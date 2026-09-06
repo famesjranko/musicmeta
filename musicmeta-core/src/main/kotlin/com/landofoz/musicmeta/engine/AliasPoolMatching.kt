@@ -87,9 +87,13 @@ internal suspend fun <T> Iterable<T>.bestArtistMatchOrAlias(
     if (aliases.isEmpty()) return null
     val byTier = compareBy<Pair<T, NameMatchTier>> { it.second.confidenceFactor }
     val comparator = if (tieBreak == null) byTier else byTier.then(compareBy(tieBreak) { it.first })
-    return mapNotNull { candidate ->
+    val aliasMatches = mapNotNull { candidate ->
         aliasTier(nameOf(candidate), aliases)?.let { candidate to it }
-    }.maxWithOrNull(comparator)?.let { ArtistNameMatch(it.first, it.second) }
+    }
+    ProbeTrace.sift("artistAlias", count(), aliasMatches.size, -1, aliasMatches.size)
+    return aliasMatches.maxWithOrNull(comparator)
+        ?.let { ArtistNameMatch(it.first, it.second) }
+        ?.also { ProbeTrace.picked("artistAlias", nameOf(it.value)) }
 }
 
 /**
@@ -108,6 +112,11 @@ internal suspend fun <T> Iterable<T>.acceptAndRankAlbumOrAlias(
     acceptAndRankAlbum(requestedArtist, artistNameOf, titleTierOf, *tieBreaks)?.let { return it }
     val aliases = resolvedAliasPool()
     if (aliases.isEmpty()) return null
+    if (ProbeTrace.enabled) {
+        val artistOk = count { aliasTier(artistNameOf(it), aliases) != null }
+        val titleOk = count { titleTierOf(it) != TitleMatcher.TitleTier.NONE }
+        ProbeTrace.sift("albumAlias", count(), artistOk, titleOk, -1)
+    }
     return aliases.sortedByDescending { it.official }.firstNotNullOfOrNull { alias ->
         filter { ArtistMatcher.matchQuality(alias.name, artistNameOf(it)) == ArtistMatcher.QUALITY_SAME_NAME }
             .acceptAndRankAlbum(alias.name, artistNameOf, titleTierOf, *tieBreaks)

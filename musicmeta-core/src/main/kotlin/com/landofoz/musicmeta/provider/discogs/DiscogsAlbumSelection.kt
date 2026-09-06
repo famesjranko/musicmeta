@@ -133,8 +133,22 @@ internal suspend fun List<DiscogsRelease>.selectRelease(request: EnrichmentReque
 private fun List<DiscogsRelease>.selectRelease(
     request: EnrichmentRequest.ForAlbum,
     aliases: List<AlternativeName>,
-): DiscogsAlbumChoice? =
-    mapNotNull { release ->
+): DiscogsAlbumChoice? {
+    if (com.landofoz.musicmeta.engine.ProbeTrace.enabled) {
+        val parsed = map { parseDiscogsRelease(it.title, request.artist, request.title, aliases) }
+        val titleOk = count { release ->
+            release.title.split(" - ").drop(1).any { TitleMatcher.equivalent(request.title, it.trim()) }
+        }
+        com.landofoz.musicmeta.engine.ProbeTrace.sift(
+            if (aliases.isEmpty()) "discogsAlbum" else "discogsAlbumAlias",
+            size,
+            parsed.count { it != null },
+            titleOk,
+            -1,
+            map { it.title },
+        )
+    }
+    return mapNotNull { release ->
         val (artist, title) = parseDiscogsRelease(release.title, request.artist, request.title, aliases)
             ?: return@mapNotNull null
         if (!TitleMatcher.equivalent(request.title, title)) return@mapNotNull null
@@ -157,4 +171,5 @@ private fun List<DiscogsRelease>.selectRelease(
             { it.artistQuality },
             { it.tieBreaks["year"] },
         ),
-    )
+    )?.also { com.landofoz.musicmeta.engine.ProbeTrace.picked("discogsAlbum", it.artist) }
+}

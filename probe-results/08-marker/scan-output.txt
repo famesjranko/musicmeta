@@ -1,0 +1,284 @@
+hits=2589 population=2868
+trailing_marker=375 (13.08%)
+interior_asterisk=48
+TRAILING	album-b1-tokyo-jihen-latin.json	2899025	東京事変*
+TRAILING	album-b1-tokyo-jihen-latin.json	21262063	東京事変*
+TRAILING	album-b1-tokyo-jihen-latin.json	9604449	東京事変*
+TRAILING	album-b1-tokyo-jihen-latin.json	3238207	東京事変*
+TRAILING	album-b1-tokyo-jihen-latin.json	20406391	東京事変*
+TRAILING	album-b3-kino.json	4450010	Виктор Цой И Группа «Кино»*
+TRAILING	album-b3-kino.json	7743925	Кино = Kino*
+TRAILING	album-b3-kino.json	918463	Кино = Kino*
+TRAILING	album-b3-kino.json	16102336	Кино = Kino*
+TRAILING	album-b3-kino.json	3486848	Кино = Kino*
+TRAILING	album-b3-kino.json	1705230	キーノ* = Кино = Kino*
+TRAILING	album-b3-kino.json	10610480	キーノ* = Кино = Kino*
+TRAILING	album-b4-alexiou.json	11837914	Χάρις Αλεξίου, Αντώνη Βαρδή*
+TRAILING	album-b4-alexiou.json	11837914	Αντώνη Βαρδή*
+TRAILING	album-b4-alexiou.json	5284253	Χ. Αλεξίου*
+TRAILING	album-b4-alexiou.json	7513727	Χάρις Αλεξίου, Αντώνη Βαρδή*
+TRAILING	album-b4-alexiou.json	7513727	Αντώνη Βαρδή*
+TRAILING	alison-krauss.json	12799374	Alison Krauss  = 艾莉森克勞絲*
+TRAILING	antonis-vardis.json	3165061	Γλυκερία Τραγουδάει Αντώνη Βαρδή*
+TRAILING	antonis-vardis.json	5103873	Μανώλης Λιδάκης, Αντώνη Βαρδή*
+TRAILING	antonis-vardis.json	5103873	Αντώνη Βαρδή*
+TRAILING	antonis-vardis.json	7513727	Χάρις Αλεξίου, Αντώνη Βαρδή*
+TRAILING	antonis-vardis.json	7513727	Αντώνη Βαρδή*
+TRAILING	antonis-vardis.json	8427722	Αντώνης Βαρδής, Αντώνης Ρέμος*
+TRAILING	antonis-vardis.json	8427722	Αντώνης Ρέμος*
+TRAILING	antonis-vardis.json	11837914	Χάρις Αλεξίου, Αντώνη Βαρδή*
+TRAILING	antonis-vardis.json	11837914	Αντώνη Βαρδή*
+TRAILING	antonis-vardis.json	36130519	Ν. Ανδρουλάκης*, Κ. Σκορδαλάκη*, Β. Σταυρακάκης*, Αντώνης Βαρδής Α. Βαρδής Α. Φραγκιαδάκης*
+TRAILING	antonis-vardis.json	36130519	Ν. Ανδρουλάκης*
+TRAILING	antonis-vardis.json	36130519	Κ. Σκορδαλάκη*
+TRAILING	antonis-vardis.json	36130519	Β. Σταυρακάκης*
+TRAILING	antonis-vardis.json	36130519	Αντώνης Βαρδής Α. Βαρδής Α. Φραγκιαδάκης*
+TRAILING	aphex-twin.json	36636445	Aphex Twin = エイフェックス・ツイン*
+TRAILING	aphex-twin.json	35323711	Aphex Twin = エイフェックス・ツイン*
+TRAILING	aphex-twin.json	36776902	Aphex Twin = エイフェックス・ツイン*
+TRAILING	aphex-twin.json	35531233	Aphex Twin = エイフェックス・ツイン*
+TRAILING	aphex-twin.json	27821487	Aphex Twin = エイフェックス・ツイン*
+TRAILING	aphex-twin.json	35323768	Aphex Twin = エイフェックス・ツイン*
+TRAILING	aphex-twin.json	10594336	AFX*
+TRAILING	aphex-twin.json	34759457	AFX*
+TRAILING	aphex-twin.json	34762484	AFX*
+TRAILING	aphex-twin.json	16085770	エイフェックス・ツイン*
+TRAILING	aphex-twin.json	63200	AFX*
+TRAILING	aphex-twin.json	18513235	The Aphex Twin*
+TRAILING	aphex-twin.json	1640209	AFX*
+TRAILING	aphex-twin.json	19438495	AFX*
+TRAILING	aphex-twin.json	15186398	AFX*
+TRAILING	aphex-twin.json	1642850	AFX*
+TRAILING	aphex-twin.json	2067659	AFX*
+TRAILING	aphex-twin.json	2113568	AFX*
+TRAILING	aphex-twin.json	10593095	AFX*
+TRAILING	aphex-twin.json	34762376	AFX*
+TRAILING	aphex-twin.json	10832338	AFX*
+TRAILING	aphex-twin.json	32452116	AFX*
+TRAILING	aphex-twin.json	6580	The Aphex Twin*
+TRAILING	aphex-twin.json	4473838	AFX*
+TRAILING	bjork.json	27860394	Björk = ビョーク*
+TRAILING	bjork.json	11154875	Björk = ビョーク*
+TRAILING	bjork.json	2099703	Björk = 碧玉*
+TRAILING	bjork.json	3227915	Björk = 碧玉*
+TRAILING	bjork.json	8675825	Björk = 碧玉*
+TRAILING	bjork.json	38062938	Björk = 比约克*
+TRAILING	bjork.json	1295953	Björk = ビョーク*
+TRAILING	bjork.json	1375612	Björk = 碧玉*
+TRAILING	bjork.json	29318713	Björk = 比约克*
+TRAILING	bjork.json	1318031	Björk = ビョーク*
+TRAILING	bjork.json	14340036	Björk = Бйорк*
+TRAILING	bjork.json	315356	Björk = ビョーク*
+TRAILING	bjork.json	24694373	Björk = ビョーク*
+TRAILING	bjork.json	2976694	Björk = 比约克*
+TRAILING	bjork.json	2670050	Björk = ビョーク*
+TRAILING	bjork.json	26427614	Björk = ビョーク*
+TRAILING	bjork.json	1117486	Björk = ビョーク*
+TRAILING	bjork.json	6417763	Björk = 比约克*
+TRAILING	bjork.json	173213	Björk = ビョーク*
+TRAILING	bjork.json	361532	Björk = 碧玉*
+TRAILING	bjork.json	2101249	Björk = 碧玉*
+TRAILING	bjork.json	8755760	Björk = ビョーク*
+TRAILING	bjork.json	4249949	Björk = 碧玉*
+TRAILING	bjork.json	661912	Björk = ビョーク*
+TRAILING	bjork.json	3068295	Bjork*
+TRAILING	bjork.json	3109360	Bjork*
+TRAILING	bjork.json	2119396	Bjork*
+TRAILING	bjork.json	5897366	Bjork*
+TRAILING	bjork.json	2429783	Bjork*
+TRAILING	bjork.json	2378105	Bjork*
+TRAILING	bjork.json	7005413	Bjork*
+TRAILING	bjork.json	2622997	Bjork*
+TRAILING	bjork.json	2645767	Bjork*
+TRAILING	bjork.json	5671834	Bjork*
+TRAILING	bjork.json	33556656	Bjork*
+TRAILING	boards-of-canada.json	37644849	Boards Of Canada = ボーズ・オブ・カナダ*
+TRAILING	boards-of-canada.json	37622664	Boards Of Canada = ボーズ・オブ・カナダ*
+TRAILING	boards-of-canada.json	37472124	Boards Of Canada = ボーズ・オブ・カナダ*
+TRAILING	boards-of-canada.json	37501929	Boards Of Canada = ボーズ・オブ・カナダ*
+TRAILING	boards-of-canada.json	37622676	Boards Of Canada = ボーズ・オヴ・カナダ*
+TRAILING	boards-of-canada.json	37472187	Boards Of Canada = ボーズ・オブ・カナダ*
+TRAILING	boards-of-canada.json	15514385	BoC*
+TRAILING	claude-debussy.json	31247278	Debussy* = ドビュッシー*
+TRAILING	claude-debussy.json	34647766	Debussy* = Дебюсси*
+TRAILING	claude-debussy.json	24692987	Claude Achille Debussy* = ドビュッシー*
+TRAILING	claude-debussy.json	12578854	Debussy*
+TRAILING	claude-debussy.json	8830019	Debussy*
+TRAILING	claude-debussy.json	5055059	Debussy*
+TRAILING	claude-debussy.json	10764192	Debussy*
+TRAILING	claude-debussy.json	9062506	Debussy*
+TRAILING	claude-debussy.json	14552031	Debussy*
+TRAILING	claude-debussy.json	33253071	Debussy*
+TRAILING	claude-debussy.json	33891849	Debussy*
+TRAILING	claude-debussy.json	34793384	Debussy*
+TRAILING	claude-debussy.json	19101178	Debussy*
+TRAILING	claude-debussy.json	6826894	Debussy*
+TRAILING	claude-debussy.json	11696518	Debussy*
+TRAILING	claude-debussy.json	30604243	Debussy*
+TRAILING	claude-debussy.json	9926280	Debussy*
+TRAILING	claude-debussy.json	9671439	Debussy*
+TRAILING	claude-debussy.json	7980381	Debussy*
+TRAILING	claude-debussy.json	20862214	Debussy*
+TRAILING	claude-debussy.json	14595993	Debussy*
+TRAILING	claude-debussy.json	8578498	Debussy*
+TRAILING	claude-debussy.json	20498563	Debussy*
+TRAILING	claude-debussy.json	12972127	Debussy*
+TRAILING	claude-debussy.json	10090488	Debussy*
+TRAILING	claude-debussy.json	22261342	Debussy*
+TRAILING	claude-debussy.json	8400135	Debussy*
+TRAILING	claude-debussy.json	13499123	Debussy*
+TRAILING	claude-debussy.json	5608733	Debussy*
+TRAILING	claude-debussy.json	11570677	Debussy*
+TRAILING	claude-debussy.json	32872506	Debussy*
+TRAILING	claude-debussy.json	13981154	Debussy*
+TRAILING	claude-debussy.json	32514669	Debussy*
+TRAILING	claude-debussy.json	18518125	Клод Дебюсси*
+TRAILING	claude-debussy.json	13065603	Дебюсси*
+TRAILING	claude-debussy.json	3515800	Debussy*
+TRAILING	claude-debussy.json	2317946	Debussy*
+TRAILING	claude-debussy.json	14716791	C. Debussy*
+TRAILING	claude-debussy.json	9575648	Debussy*
+TRAILING	claude-debussy.json	9355570	DEBUSSY*
+TRAILING	claude-debussy.json	29954161	Debussy*
+TRAILING	claude-debussy.json	33239298	Ντεμπισί*
+TRAILING	fairuz.json	36531652	Fairuz*
+TRAILING	fela-kuti.json	6460331	Felá Anikũlapo Kuti* = フェラ・クティ*
+TRAILING	fela-kuti.json	28530490	Felá Anikũlapo Kuti* = フェラ・クティ*
+TRAILING	fela-kuti.json	1921349	Felá Anikũlapo-Kuti*
+TRAILING	fela-kuti.json	387743	Fela*
+TRAILING	fela-kuti.json	15411047	Fela*
+TRAILING	fela-kuti.json	9595596	Fela*
+TRAILING	fela-kuti.json	12858865	Fela Anikulapo Kuti*
+TRAILING	fela-kuti.json	5892904	Fela*
+TRAILING	fela-kuti.json	26059960	Fela*
+TRAILING	fela-kuti.json	13678645	Fela Anikulapo Kuti*
+TRAILING	fela-kuti.json	29187379	Fela Anikulapo Kuti*
+TRAILING	fela-kuti.json	106584	Fela Anikulapo Kuti*
+TRAILING	fela-kuti.json	4328988	Fẹla*
+TRAILING	fela-kuti.json	1276971	Fela Ransome Kuti*
+TRAILING	fela-kuti.json	7408174	Fela Anikulapo Kuti*
+TRAILING	fela-kuti.json	2742888	Fela*
+TRAILING	fela-kuti.json	4016878	Fela Anikulapo Kuti*
+TRAILING	fela-kuti.json	12972563	Fela Ransome Kuti*
+TRAILING	fela-kuti.json	5549213	Fela Anikulapo Kuti*
+TRAILING	fela-kuti.json	681992	Fela*
+TRAILING	fela-kuti.json	2059240	Fela Ransome Kuti*
+TRAILING	fela-kuti.json	16622781	Fḛlá Anikulapo Kuti*
+TRAILING	fela-kuti.json	30942937	Fḛlá Anikulapo-Kuti*
+TRAILING	fela-kuti.json	1347807	Fela Ransome Kuti*
+TRAILING	fela-kuti.json	12244662	Fela*
+TRAILING	fela-kuti.json	8649219	Fela Anikulapo Kuti*
+TRAILING	fela-kuti.json	13434461	Fela Ransome Kuti*
+TRAILING	fela-kuti.json	13724291	Fela Anikulapo Kuti*
+TRAILING	fela-kuti.json	7119886	Fela Anikulapo Kuti*
+TRAILING	fela-kuti.json	4765240	Fela Ranzome Kuti*
+TRAILING	fela-kuti.json	8327507	Fela Anikulapo-Kuti*
+TRAILING	fela-kuti.json	15236296	Fela*
+TRAILING	fela-kuti.json	541497	Fela Ransome Kuti*
+TRAILING	fela-kuti.json	558578	Fẹla*
+TRAILING	fela-kuti.json	1311298	Fela*
+TRAILING	fela-kuti.json	10637101	Fela Anikulapo Kuti*
+TRAILING	fela-kuti.json	534289	Fela*
+TRAILING	fela-kuti.json	4208486	Fela Anikulapo Kuti*
+TRAILING	fela-kuti.json	12361287	Felá Anikũlapo-Kuti*
+TRAILING	fela-kuti.json	2144142	Fela Anikulapo Kuti*
+TRAILING	fela-kuti.json	10907083	Fela Anikulapo Kuti*
+TRAILING	fela-kuti.json	33901173	Fela Anikulapo Kuti*
+TRAILING	fela-kuti.json	7591367	Fela*
+TRAILING	fela-kuti.json	10996474	Fela Anikulapo Kuti*
+TRAILING	fela-kuti.json	12680730	Fela Ransome Kuti*
+TRAILING	fela-kuti.json	85960	Fela Anikulapo Kuti*
+TRAILING	fela-kuti.json	2009905	Fḛlá Anikulapo-Kuti*
+TRAILING	fela-kuti.json	2245741	Fela Anikulapo Kuti*
+TRAILING	fela-kuti.json	4375670	Fela Anikulapo Kuti*
+TRAILING	fela-kuti.json	2460158	Fela*
+TRAILING	fela-kuti.json	33513116	Felá Anikũlapo Kuti*
+TRAILING	fela-kuti.json	14718346	Fela Anikulapo Kuti*
+TRAILING	fela-kuti.json	2853875	Fela*
+TRAILING	fela-kuti.json	2479197	Fela*
+TRAILING	fela-kuti.json	1956162	Fela*
+TRAILING	fela-kuti.json	2605613	Fḛlá Anikulapo Kuti*
+TRAILING	fela-kuti.json	9190315	Fela*
+TRAILING	fela-kuti.json	16243100	Fela Ransome Kuti*
+TRAILING	fela-kuti.json	24052466	Fela*
+TRAILING	fela-kuti.json	29834644	Fela*
+TRAILING	fela-kuti.json	5993770	Fela Anikulapo Kuti*
+TRAILING	fela-kuti.json	2473204	Fela*
+TRAILING	fela-kuti.json	576008	Fela*
+TRAILING	fela-kuti.json	8577553	Fela Anikulapo Kuti*
+TRAILING	fela-kuti.json	4094623	Fela Ransome Kuti*
+TRAILING	fleetwood-mac.json	9790713	Fleetwood Mac = フリートウッド・マック*
+TRAILING	fleetwood-mac.json	13179160	Fleetwood Mac = フリートウッド・マック*
+TRAILING	fleetwood-mac.json	4879041	Fleetwood Mac = フリートウッド・マック*
+TRAILING	fleetwood-mac.json	9818192	Fleetwood Mac = フリートウッド・マック・ライヴ*
+TRAILING	fleetwood-mac.json	4879067	Fleetwood Mac = フリートウッド・マック*
+TRAILING	fleetwood-mac.json	14718060	Fleetwood Mac = フリートウッド・マック*
+TRAILING	fleetwood-mac.json	3736883	Fleetwood Mac = フリートウッド・マック*
+TRAILING	fleetwood-mac.json	25911220	Fleetwood Mac = フリートウッド・マック*
+TRAILING	fleetwood-mac.json	14432431	Fleetwood Mac = 플리트우드 맥*
+TRAILING	fleetwood-mac.json	19963261	Fleetwood Mac = フリートウッド・マック*
+TRAILING	fleetwood-mac.json	9309654	Fleetwood Mac = フリートウッド・マック*
+TRAILING	fleetwood-mac.json	17734900	Fleetwood Mac = フリートウッド・マック*
+TRAILING	fleetwood-mac.json	13257040	Fleetwood Mac = フリートウッド・マック*
+TRAILING	fleetwood-mac.json	14727641	Fleetwood Mac = フリートウッド・マック*
+TRAILING	fleetwood-mac.json	20686984	Fleetwood Mac = フリートウッド・マック*
+TRAILING	fleetwood-mac.json	4918848	Fleetwood Mac = フリートウッド・マック*
+TRAILING	fleetwood-mac.json	9968221	Fleetwood Mac = フリートウッド・マック*
+TRAILING	fleetwood-mac.json	9968591	Fleetwood Mac = フリートウッド・マック*
+TRAILING	fleetwood-mac.json	4879049	Fleetwood Mac = フリートウッド・マック*
+TRAILING	fleetwood-mac.json	3503849	Fleetwood Mac = フリートウッド・マック*
+TRAILING	fleetwood-mac.json	11314019	Fleetwood Mac = フリートウッド・マック*
+TRAILING	fleetwood-mac.json	3469652	Fleetwood Mac = フリートウッド・マック*
+TRAILING	fleetwood-mac.json	4944259	Fleetwood Mac = フリートウッド・マック*
+TRAILING	fleetwood-mac.json	9645587	Fleetwood Mac = フリートウッド・マック*
+TRAILING	fleetwood-mac.json	2163954	Fleetwood Mac = フリートウッド・マック*
+TRAILING	fleetwood-mac.json	25146955	Fleetwood Mac = 플리트우드 맥*
+TRAILING	fleetwood-mac.json	4875927	Fleetwood Mac = フリートウッド・マック*
+TRAILING	fleetwood-mac.json	33386693	Fleetwood Mac = フリートウッド・マック*
+TRAILING	fleetwood-mac.json	3240146	The Original Fleetwood Mac*
+TRAILING	fleetwood-mac.json	5078627	Peter Green's Fleetwood Mac*
+TRAILING	fleetwood-mac.json	15178323	Peter Green's Fleetwood Mac*
+TRAILING	fleetwood-mac.json	6917199	Peter Green's Fleetwood Mac*
+TRAILING	haris-alexiou.json	9409544	Χάρις Αλεξίου = Haris Alexiou*
+TRAILING	haris-alexiou.json	8066370	Χάρις Αλεξίου = Harris Alexiou*
+TRAILING	haris-alexiou.json	11714578	Χάρις Αλεξίου = Haris Alexiou*
+TRAILING	haris-alexiou.json	34237360	Χάρις Αλεξίου = ハリス・アレクシウ*
+TRAILING	haris-alexiou.json	7534713	Χάρις Αλεξίου = Haris Alexiou*
+TRAILING	haris-alexiou.json	10119334	Χάρις Αλεξίου = Haris Alexiou*
+TRAILING	haris-alexiou.json	33918156	Χάρις Αλεξίου = Haris Alexiou*
+TRAILING	haris-alexiou.json	7534365	Χάρις Αλεξίου = Haris Alexiou*
+TRAILING	haris-alexiou.json	26860919	חאריס אלקסיו* = Haris Alexiou*
+TRAILING	haris-alexiou.json	11840183	Χάρις Αλεξίου = Haris Alexiou*
+TRAILING	haris-alexiou.json	13007048	Haris Alexiou*
+TRAILING	haris-alexiou.json	2998352	Χαρούλα*
+TRAILING	haris-alexiou.json	7720846	Haris Alexiou*
+TRAILING	haris-alexiou.json	23165786	Χ. Αλεξίου*
+TRAILING	haris-alexiou.json	32849862	Haris Alexiou*
+TRAILING	haris-alexiou.json	26660582	Haris Alexiou*
+TRAILING	haris-alexiou.json	7165544	Haris Alexiou*
+TRAILING	haris-alexiou.json	8308462	Haris Alexiou*
+TRAILING	haris-alexiou.json	9284723	Haris Alexiou*
+TRAILING	haris-alexiou.json	4719927	Haris Alexiou*
+TRAILING	haris-alexiou.json	30391538	Haris Alexiou*
+TRAILING	haris-alexiou.json	14485400	Haris Alexiou*
+TRAILING	haris-alexiou.json	4705386	Χ. Αλεξίου*
+TRAILING	haris-alexiou.json	9775125	Haris Alexiou*
+TRAILING	haris-alexiou.json	13648947	Harris*
+TRAILING	haris-alexiou.json	30064282	Harris*
+TRAILING	haris-alexiou.json	9576264	Haris Alexiou*
+TRAILING	kendrick-lamar.json	23867492	Kendrick Lamar = 肯卓克拉瑪*
+TRAILING	kino.json	1705230	キーノ* = Кино = Kino*
+TRAILING	kino.json	10610480	キーノ* = Кино = Kino*
+TRAILING	kino.json	4022974	Группа "Кино"* = Group "Kino" (Cinema)*
+TRAILING	kino.json	14495386	Кино = Kino (Cinema)*
+TRAILING	kino.json	1237479	Кино = Kino*
+TRAILING	kino.json	9948596	Группа "Кино"* = Group "Kino" (Cinema)*
+TRAILING	kino.json	7987243	Кино = Group "Kino"* = Cinema*
+TRAILING	kino.json	10431862	Кино = Kino*
+TRAILING	kino.json	15346801	Кино = Kino (Cinema)*
+TRAILING	kino.json	918463	Кино = Kino*
+TRAILING	kino.json	14076819	Кино = Kino*
+TRAILING	kino.json	7743925	Кино = Kino*
+TRAILING	kino.json	2155935	Группа "Кино"* = Group "Kino" (Cinema)*
+TRAILING	kino.json	3486848	Кино = Kino*
+TRAILING	

@@ -1,0 +1,94 @@
+package com.landofoz.musicmeta.provider.discogs
+
+import com.landofoz.musicmeta.engine.AlternativeName
+import com.landofoz.musicmeta.engine.NameMatchTier
+import com.landofoz.musicmeta.engine.artistNameTier
+import com.landofoz.musicmeta.engine.sameNameTier
+import org.json.JSONObject
+import org.junit.Test
+import java.io.File
+
+/**
+ * Throwaway probe for `features/08` phase 1, run by hand. Not part of the suite's evidence.
+ */
+class AsteriskIncidenceProbe {
+
+    private val root = File("/home/andy/dev/musicmeta/.claude/worktrees/agent-a87e9639f637b1300/.scratch/features/prototypes/08-discogs-asterisk")
+
+    private fun creditTier(requested: String, credit: String): NameMatchTier? {
+        artistNameTier(requested, credit, emptyList())?.let { return it }
+        val parts = credit.split(", ").map { it.trim() }.filter { it.isNotEmpty() }
+        if (parts.size < 2) return null
+        return parts.mapNotNull { sameNameTier(requested, it, emptyList()) }.minByOrNull { it.ordinal }
+    }
+
+    private fun artistSides(title: String): List<String> {
+        val out = mutableListOf<String>()
+        var from = 0
+        while (true) {
+            val i = title.indexOf(" - ", from)
+            if (i < 0) return out
+            val artist = stripDiscogsDisambiguator(title.substring(0, i).trim())
+            if (artist.isNotEmpty()) out.add(artist)
+            from = i + 3
+        }
+    }
+
+    @Test
+    fun `probe reports how many marked credits the shipped test rejects`() {
+        // Given - the captured pools and the artist each was searched for
+        val requested = mutableListOf<Pair<String, String>>()
+        listOf("artists.tsv" to 1, "albums.tsv" to 1).forEach { (file, col) ->
+            File(root, file).readLines().filter { it.isNotBlank() }.forEach { line ->
+                val cells = line.split("\t")
+                requested.add(cells[0] to cells[col])
+            }
+        }
+
+        // When - every artist-side string is tested as shipped, and again with one trailing star gone
+        var population = 0
+        var marked = 0
+        var flips = 0
+        var rejectedBoth = 0
+        val flipped = mutableListOf<String>()
+        var exact = 0
+        var exactBlocked = 0
+        val blocked = mutableListOf<String>()
+        requested.forEach { (slug, artist) ->
+            val body = File(root, "captures/$slug.json")
+            if (!body.exists()) return@forEach
+            val results = JSONObject(body.readText()).optJSONArray("results") ?: return@forEach
+            (0 until results.length()).forEach { i ->
+                val title = results.getJSONObject(i).optString("title", "")
+                artistSides(title).forEach { side ->
+                    population++
+                    val hasMarker = side.endsWith("*") || side.split(", ").any { it.trim().endsWith("*") }
+                    if (!hasMarker) return@forEach
+                    marked++
+                    val now = creditTier(artist, side)
+                    val stripped = creditTier(artist, side.split(", ").joinToString(", ") { it.trim().removeSuffix("*") })
+                    if (now == null && stripped != null) {
+                        flips++
+                        flipped.add("$slug\t$artist\t$side\t$stripped")
+                    } else if (now == null) {
+                        rejectedBoth++
+                    }
+                    side.split(", ").map { it.trim() }.filter { it.endsWith("*") }.forEach { part ->
+                        val asRequested = part.removeSuffix("*")
+                        exact++
+                        if (creditTier(asRequested, side) == null) {
+                            exactBlocked++
+                            blocked.add("$slug\t$asRequested\t$side")
+                        }
+                    }
+                }
+            }
+        }
+
+        // Then - the counts are printed for the report
+        println("population=$population marked=$marked flips=$flips rejectedBoth=$rejectedBoth")
+        println("exactVariationRequests=$exact blockedByMarker=$exactBlocked")
+        flipped.forEach { println("FLIP\t$it") }
+        blocked.forEach { println("BLOCKED\t$it") }
+    }
+}

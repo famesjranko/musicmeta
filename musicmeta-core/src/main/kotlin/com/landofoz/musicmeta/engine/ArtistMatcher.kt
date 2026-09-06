@@ -152,6 +152,8 @@ internal fun <T> Iterable<T>.bestArtistMatch(
     nameOf: (T) -> String,
 ): T? {
     val byQuality = compareBy<T> { ArtistMatcher.matchQuality(expected, nameOf(it)) }
-    return filter { ArtistMatcher.isMatch(expected, nameOf(it)) }
-        .maxWithOrNull(if (tieBreak == null) byQuality else byQuality.then(tieBreak))
+    val accepted = filter { ArtistMatcher.isMatch(expected, nameOf(it)) }
+    ProbeTrace.sift("artist", count(), accepted.size, -1, accepted.size)
+    return accepted.maxWithOrNull(if (tieBreak == null) byQuality else byQuality.then(tieBreak))
+        ?.also { ProbeTrace.picked("artist", nameOf(it)) }
 }

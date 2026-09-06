@@ -77,9 +77,16 @@ internal fun <T> Iterable<T>.acceptAndRankAlbum(
         }
         .filter { it.tier != TitleMatcher.TitleTier.NONE }
 
+    if (ProbeTrace.enabled) {
+        val artistOk = count { ArtistMatcher.isMatch(requestedArtist, artistNameOf(it)) }
+        val titleOk = count { titleTierOf(it) != TitleMatcher.TitleTier.NONE }
+        ProbeTrace.sift("album", count(), artistOk, titleOk, matches.size, map { artistNameOf(it) })
+    }
+
     var comparator = compareBy<AlbumMatch<T>> { it.tier }.thenBy { it.artistQuality }
     for (tieBreak in tieBreaks) {
         comparator = comparator.thenBy { it.tieBreaks[tieBreak.name] }
     }
     return matches.maxWithOrNull(comparator)
+        ?.also { ProbeTrace.picked("album", artistNameOf(it.candidate)) }
 }
