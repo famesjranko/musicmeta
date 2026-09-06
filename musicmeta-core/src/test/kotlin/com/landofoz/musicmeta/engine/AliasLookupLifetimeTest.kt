@@ -61,7 +61,7 @@ class AliasLookupLifetimeTest {
     }
 
     @Test
-    fun `close reaches a source still running on the engine's detached scope`() = runTest {
+    fun `a lookup in flight when the engine closes is abandoned`() = runTest {
         // Given - a call whose alias source is still running, under a deadline far too long to fire
         val abandoned = CountDownLatch(1)
         val entered = CountDownLatch(1)
@@ -72,9 +72,9 @@ class AliasLookupLifetimeTest {
         // When - the engine is closed while that lookup is in flight
         engine.close()
 
-        // Then - closing the detached scope reached the lookup running on it
+        // Then - the lookup is abandoned, by the closed scope or by the call's own teardown
         assertTrue(
-            "close() could not see the lookup's job",
+            "the lookup outlived close()",
             abandoned.await(GRACE_MS, TimeUnit.MILLISECONDS),
         )
         call.cancel()

@@ -90,7 +90,9 @@ internal class ResolvedEntityNames(
     /**
      * The one in-flight resolution of [source], run on [lookupScope] rather than on the reader that
      * opened it: the readers are the whole fan-out and do not share a fate, so a provider's own
-     * `withTimeout` must not take the lookup the others are waiting on down with it.
+     * `withTimeout` must not take the lookup the others are waiting on down with it. Only the job is
+     * replaced: the lookup keeps the opening reader's dispatcher and deadline, so it runs on the
+     * fan-out's threads, not on the scope's own dispatcher.
      */
     // SwallowedException: every failure is the empty pool, per [aliases]; nothing else reads it.
     @Suppress("SwallowedException")
