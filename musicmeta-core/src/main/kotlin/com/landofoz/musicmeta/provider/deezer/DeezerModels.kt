@@ -40,9 +40,9 @@ internal data class DeezerArtistSearchResult(
     /** How this hit's name matched the request — an alias tier scales the reported confidence. */
     val nameTier: NameMatchTier = NameMatchTier.CANONICAL,
     /**
-     * Another artist in the pool carried the requested name just as exactly, so popularity is what
-     * chose this one. Two same-named entries are as often two different acts as one act listed
-     * twice, and the search cannot tell those apart.
+     * The pool held a second entry that could be a different act of the same name — same name, its
+     * own discography, and an audience of comparable size — so popularity is what chose this one
+     * rather than evidence. A tribute act, a mis-spacing or an empty ghost entry is not that.
      */
     val ambiguousName: Boolean = false,
 )

@@ -61,9 +61,9 @@ internal class DeezerApi(
      * ghost case, two entries both named exactly "Radiohead".
      *
      * It is also the homonym case, where those two entries are two different acts, and popularity
-     * then picks the louder one rather than the right one. That is what
-     * [DeezerArtistSearchResult.ambiguousName] reports: a caller holding evidence of its own can
-     * refuse the pick, and one holding none at least knows what settled it.
+     * then picks the louder one rather than the right one. [DeezerArtistSearchResult.ambiguousName]
+     * reports when it could be: see [couldBeAnotherAct] for what counts as a rival, and why a
+     * same-name entry is usually not one.
      */
     suspend fun searchArtist(name: String): DeezerArtistSearchResult? {
         val encoded = encodeQueryValue(name)
@@ -72,9 +72,6 @@ internal class DeezerApi(
 
         val data = json.optJSONArray("data") ?: return null
         val candidates = (0 until data.length()).mapNotNull { data.optJSONObject(it) }
-        val sameNameCount = candidates.count {
-            ArtistMatcher.matchQuality(name, it.optString("name", "")) == ArtistMatcher.QUALITY_SAME_NAME
-        }
         return candidates
             .bestArtistMatchOrAlias(
                 expected = name,
@@ -90,9 +87,34 @@ internal class DeezerApi(
                     pictureBig = artist.optString("picture_big").takeIfNotEmpty(),
                     pictureXl = artist.optString("picture_xl").takeIfNotEmpty(),
                     nameTier = match.tier,
-                    ambiguousName = sameNameCount > 1,
+                    ambiguousName = candidates.any { it !== artist && couldBeAnotherAct(name, artist, it) },
                 )
             }
+    }
+
+    /**
+     * Whether [candidate] could be a second act called [name], rather than one more entry the
+     * search returned under it — the question [DeezerArtistSearchResult.ambiguousName] answers.
+     *
+     * A same name alone does not make one. A pool for a well-known artist routinely carries
+     * tribute acts, mis-spacings that normalize to the same string ("Radio Head") and empty ghost
+     * entries, and treating any of them as a rival would refuse a name that is not in doubt. Two
+     * signals separate them, and both are on the payload:
+     *
+     * - **A discography.** An act whose neighbours are worth walking has released something;
+     *   `nb_album` of zero is an entry, not an artist.
+     * - **A comparable audience.** Popularity is a fair tiebreak when it is decisive and a coin
+     *   flip when it is not, so a candidate within [AMBIGUITY_FAN_RATIO]× of the winner's `nb_fan`
+     *   is a rival and one far below it is not. Measured over nine homonym-prone names: the pairs
+     *   this admits (`Sungazer` 2441/1856, `Alaska` 388/387, `Pentagram` 30011/3880) are all two
+     *   genuinely different acts, and the ones it rejects are all an act and its shadow.
+     */
+    private fun couldBeAnotherAct(name: String, winner: JSONObject, candidate: JSONObject): Boolean {
+        if (ArtistMatcher.matchQuality(name, candidate.optString("name", "")) != ArtistMatcher.QUALITY_SAME_NAME) {
+            return false
+        }
+        if (candidate.optLong("nb_album") <= 0) return false
+        return candidate.optLong("nb_fan") * AMBIGUITY_FAN_RATIO >= winner.optLong("nb_fan")
     }
 
     suspend fun getArtistAlbums(artistId: Long, limit: Int = 50): List<DeezerArtistAlbum> {
@@ -418,6 +440,9 @@ internal class DeezerApi(
 
         /** Candidate pool size for artist search — enough hits for a ghost to be outvoted. */
         const val ARTIST_SEARCH_LIMIT = 10
+
+        /** How far below the winner's `nb_fan` a same-named entry stops being a rival act. */
+        const val AMBIGUITY_FAN_RATIO = 10
 
         /** Candidate pool size for track search — enough hits for a wrong edition to be outranked. */
         const val TRACK_SEARCH_LIMIT = 5

@@ -9,6 +9,7 @@ import com.landofoz.musicmeta.EnrichmentType
 import com.landofoz.musicmeta.IdentifierNamespace
 import com.landofoz.musicmeta.ProviderCapability
 import com.landofoz.musicmeta.SimilarAlbum
+import com.landofoz.musicmeta.engine.ArtistMatcher
 import com.landofoz.musicmeta.engine.ConfidenceCalculator
 import com.landofoz.musicmeta.engine.NameMatchTier
 import com.landofoz.musicmeta.http.HttpClient
@@ -150,9 +151,13 @@ public class SimilarAlbumsProvider internal constructor(
      *    [DeezerProvider.enrichSimilarTracks] takes off the track search. The requested *title* is
      *    what only one of the same-named acts recorded, so the hit identifies the artist even where
      *    the name does not. Selection is [selectAlbum]'s, so a remaster suffix is tolerated and a
-     *    live or deluxe edition of a bare request is not.
-     * 3. The name search, but only when its pool held no second candidate under the requested name
-     *    ([DeezerArtistSearchResult.ambiguousName]).
+     *    live or deluxe edition of a bare request is not — but its ranking puts the title tier
+     *    above artist quality over a deliberately loose artist floor, so a same-titled album by
+     *    "Trouble Andrew" outranks the remastered one by "Trouble". Seeding from a hit whose artist
+     *    is merely *plausible* would be the same wrong answer by another route, so the id is taken
+     *    only at [ArtistMatcher.QUALITY_SAME_NAME].
+     * 3. The name search, but only when its pool held no second entry that could be another act of
+     *    that name ([DeezerArtistSearchResult.ambiguousName]).
      *
      * An ambiguous name that no album hit resolves therefore yields `NotFound`: a list of albums by
      * the wrong act's neighbours is not a thinner answer than the right one, it is a different act's
@@ -164,7 +169,9 @@ public class SimilarAlbumsProvider internal constructor(
 
         val albumMatch = api.searchAlbums("${request.artist} ${request.title}", ALBUM_SEARCH_LIMIT)
             .selectAlbum(request)
-        albumMatch?.candidate?.artistId?.let { return SeedArtist(it, albumMatch.nameTier) }
+        if (albumMatch != null && albumMatch.artistQuality == ArtistMatcher.QUALITY_SAME_NAME) {
+            albumMatch.candidate.artistId?.let { return SeedArtist(it, albumMatch.nameTier) }
+        }
 
         val byName = api.searchArtist(request.artist) ?: return null
         return if (byName.ambiguousName) null else SeedArtist(byName.id, byName.nameTier)

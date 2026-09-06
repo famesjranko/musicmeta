@@ -642,6 +642,21 @@ help — both acts already match the name. Where a route has other evidence on t
 Where it has none, `DeezerArtistSearchResult.ambiguousName` says so, and a route whose whole answer
 derives from the seed refuses rather than answering as the wrong act at full confidence.
 
+**Counting same names is not counting acts, and the difference is a guard against an outage.** A
+pool for a well-known artist is full of same-name entries that are not second acts: "Radiohead"
+live-returns "Radio Head" (436 fans, and `ArtistMatcher` reads it as the same name once spacing is
+dropped), a tribute band, and a zero-album ghost. A first cut that called any second same-name entry
+ambiguous would have refused `SIMILAR_ALBUMS` for Radiohead on every request whose title Deezer does
+not carry — a wrong answer traded for no answer. What separates a rival from a shadow is on the
+payload: its own discography (`nb_album > 0`) *and* an audience within an order of magnitude of the
+winner's. Each half alone admits one of the two shapes.
+
+The seam an accepted hit reaches the seed through needs the same care. `acceptAndRankAlbum` ranks
+title tier **above** artist quality over a deliberately loose artist floor, so a `Psalm 9` by
+"Trouble Andrew" (exact title, containment name) outranks `Psalm 9 (Remastered 2020)` by "Trouble"
+(edition title, same name). Good enough to *rank* a pool is not good enough to *identify* an artist:
+read `AlbumMatch.artistQuality` and take the id only at `QUALITY_SAME_NAME`.
+
 **The tiebreak must be a signal the payload actually sends, and "same name" is not always one.**
 `ITunesApi.searchArtist` and `DiscogsApi.searchArtist` got the same treatment, and neither could
 copy the Deezer tail: an iTunes `musicArtist` result carries no popularity field at all (only

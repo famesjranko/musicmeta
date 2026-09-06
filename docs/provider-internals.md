@@ -47,9 +47,12 @@ two response shapes under one cache key. `MusicBrainzQualifierFallback.kt` strip
 - **`deezer` has a second public provider class.** `SimilarAlbumsProvider` registers under its own id
   `deezer-similar-albums`, so it gets its own `CircuitBreaker` and can be disabled without touching
   `deezer`. It exists because `SIMILAR_ALBUMS` is *derived* — Deezer has no such endpoint, so it
-  fans out to related artists and scores their albums, up to seven HTTP calls per request — the
-  first of which is an album search, because the requested *title* is the only thing that tells two
-  same-named artists apart. Its class
+  fans out to related artists and scores their albums, up to eight HTTP calls per request: an album
+  search — because the requested *title* is the only thing that tells two same-named artists apart —
+  an artist search where that misses, the related-artists call, and one album list per related
+  artist. On a call that also asks for an `ALBUM_*` type, that album search repeats the query
+  `DeezerAlbumScope.resolveAlbum` already made: the two providers are separate objects, so they
+  cannot share a `ProviderCallScope` slot. Its class
   comment says why it is not a `CompositeSynthesizer`: keeping the calls in a plain provider means
   the engine schedules and rate-limits it like any other.
 
