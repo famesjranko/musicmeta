@@ -172,7 +172,12 @@ internal class ListenBrainzApi(
     private fun parseSimilarArtist(item: JSONObject): ListenBrainzSimilarArtist? {
         val mbid = item.optString("artist_mbid").takeIf { it.isNotBlank() } ?: return null
         val name = item.optString("name").takeIf { it.isNotBlank() } ?: return null
-        return ListenBrainzSimilarArtist(artistMbid = mbid, name = name, score = item.optInt("score", 0))
+        return ListenBrainzSimilarArtist(
+            artistMbid = mbid,
+            name = name,
+            score = item.optInt("score", 0),
+            comment = item.optString("comment").takeIf { it.isNotBlank() },
+        )
     }
 
     /** GET /1/explore/lb-radio?prompt=artist:({prompt})&mode={mode}. Requires authToken. */
@@ -348,6 +353,7 @@ internal class ListenBrainzApi(
                     "[0].artist_mbid",
                     "[0].name",
                     "[0].score",
+                    "[0].comment",
                 ),
             ),
             SchemaTarget(

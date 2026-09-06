@@ -25,36 +25,45 @@ import java.io.File
  * touches grouping, scoring or order; the harness asserts that the merged list is unchanged.
  */
 // ---- ARM BLOCK START ----
-private const val ARM_NAME = "control"
+private const val ARM_NAME = "comment"
 
-/** The string this arm would attach to a merged group. */
+/**
+ * The string this arm would attach to a merged group: the Labs `comment` of the member whose MBID
+ * is the group's own.
+ *
+ * A same-name member carrying no MBID is never asked, because `groupArtists` attached it by
+ * contributor order rather than by evidence.
+ */
 private fun armLabel(
     group: List<SimilarArtist>,
     groupMbid: String?,
-    calls: MutableList<String>,
-): String? = null
+    @Suppress("UNUSED_PARAMETER") calls: MutableList<String>,
+): String? =
+    group.firstOrNull { mbidOf(it) != null && mbidOf(it) == groupMbid }
+        ?.disambiguation
+        ?.takeIf { it.isNotBlank() }
 
-/** The URL this arm would attach to a merged group. */
+/** The URL this arm would attach to a merged group. This arm surfaces no link. */
 private fun armLink(
     group: List<SimilarArtist>,
     groupMbid: String?,
 ): String? = null
 
-private fun lastFmRow(obj: JSONObject) =
-    LastFmSimilarArtist(
-        name = obj.optString("name", ""),
-        matchScore = obj.optString("match", "0").toFloatOrNull() ?: 0f,
-        mbid = obj.optString("mbid").takeIf { it.isNotBlank() },
-    )
+private fun lastFmRow(obj: JSONObject) = LastFmSimilarArtist(
+    name = obj.optString("name", ""),
+    matchScore = obj.optString("match", "0").toFloatOrNull() ?: 0f,
+    mbid = obj.optString("mbid").takeIf { it.isNotBlank() },
+)
 
-private fun deezerRow(obj: JSONObject) = DeezerRelatedArtist(id = obj.optLong("id"), name = obj.optString("name", ""))
+private fun deezerRow(obj: JSONObject) =
+    DeezerRelatedArtist(id = obj.optLong("id"), name = obj.optString("name", ""))
 
-private fun labsRow(obj: JSONObject) =
-    ListenBrainzSimilarArtist(
-        artistMbid = obj.optString("artist_mbid"),
-        name = obj.optString("name"),
-        score = obj.optInt("score", 0),
-    )
+private fun labsRow(obj: JSONObject) = ListenBrainzSimilarArtist(
+    artistMbid = obj.optString("artist_mbid"),
+    name = obj.optString("name"),
+    score = obj.optInt("score", 0),
+    comment = obj.optString("comment").takeIf { it.isNotBlank() },
+)
 // ---- ARM BLOCK END ----
 
 private const val PROVIDER_LASTFM = "lastfm"

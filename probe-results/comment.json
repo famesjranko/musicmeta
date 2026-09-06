@@ -1,0 +1,318 @@
+{
+  "perArtist": [
+    {
+      "mergedTop10": [
+        "Thom Yorke|1.0000",
+        "Blur|0.7444",
+        "The Smashing Pumpkins|0.7371",
+        "Jeff Buckley|0.7206",
+        "Pixies|0.6539",
+        "The Strokes|0.6066",
+        "The Smiths|0.5262",
+        "Weezer|0.5018",
+        "Elliott Smith|0.4313",
+        "Björk|0.4275"
+      ],
+      "artist": "radiohead",
+      "extraCalls": 0,
+      "groups": 109,
+      "labelled": 45,
+      "linked": 0
+    },
+    {
+      "mergedTop10": [
+        "Boards of Canada|1.0000",
+        "Squarepusher|0.9873",
+        "Autechre|0.9550",
+        "Plaid|0.6527",
+        "Burial|0.6341",
+        "AFX|0.5942",
+        "Four Tet|0.5567",
+        "µ-Ziq|0.5172",
+        "Polygon Window|0.4527",
+        "Casino Versus Japan|0.4434"
+      ],
+      "artist": "aphex-twin",
+      "extraCalls": 0,
+      "groups": 118,
+      "labelled": 46,
+      "linked": 0
+    },
+    {
+      "mergedTop10": [
+        "A$AP Rocky|1.0000",
+        "Jay Rock|0.9635",
+        "J. Cole|0.9537",
+        "Schoolboy Q|0.9282",
+        "Kanye West|0.9264",
+        "Baby Keem|0.8860",
+        "Black Hippy|0.8740",
+        "JID|0.8261",
+        "Pusha T|0.7348",
+        "Joey Bada$$|0.6683"
+      ],
+      "artist": "kendrick-lamar",
+      "extraCalls": 0,
+      "groups": 110,
+      "labelled": 53,
+      "linked": 0
+    },
+    {
+      "mergedTop10": [
+        "Stevie Nicks|1.0000",
+        "The Rolling Stones|0.8758",
+        "Elton John|0.7597",
+        "Eric Clapton|0.7415",
+        "David Bowie|0.7321",
+        "Paul McCartney|0.6343",
+        "Bruce Springsteen|0.6134",
+        "George Harrison|0.5778",
+        "Electric Light Orchestra|0.5456",
+        "The Beatles|0.5089"
+      ],
+      "artist": "fleetwood-mac",
+      "extraCalls": 0,
+      "groups": 106,
+      "labelled": 54,
+      "linked": 0
+    },
+    {
+      "mergedTop10": [
+        "Aphex Twin|1.0000",
+        "Autechre|0.8450",
+        "Squarepusher|0.6880",
+        "Plaid|0.6800",
+        "Casino Versus Japan|0.6621",
+        "Seefeel|0.4648",
+        "Air|0.4122",
+        "Massive Attack|0.3594",
+        "Four Tet|0.3340",
+        "Darkside|0.3280"
+      ],
+      "artist": "boards-of-canada",
+      "extraCalls": 0,
+      "groups": 113,
+      "labelled": 42,
+      "linked": 0
+    },
+    {
+      "mergedTop10": [
+        "KSLV Noh|1.0000",
+        "Dxrk ダーク|0.8655",
+        "SHADXWBXRN|0.7078",
+        "MC Orsen|0.6764",
+        "Mista Playa|0.5362",
+        "Pharmacist|0.5121",
+        "MoonDeity|0.4698",
+        "ONIMXRU|0.4672",
+        "VISXGE|0.4511",
+        "Archez|0.4460"
+      ],
+      "artist": "4wheel",
+      "extraCalls": 0,
+      "groups": 35,
+      "labelled": 0,
+      "linked": 0
+    },
+    {
+      "mergedTop10": [
+        "BigDaddy|1.0000",
+        "Juky San|0.7635",
+        "Emcee L (Da LAB)|0.7635",
+        "Amee|0.7291",
+        "PHÚC DU|0.6948",
+        "Umie|0.6823",
+        "Suni Hạ Linh|0.6610",
+        "Hoang Thuy Linh|0.6604",
+        "Takej Minh Huy|0.6341",
+        "Binz|0.6260"
+      ],
+      "artist": "changg",
+      "extraCalls": 0,
+      "groups": 39,
+      "labelled": 0,
+      "linked": 0
+    },
+    {
+      "mergedTop10": [
+        "Jutes|1.0000",
+        "Spiritbox|0.9471",
+        "Bad Omens|0.8796",
+        "Amira Elfeky|0.8176",
+        "breakk.away|0.6939",
+        "Dayseeker|0.6648",
+        "The Home Team|0.6314",
+        "Bad Omens|0.6251",
+        "The Plot In You|0.5486",
+        "Thornhill|0.5437"
+      ],
+      "artist": "sleep-token",
+      "extraCalls": 0,
+      "groups": 129,
+      "labelled": 51,
+      "linked": 0
+    },
+    {
+      "mergedTop10": [
+        "PJ Harvey|1.0000",
+        "Portishead|0.9348",
+        "Massive Attack|0.8700",
+        "Air|0.8355",
+        "Goldfrapp|0.7328",
+        "Kate Bush|0.7084",
+        "Archive|0.7058",
+        "Arca|0.7058",
+        "UNKLE|0.6132",
+        "The Sugarcubes|0.6131"
+      ],
+      "artist": "bjork",
+      "extraCalls": 0,
+      "groups": 121,
+      "labelled": 47,
+      "linked": 0
+    },
+    {
+      "mergedTop10": [
+        "Ebo Taylor|1.0000",
+        "Tony Allen|0.9649",
+        "Femi Kuti|0.7711",
+        "Manu Dibango|0.7268",
+        "The Funkees|0.7077",
+        "Seun Kuti|0.4849",
+        "Antibalas|0.4041",
+        "The Lijadu Sisters|0.3794",
+        "The Budos Band|0.3145",
+        "Orchestre Poly-Rythmo de Cotonou|0.3109"
+      ],
+      "artist": "fela-kuti",
+      "extraCalls": 0,
+      "groups": 122,
+      "labelled": 33,
+      "linked": 0
+    },
+    {
+      "mergedTop10": [
+        "Avishai Cohen|1.0000",
+        "Brad Mehldau|0.8001",
+        "Aaron Parks|0.7460",
+        "Esbjörn Svensson Trio|0.6004",
+        "Lars Danielsson|0.5519",
+        "Bill Laurance|0.5365",
+        "GoGo Penguin|0.4203",
+        "Hiromi|0.4065",
+        "Mammal Hands|0.4008",
+        "The Bad Plus|0.4005"
+      ],
+      "artist": "tigran-hamasyan",
+      "extraCalls": 0,
+      "groups": 117,
+      "labelled": 48,
+      "linked": 0
+    },
+    {
+      "mergedTop10": [
+        "Burial & Four Tet|1.0000",
+        "Four Tet|0.9324",
+        "Kode9|0.9073",
+        "Aphex Twin|0.8932",
+        "Boards of Canada|0.8363",
+        "Burial & Four Tet & Thom Yorke|0.7794",
+        "Zomby|0.7739",
+        "Mount Kimbie|0.5790",
+        "Blackdown|0.5781",
+        "Skream|0.5474"
+      ],
+      "artist": "burial",
+      "extraCalls": 0,
+      "groups": 107,
+      "labelled": 44,
+      "linked": 0
+    }
+  ],
+  "extraUpstreamCallDetail": [],
+  "groupsLinked": 0,
+  "extraUpstreamCalls": 0,
+  "groupsLabelled": 463,
+  "groupsTotal": 1226,
+  "arm": "comment",
+  "splitPairs": [
+    {
+      "entries": [
+        {
+          "mbid": "eecada09-acfc-472d-ae55-e9e5a43f12d8",
+          "link": null,
+          "contributors": [
+            "deezer",
+            "listenbrainz"
+          ],
+          "label": "metalcore/post-metal"
+        },
+        {
+          "mbid": "8834d8b5-72a4-4a6e-9d35-3a041b8579fa",
+          "link": null,
+          "contributors": ["lastfm"],
+          "label": null
+        }
+      ],
+      "artist": "sleep-token",
+      "name": "bad omens"
+    },
+    {
+      "entries": [
+        {
+          "mbid": "9c935736-7530-41e4-b776-1dbcf534c061",
+          "link": null,
+          "contributors": [
+            "deezer",
+            "listenbrainz"
+          ],
+          "label": "Canadian metalcore"
+        },
+        {
+          "mbid": "a39ad456-a697-4f32-aa36-c107f654d318",
+          "link": null,
+          "contributors": ["lastfm"],
+          "label": null
+        }
+      ],
+      "artist": "sleep-token",
+      "name": "spiritbox"
+    },
+    {
+      "entries": [
+        {
+          "mbid": "56eb02c4-1f16-4613-8bb3-b4a752283fc3",
+          "link": null,
+          "contributors": ["listenbrainz"],
+          "label": "UK experimental metal"
+        },
+        {
+          "mbid": "e9ea0fbc-ccc7-4e98-9290-0a41aa848fa2",
+          "link": null,
+          "contributors": ["lastfm"],
+          "label": null
+        }
+      ],
+      "artist": "sleep-token",
+      "name": "loathe"
+    },
+    {
+      "entries": [
+        {
+          "mbid": "beb404c4-9d0b-4042-a56c-aad7673c677d",
+          "link": null,
+          "contributors": ["listenbrainz"],
+          "label": "electrojazz duo from New York"
+        },
+        {
+          "mbid": "21006fdb-2e22-4950-91ed-8575a1a96b58",
+          "link": null,
+          "contributors": ["lastfm"],
+          "label": null
+        }
+      ],
+      "artist": "tigran-hamasyan",
+      "name": "sungazer"
+    }
+  ]
+}
