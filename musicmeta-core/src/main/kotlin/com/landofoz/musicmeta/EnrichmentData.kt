@@ -294,15 +294,19 @@ public data class SimilarTrack(
      * ranks the *artist's* similarity to the seed artist, not similarity between the tracks
      * themselves, applied uniformly to that artist's top tracks. A single non-nullable field is
      * kept (rather than a distinct field per source, as [SimilarAlbum.artistMatchScore] does for
-     * albums) because [SimilarTrackMerger][com.landofoz.musicmeta.engine.SimilarTrackMerger]
-     * already keeps the genuine Last.fm score on overlap, so provenance is enough to interpret it.
+     * albums) because [sources] names which of those scales the figure came from, and that is what
+     * a caller needs to interpret it.
      *
-     * On a merged answer the merger divides every score by the largest, so the top entry is 1.0 and
-     * a score says where a track sat in *that* merge — comparing one against a score from another
-     * answer, or against the number a provider reported, means nothing. A list in which every entry
-     * scored zero stays at zero, having no scale to rank against. Catalog filtering
-     * (`catalogFilterMode`) runs after the merge and reads this score for nothing: `AVAILABLE_ONLY`
-     * can remove the 1.0 entry outright, and `AVAILABLE_FIRST` reorders without touching a score.
+     * On a merged answer it is a *position within that answer*, not a similarity measurement.
+     * [SimilarTrackMerger][com.landofoz.musicmeta.engine.SimilarTrackMerger] takes Last.fm's figure
+     * un-summed where Last.fm contributed and sums the other contributors' where it did not, then
+     * divides every result by the largest, so the top entry is 1.0. Comparing one score against
+     * another answer's, or against the number a provider reported, means nothing — and with three
+     * or more contributors a Last.fm entry can rank below one that two other providers agree on. A
+     * list in which every entry scored zero stays at zero, having no scale to rank against. Catalog
+     * filtering (`catalogFilterMode`) runs after the merge and reads this score for nothing:
+     * `AVAILABLE_ONLY` can remove the 1.0 entry outright, and `AVAILABLE_FIRST` reorders without
+     * touching a score.
      */
     val matchScore: Float,
     val identifiers: EnrichmentIdentifiers = EnrichmentIdentifiers(),

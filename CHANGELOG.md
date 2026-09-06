@@ -60,6 +60,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `EnrichmentRequest.forAlbum`'s pre-`trackCount`/`year` overload is removed: source is unaffected (both default), but a `.jar` compiled against 0.12.0 throws `NoSuchMethodError` until recompiled
 - `SimilarArtist.matchScore` is now rank in its own merged list, top entry 1.0, not a sum clamped at 1.0: merged order and every score move; a cached list reads on the old scale until you clear it
 - `SimilarArtist` gains a trailing `disambiguation` parameter: source-compatible via named arguments, but its constructor and `copy` descriptors move, so an older `.jar` needs recompiling (#357)
+- `SimilarTrack.matchScore` is a position in its own merged list (top entry 1.0), not a clamped sum: with a third provider a Last.fm track can rank below one two others agree on; re-read a threshold
 
 ### Added
 - `SimilarArtist.disambiguation` carries MusicBrainz's words for the act — "Canadian metalcore" — so two similar artists sharing a name read apart; null where nothing described it (#357)
@@ -110,7 +111,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Two published-surface conventions documented: every score is a `Float` on 0.0-1.0, every date a `String` in ISO-8601 and every `year` an `Int?` — with their frozen exceptions named
 
 ### Fixed
-- `SimilarTrack.matchScore` is rescaled against the merged list's own maximum instead of clamped at 1.0, so a third similar-track provider no longer flattens the head of the list into one long tie
 - `SimilarTrack` MusicBrainz ids from Last.fm documented as dead in MusicBrainz over half the time, and still passed through: validating by search would drop 12.5% of the ids that work
 - Last.fm's similar-artist MusicBrainz ids documented as sometimes naming the wrong act (not stale) and passed through unchanged; corroboration was measured and costs more than it corrects
 - `SIMILAR_ALBUMS` now seeds from the requested album's own Deezer artist id, not a name search that broke a homonym tie on fan count; an unresolvable homonym is `NotFound`, not another act's list
@@ -164,6 +164,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Migration note
 If you use `EnrichmentCache`, clear it after upgrading from 0.12.0 or earlier: a cached `SIMILAR_ARTISTS` list decodes on the old summed-and-clamped `matchScore` scale.
+The same is true of a cached `SIMILAR_TRACKS` list merged with a provider of your own.
 Until cleared, a cached list and a fresh one are not comparable, and a cached entry may still hold Discogs' `Unknown` country sentinel.
 
 ## [0.12.0] - 2026-08-18

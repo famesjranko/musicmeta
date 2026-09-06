@@ -9,17 +9,20 @@ import com.landofoz.musicmeta.SimilarTrack
 /**
  * Deduplicates and merges similar track results from multiple providers.
  *
- * Additive scoring: tracks recommended by multiple providers rank higher — *except* when Last.fm
- * (genuine track-level similarity) and Deezer (artist-similarity applied to an artist's top tracks,
- * see [SimilarTrack.matchScore]) agree on the same track. There, summing would let an
- * artist-derived approximation inflate a real score, so Last.fm's score wins outright instead.
+ * Additive scoring: tracks recommended by multiple providers rank higher — *except* where Last.fm
+ * (genuine track-level similarity) and a provider like Deezer (artist-similarity applied to an
+ * artist's top tracks, see [SimilarTrack.matchScore]) agree on the same track. There, summing would
+ * let an artist-derived approximation inflate a real score, so Last.fm's figure is taken un-summed.
  *
- * The scores are then rescaled against the merged list's own maximum rather than clamped, so a
+ * That exemption is about the **raw** figure a group carries, not about where the group ranks. Every
+ * group's figure is then rescaled against the merged list's own maximum rather than clamped, so a
  * [SimilarTrack.matchScore] is a position within *this* merge and nothing else — it is not
- * comparable against another list's, nor against the figure a provider reported. That position is
- * fixed at merge time; a served result can still differ from it, because catalog filtering
- * (`catalogFilterMode`) runs afterward and may drop the top-scored entry or reorder the list
- * without touching any score.
+ * comparable against another list's, nor against the figure a provider reported. With three or more
+ * contributors a Last.fm group can therefore rank below a group two others agree on, which is what
+ * additive scoring means: the un-summed figure is protected from inflation, not from being
+ * outranked. That position is fixed at merge time; a served result can still differ from it, because
+ * catalog filtering (`catalogFilterMode`) runs afterward and may drop the top-scored entry or
+ * reorder the list without touching any score.
  */
 internal object SimilarTrackMerger : ResultMerger {
 
