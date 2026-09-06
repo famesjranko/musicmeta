@@ -1,0 +1,5 @@
+{
+  "wikidata-sitelink-radiohead.json": "ids=Q44190&props=sitelinks",
+  "wikidata-sitelink-no-english-article.json": "ids=Q43779&props=sitelinks",
+  "wikidata-sitelink-missing-entity.json": "ids=Q999999999&props=sitelinks"
+}
