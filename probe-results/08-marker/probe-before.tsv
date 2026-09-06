@@ -1,40 +1,40 @@
 item	kind	provider	type	outcome	side	pickedArtist	sifts	requests	ms	detail
-A1	artist	deezer	ARTIST_PHOTO	REJECT	ARTIST-SIDE		artist:3/a0/t-1[]	1	495	NotFound
-A1	artist	itunes	ARTIST_DISCOGRAPHY	REJECT	ARTIST-SIDE		artist:1/a0/t-1[]	1	51	NotFound
-A1	artist	discogs	ARTIST_PHOTO	REJECT	ARTIST-SIDE		artist:1/a0/t-1[]	1	647	NotFound
-A2	artist	deezer	ARTIST_PHOTO	REJECT	ARTIST-SIDE		artist:10/a0/t-1[]	1	485	NotFound
-A2	artist	itunes	ARTIST_DISCOGRAPHY	REJECT	ARTIST-SIDE		artist:2/a0/t-1[]	1	40	NotFound
-A2	artist	discogs	ARTIST_PHOTO	REJECT	ARTIST-SIDE		artist:1/a0/t-1[]	1	675	NotFound
-A3	artist	deezer	ARTIST_PHOTO	MATCH		Кино	artist:10/a1/t-1[]	1	387	conf=0.8
-A3	artist	itunes	ARTIST_DISCOGRAPHY	MATCH		Кино	artist:10/a1/t-1[]	2	3271	conf=0.8
-A3	artist	discogs	ARTIST_PHOTO	MATCH		Кино	artist:10/a2/t-1[]	2	1771	conf=0.6
-A4	artist	deezer	ARTIST_PHOTO	MATCH		Χάρις Αλεξίου	artist:1/a1/t-1[]	1	380	conf=0.8
-A4	artist	itunes	ARTIST_DISCOGRAPHY	MATCH		Χάρις Αλεξίου	artist:2/a1/t-1[]	2	3051	conf=0.8
-A4	artist	discogs	ARTIST_PHOTO	MATCH		Χάρις Αλεξίου	artist:10/a1/t-1[]	2	1864	conf=0.6
-A5	artist	deezer	ARTIST_PHOTO	REJECT	ARTIST-SIDE		artist:10/a0/t-1[]	1	485	NotFound
-A5	artist	itunes	ARTIST_DISCOGRAPHY	MATCH		فيروز	artist:10/a2/t-1[]	2	3054	conf=0.8
-A5	artist	discogs	ARTIST_PHOTO	REJECT	ARTIST-SIDE		artist:10/a0/t-1[]	1	323	NotFound
-B1	album	deezer	ALBUM_ART	REJECT	ARTIST-SIDE		album:0/a0/t0[];albumAlias:0/a0/t0[];album:0/a0/t0[];album:0/a0/t0[];album:0/a0/t0[];album:0/a0/t0[];album:0/a0/t0[]	1	409	NotFound
-B1	album	itunes	ALBUM_ART	REJECT	ARTIST-SIDE		album:1/a0/t0[Hokkaido University of Education Super Winds & Kenichi Watanabe];albumAlias:1/a0/t0[];album:0/a0/t0[];album:0/a0/t0[];album:0/a0/t0[];album:0/a0/t0[];album:0/a0/t0[]	1	31	NotFound
-B1	album	discogs	ALBUM_ART	REJECT	ARTIST-SIDE		discogsAlbum:0/a0/t0[];discogsAlbumAlias:0/a0/t0[]	1	276	NotFound
-B2	album	deezer	ALBUM_ART	MATCH		IU	album:1/a0/t1[IU];albumAlias:1/a1/t1[];album:1/a1/t1[IU]	1	405	conf=0.76
-B2	album	itunes	ALBUM_ART	MATCH		IU	album:1/a0/t1[IU];albumAlias:1/a1/t1[];album:1/a1/t1[IU]	1	1504	conf=0.76
-B2	album	discogs	ALBUM_ART	REJECT	ARTIST-SIDE		discogsAlbum:0/a0/t0[];discogsAlbumAlias:0/a0/t0[]	1	337	NotFound
-B3	album	deezer	ALBUM_ART	MATCH		Кино	album:4/a3/t2[Кино|Кино|Кино Фильм|Кино]	1	410	conf=0.8
-B3	album	itunes	ALBUM_ART	MATCH		Kino	album:3/a0/t1[Kino|Кино Фильм|Viktor Tsoi & Kino];albumAlias:3/a1/t1[];album:0/a0/t0[];album:1/a1/t1[Kino]	1	43	conf=0.76
-B3	album	discogs	ALBUM_ART	MATCH		Кино	discogsAlbum:5/a5/t5[Кино - Группа Крови|Кино - Группа Крови|Кино - Группа Крови|Кино - Группа Крови|Кино - Группа Крови]	1	369	conf=0.8
+A1	artist	deezer	ARTIST_PHOTO	MATCH		Tokyo Incidents	artist:3/a0/t-1[];artistAlias:3/a1/t-1[]	1	510	conf=0.76
+A1	artist	itunes	ARTIST_DISCOGRAPHY	MATCH		Tokyo Incidents	artist:1/a0/t-1[];artistAlias:1/a1/t-1[]	2	3067	conf=0.76
+A1	artist	discogs	ARTIST_PHOTO	MATCH		Tokyo Jihen	artist:1/a0/t-1[];artistAlias:1/a1/t-1[]	2	1925	conf=0.6
+A2	artist	deezer	ARTIST_PHOTO	MATCH		IU	artist:10/a0/t-1[];artistAlias:10/a1/t-1[]	1	513	conf=0.76
+A2	artist	itunes	ARTIST_DISCOGRAPHY	MATCH		IU	artist:2/a0/t-1[];artistAlias:2/a2/t-1[]	2	3177	conf=0.76
+A2	artist	discogs	ARTIST_PHOTO	MATCH		IU	artist:1/a0/t-1[];artistAlias:1/a1/t-1[]	2	1735	conf=0.6
+A3	artist	deezer	ARTIST_PHOTO	MATCH		Кино	artist:10/a1/t-1[]	1	397	conf=0.8
+A3	artist	itunes	ARTIST_DISCOGRAPHY	MATCH		Кино	artist:10/a1/t-1[]	2	3152	conf=0.8
+A3	artist	discogs	ARTIST_PHOTO	MATCH		Кино	artist:10/a2/t-1[]	2	1865	conf=0.6
+A4	artist	deezer	ARTIST_PHOTO	MATCH		Χάρις Αλεξίου	artist:1/a1/t-1[]	1	410	conf=0.8
+A4	artist	itunes	ARTIST_DISCOGRAPHY	MATCH		Χάρις Αλεξίου	artist:2/a1/t-1[]	2	3338	conf=0.8
+A4	artist	discogs	ARTIST_PHOTO	MATCH		Χάρις Αλεξίου	artist:10/a1/t-1[]	2	1783	conf=0.6
+A5	artist	deezer	ARTIST_PHOTO	MATCH		Fairuz	artist:10/a0/t-1[];artistAlias:10/a1/t-1[]	1	411	conf=0.76
+A5	artist	itunes	ARTIST_DISCOGRAPHY	MATCH		فيروز	artist:10/a2/t-1[]	2	3421	conf=0.8
+A5	artist	discogs	ARTIST_PHOTO	REJECT	BOTH-OK	Fairuz = فيروز	artist:10/a0/t-1[];artistAlias:10/a1/t-1[]	2	1799	NotFound
+B1	album	deezer	ALBUM_ART	REJECT	ARTIST-SIDE		album:0/a0/t0[];albumAlias:0/a0/t0[];album:0/a0/t0[];album:0/a0/t0[];album:0/a0/t0[];album:0/a0/t0[];album:0/a0/t0[]	1	422	NotFound
+B1	album	itunes	ALBUM_ART	REJECT	ARTIST-SIDE		album:1/a0/t0[Hokkaido University of Education Super Winds & Kenichi Watanabe];albumAlias:1/a0/t0[];album:0/a0/t0[];album:0/a0/t0[];album:0/a0/t0[];album:0/a0/t0[];album:0/a0/t0[]	1	383	NotFound
+B1	album	discogs	ALBUM_ART	REJECT	ARTIST-SIDE		discogsAlbum:0/a0/t0[];discogsAlbumAlias:0/a0/t0[]	1	324	NotFound
+B2	album	deezer	ALBUM_ART	MATCH		IU	album:1/a0/t1[IU];albumAlias:1/a1/t1[];album:1/a1/t1[IU]	1	411	conf=0.76
+B2	album	itunes	ALBUM_ART	MATCH		IU	album:1/a0/t1[IU];albumAlias:1/a1/t1[];album:1/a1/t1[IU]	1	1867	conf=0.76
+B2	album	discogs	ALBUM_ART	REJECT	ARTIST-SIDE		discogsAlbum:0/a0/t0[];discogsAlbumAlias:0/a0/t0[]	1	284	NotFound
+B3	album	deezer	ALBUM_ART	MATCH		Кино	album:4/a3/t2[Кино|Кино|Кино Фильм|Кино]	1	334	conf=0.8
+B3	album	itunes	ALBUM_ART	MATCH		Kino	album:3/a0/t1[Kino|Кино Фильм|Viktor Tsoi & Kino];albumAlias:3/a1/t1[];album:0/a0/t0[];album:1/a1/t1[Kino]	1	2063	conf=0.76
+B3	album	discogs	ALBUM_ART	MATCH		Кино	discogsAlbum:5/a5/t5[Кино - Группа Крови|Кино - Группа Крови|Кино - Группа Крови|Кино - Группа Крови|Кино - Группа Крови]	1	242	conf=0.8
 B4	album	deezer	ALBUM_ART	REJECT	ARTIST-SIDE		album:0/a0/t0[];albumAlias:0/a0/t0[];album:0/a0/t0[];album:0/a0/t0[];album:0/a0/t0[];album:0/a0/t0[];album:0/a0/t0[];album:0/a0/t0[];album:0/a0/t0[];album:0/a0/t0[];album:0/a0/t0[];album:0/a0/t0[];album:0/a0/t0[];album:0/a0/t0[]	1	409	NotFound
-B4	album	itunes	ALBUM_ART	REJECT	ARTIST-SIDE		album:1/a0/t0[Manos Loizos & Haris Alexiou];albumAlias:1/a0/t0[];album:0/a0/t0[];album:0/a0/t0[];album:0/a0/t0[];album:0/a0/t0[];album:0/a0/t0[];album:0/a0/t0[];album:0/a0/t0[];album:0/a0/t0[];album:0/a0/t0[];album:0/a0/t0[];album:0/a0/t0[];album:0/a0/t0[]	1	1517	NotFound
-B4	album	discogs	ALBUM_ART	MATCH		Χάρις Αλεξίου, Αντώνης Βαρδής	discogsAlbum:5/a5/t5[Χάρις Αλεξίου, Αντώνης Βαρδής - Ξημερώνει|Χάρις Αλεξίου, Onirama - Ξημερώνει|Χάρις Αλεξίου, Αντώνη Βαρδή* - Ξημερώνει|Χάρις Αλεξίου, Αντώνης Βαρδής - Ξημερώνει|Χάρις Αλεξίου, Αντώνης Βαρδής - Ξημερώνει]	1	326	conf=0.8
-B5	album	deezer	ALBUM_ART	REJECT	ARTIST-SIDE		album:0/a0/t0[];albumAlias:0/a0/t0[];album:0/a0/t0[];album:0/a0/t0[];album:0/a0/t0[];album:0/a0/t0[];album:0/a0/t0[];album:0/a0/t0[]	1	381	NotFound
-B5	album	itunes	ALBUM_ART	REJECT	ARTIST-SIDE		album:0/a0/t0[];albumAlias:0/a0/t0[];album:0/a0/t0[];album:0/a0/t0[];album:0/a0/t0[];album:0/a0/t0[];album:0/a0/t0[];album:0/a0/t0[]	1	1967	NotFound
-B5	album	discogs	ALBUM_ART	REJECT	ARTIST-SIDE		discogsAlbum:0/a0/t0[];discogsAlbumAlias:0/a0/t0[]	1	286	NotFound
-C1	track	deezer	TRACK_METADATA	REJECT	NO-POOL			2	921	NotFound
-C2	track	deezer	TRACK_METADATA	REJECT	NO-POOL			2	1025	NotFound
-C3	track	deezer	TRACK_METADATA	MATCH-UNTRACED				1	462	conf=0.8
-C4	track	deezer	TRACK_METADATA	REJECT	NO-POOL			2	1024	NotFound
-C5	track	deezer	TRACK_METADATA	REJECT	NO-POOL			2	942	NotFound
-L1	album	deezer	ALBUM_ART	MATCH		Radiohead	album:5/a2/t1[Radiohead|Radiohead|Vitamin String Quartet|Mother Falcon|Molotov Cocktail Piano]	1	407	conf=0.8
-L1	album	itunes	ALBUM_ART	MATCH		Radiohead	album:5/a2/t1[Radiohead|Radiohead|Mother Falcon|Molotov Cocktail Piano|Vitamin String Quartet]	1	297	conf=0.8
-L1	album	discogs	ALBUM_ART	MATCH		Radiohead	discogsAlbum:5/a5/t4[Radiohead - Ok. Компьютер (OK Computer)|Radiohead - OK Computer|Radiohead - OK Computer|Radiohead - OK Computer|Radiohead - OK Computer]	1	317	conf=0.8
-TOTALS	74	api.deezer.com=20,api.discogs.com=13,itunes.apple.com=14,musicbrainz.org=27
+B4	album	itunes	ALBUM_ART	REJECT	ARTIST-SIDE		album:1/a0/t0[Manos Loizos & Haris Alexiou];albumAlias:1/a0/t0[];album:0/a0/t0[];album:0/a0/t0[];album:0/a0/t0[];album:0/a0/t0[];album:0/a0/t0[];album:0/a0/t0[];album:0/a0/t0[];album:0/a0/t0[];album:0/a0/t0[];album:0/a0/t0[];album:0/a0/t0[];album:0/a0/t0[]	1	1952	NotFound
+B4	album	discogs	ALBUM_ART	MATCH		Χάρις Αλεξίου, Αντώνης Βαρδής	discogsAlbum:5/a5/t5[Χάρις Αλεξίου, Αντώνης Βαρδής - Ξημερώνει|Χάρις Αλεξίου, Onirama - Ξημερώνει|Χάρις Αλεξίου, Αντώνη Βαρδή* - Ξημερώνει|Χάρις Αλεξίου, Αντώνης Βαρδής - Ξημερώνει|Χάρις Αλεξίου, Αντώνης Βαρδής - Ξημερώνει]	1	302	conf=0.8
+B5	album	deezer	ALBUM_ART	REJECT	ARTIST-SIDE		album:0/a0/t0[];albumAlias:0/a0/t0[];album:0/a0/t0[];album:0/a0/t0[];album:0/a0/t0[];album:0/a0/t0[];album:0/a0/t0[];album:0/a0/t0[]	1	383	NotFound
+B5	album	itunes	ALBUM_ART	REJECT	ARTIST-SIDE		album:0/a0/t0[];albumAlias:0/a0/t0[];album:0/a0/t0[];album:0/a0/t0[];album:0/a0/t0[];album:0/a0/t0[];album:0/a0/t0[];album:0/a0/t0[]	1	1989	NotFound
+B5	album	discogs	ALBUM_ART	REJECT	ARTIST-SIDE		discogsAlbum:0/a0/t0[];discogsAlbumAlias:0/a0/t0[]	1	265	NotFound
+C1	track	deezer	TRACK_METADATA	REJECT	NO-POOL			2	892	NotFound
+C2	track	deezer	TRACK_METADATA	REJECT	NO-POOL			2	910	NotFound
+C3	track	deezer	TRACK_METADATA	MATCH-UNTRACED				1	335	conf=0.8
+C4	track	deezer	TRACK_METADATA	REJECT	NO-POOL			2	1016	NotFound
+C5	track	deezer	TRACK_METADATA	REJECT	NO-POOL			2	1024	NotFound
+L1	album	deezer	ALBUM_ART	MATCH		Radiohead	album:5/a2/t1[Radiohead|Radiohead|Vitamin String Quartet|Mother Falcon|Molotov Cocktail Piano]	1	409	conf=0.8
+L1	album	itunes	ALBUM_ART	MATCH		Radiohead	album:5/a2/t1[Radiohead|Radiohead|Mother Falcon|Molotov Cocktail Piano|Vitamin String Quartet]	1	38	conf=0.8
+L1	album	discogs	ALBUM_ART	MATCH		Radiohead	discogsAlbum:5/a5/t4[Radiohead - Ok. Компьютер (OK Computer)|Radiohead - OK Computer|Radiohead - OK Computer|Radiohead - OK Computer|Radiohead - OK Computer]	1	372	conf=0.8
+TOTALS	68	api.deezer.com=20,api.discogs.com=16,itunes.apple.com=16,musicbrainz.org=16
