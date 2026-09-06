@@ -112,12 +112,7 @@ ALLOWLIST: dict[str, str] = {
 # `httpClient` calls that belong to no route this check can enumerate: a request made outside a
 # `*Api.kt`, or one no route in its own file reaches. Each is unpinnable where it stands, because a
 # pin names a URL its api client builds.
-UNENUMERABLE_CALL_SITES: dict[str, str] = {
-    "wikipedia/WikipediaProvider.kt#fetchWikidataTitle": (
-        "resolves a Wikipedia title from a Wikidata sitelink, and asks Wikidata from the provider "
-        "rather than through an api client, so no route names it and no pin can reach it"
-    ),
-}
+UNENUMERABLE_CALL_SITES: dict[str, str] = {}
 
 NO_PROVIDERS_FINDING = (
     f"::error::no `*Api.kt` found under `{PROVIDER_ROOT}`, so this check scanned nothing. Fix the "

@@ -78,7 +78,7 @@ than it looks like, each learned the hard way.
   pulls next — PR #285 did exactly that, fixed by #290. A green `demo-canary` is not evidence the
   demo tree passes `make check`.
 
-- **The daily schema pin gates nothing, and covers 17 routes across the 11 providers.** It runs on
+- **The daily schema pin gates nothing, and covers 19 routes across the 11 providers.** It runs on
   a schedule in `provider-drift.yml`, so a merge never waits on it and a provider outage can never
   block this repo; the signal is the failed run's email. Each route is requested once and checked
   for named JSON paths still being present and non-blank — around 90 paths, against the ~304
@@ -103,12 +103,12 @@ than it looks like, each learned the hard way.
   the key. Deciding a route is genuinely not worth pinning is still a human's call, and the
   allowlist entry is where that call is written down.
 
-- **The route enumeration is same-file, and one request escapes it.** A route is found by following
-  calls within its own `*Api.kt`, so a fetch helper split into another file would take its callers
-  out of the enumeration; the check's second list reports an `httpClient` call no route reaches, so
-  the split announces itself rather than shrinking the route count quietly. One call is on that list
-  today: `WikipediaProvider` asks Wikidata for a sitelink itself rather than through an api client,
-  which no route names and no pin can reach.
+- **The route enumeration is same-file.** A route is found by following calls within its own
+  `*Api.kt`, so a fetch helper split into another file would take its callers out of the
+  enumeration; the check's second list reports an `httpClient` call no route reaches, so the split
+  announces itself rather than shrinking the route count quietly. That list is empty today, which
+  means every request this library makes is attributed to a route — not that the enumeration would
+  survive the split.
 
 - **A red e2e run means an upstream answered, not that one was unreachable.** Its assertions accept
   a `Success`, a `RateLimited`, and an `Error` of kind `NETWORK`, `RATE_LIMIT` or `TIMEOUT`: a

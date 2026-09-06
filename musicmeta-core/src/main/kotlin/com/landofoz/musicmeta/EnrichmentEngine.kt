@@ -367,6 +367,9 @@ public interface EnrichmentEngine {
             addProvider(MusicBrainzProvider(client, musicBrainzLimiter))
             addProvider(CoverArtArchiveProvider(client, coverArtArchiveLimiter))
             addProvider(WikidataProvider(client, wikidataLimiter))
+            // Wikipedia reaches two hosts: its own, and Wikidata for the sitelink that resolves an
+            // article title. `wikidataLimiter` is the same instance WikidataProvider holds, so the
+            // two providers queue on one limiter for the one host, per the rule above.
             addProvider(WikipediaProvider(client, wikipediaLimiter, wikidataLimiter))
             // One DeezerApi for both providers: it owns the call-scoped album scope, so sharing it
             // is what makes the album search they both need one request per call rather than two.
