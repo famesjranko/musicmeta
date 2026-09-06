@@ -61,10 +61,16 @@ internal class WikidataApi(
      *
      * A requested id that Wikidata has since redirected answers under the *target* id, so
      * `entities.<requested id>` is absent and the outcome is [EnwikiSitelink.NoEntity].
+     *
+     * No body at all is [EnwikiSitelink.UnreadableShape], not [EnwikiSitelink.NoEntity]:
+     * [bodyOrThrowTransient] hands back `null` for a 4xx, and this route answers an id it does not
+     * hold at 200 (§31). A 4xx here is a statement about the *request* — a parameter this route
+     * stopped accepting — so classifying it as "Wikidata has no such entity" would report a route
+     * that stopped serving us as an artist without a page.
      */
     suspend fun getEnwikiSitelink(wikidataId: String): EnwikiSitelink = rateLimiter.execute {
         val json = httpClient.fetchJsonResult(enwikiSitelinkUrl(wikidataId)).bodyOrThrowTransient()
-            ?: return@execute EnwikiSitelink.NoEntity
+            ?: return@execute EnwikiSitelink.UnreadableShape
         val entity = json.optJSONObject("entities")?.optJSONObject(wikidataId)
         if (entity == null || entity.has("missing")) return@execute EnwikiSitelink.NoEntity
         val sitelinks = entity.optJSONObject("sitelinks") ?: return@execute EnwikiSitelink.UnreadableShape

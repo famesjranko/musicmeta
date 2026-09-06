@@ -36,11 +36,15 @@ internal sealed interface EnwikiSitelink {
     data object NoArticle : EnwikiSitelink
 
     /**
-     * No usable entity in the answer — the id is marked `missing`, the response is keyed under a
-     * different id because the requested one is a redirect, or the request was shed with a 4xx.
+     * Wikidata answered, and holds no entity under the requested id — it is marked `missing`, or
+     * the answer is keyed under a different id because the requested one is now a redirect.
      */
     data object NoEntity : EnwikiSitelink
 
-    /** The entity is present and carries no `sitelinks` object, which this route always returns. */
+    /**
+     * The answer is not one this route can be read from: an entity present but carrying no
+     * `sitelinks` object, or no body at all. Both are the route having moved, never a fact about
+     * the artist, so this is the one case the caller logs.
+     */
     data object UnreadableShape : EnwikiSitelink
 }

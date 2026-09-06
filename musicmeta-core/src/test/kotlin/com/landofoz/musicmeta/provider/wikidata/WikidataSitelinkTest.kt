@@ -1,5 +1,6 @@
 package com.landofoz.musicmeta.provider.wikidata
 
+import com.landofoz.musicmeta.http.HttpResult
 import com.landofoz.musicmeta.http.RateLimiter
 import com.landofoz.musicmeta.testkit.UpstreamPools
 import com.landofoz.musicmeta.testutil.FakeHttpClient
@@ -58,6 +59,21 @@ class WikidataSitelinkTest {
 
         // Then - no entity, read off the marker rather than off the `sitelinks` it also lacks
         assertEquals(EnwikiSitelink.NoEntity, outcome)
+    }
+
+    @Test
+    fun `a 4xx is an unreadable shape, not Wikidata saying it holds no such entity`() = runTest {
+        // Given - a route that sheds the request, which bodyOrThrowTransient hands back as no body.
+        // This route answers an id it does not hold at 200, so a 4xx is about the request.
+        val http = FakeHttpClient()
+        http.givenHttpResult("props=sitelinks", HttpResult.ClientError(400, "unknown parameter"))
+
+        // When - the sitelink route is called
+        val outcome = api(http).getEnwikiSitelink("Q44190")
+
+        // Then - the shape is unreadable, which the caller logs, rather than a claim about the id
+        assertEquals(EnwikiSitelink.UnreadableShape, outcome)
+        assertNotEquals(EnwikiSitelink.NoEntity, outcome)
     }
 
     @Test

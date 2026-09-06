@@ -163,5 +163,12 @@ public class WikipediaProvider internal constructor(
 
     private companion object {
         const val TAG = "WikipediaProvider"
+
+        /**
+         * Unread here — the sitelink route builds its own URL. It stays because a `const val` in a
+         * private companion is still a public static field on the JVM, so deleting it is a break
+         * for a Java caller, and [TAG] leaks the same way: removing one of the pair buys nothing.
+         */
+        const val WIKIDATA_API = WikidataApi.BASE_URL
     }
 }

@@ -21,9 +21,10 @@ same parse it would be checking:
 
 ## Provenance
 
-Captured live on **2026-09-06** from
-`https://www.wikidata.org/w/api.php?action=wbgetentities&props=sitelinks&sitefilter=enwiki&format=json&ids=<id>`,
-one request per file, three ids:
+Captured live on **2026-09-06** from the URL `WikidataApi.enwikiSitelinkUrl` builds, parameter for
+parameter and in its order —
+`https://www.wikidata.org/w/api.php?action=wbgetentities&ids=<id>&props=sitelinks&sitefilter=enwiki&format=json`
+— one request per file, three ids:
 
 | File | id | What it is |
 |---|---|---|
