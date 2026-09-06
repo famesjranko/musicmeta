@@ -323,7 +323,9 @@ object Formatter {
         is EnrichmentData.Discography -> "${data.albums.size} albums"
         is EnrichmentData.Tracklist -> "${data.tracks.size} tracks"
         is EnrichmentData.SimilarTracks ->
-            data.tracks.take(3).joinToString(", ") { "${it.title} (rank ${formatScore(it.matchScore)})" }
+            data.tracks.take(3).joinToString(", ") {
+                "${it.title} — ${it.artist} (rank ${formatScore(it.matchScore)})"
+            }
         is EnrichmentData.ArtistLinks -> data.links.take(3).joinToString(", ") { it.type }
         is EnrichmentData.Credits -> {
             val cats = data.credits.groupBy { it.roleCategory ?: "other" }
@@ -337,7 +339,9 @@ object Formatter {
             "${data.source} " + (data.durationMs?.let { "${it / 1000}s " } ?: "") + "preview"
         is EnrichmentData.RadioPlaylist -> "${data.tracks.size} tracks"
         is EnrichmentData.SimilarAlbums ->
-            "${data.albums.size} albums: " + data.albums.take(3).joinToString(", ") { "${it.title} by ${it.artist}" }
+            "${data.albums.size} albums: " + data.albums.take(3).joinToString(", ") {
+                "${it.title} by ${it.artist}" + (it.year?.let { year -> " ($year)" } ?: "")
+            }
         is EnrichmentData.GenreDiscovery ->
             "${data.relatedGenres.size} genres: " +
                 data.relatedGenres.take(3).joinToString(", ") { "${it.name} (affinity ${formatScore(it.affinity)})" }
