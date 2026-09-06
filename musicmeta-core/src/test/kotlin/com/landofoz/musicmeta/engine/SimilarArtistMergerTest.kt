@@ -588,4 +588,81 @@ class SimilarArtistMergerTest {
         assertEquals(1, merged.size)
         assertEquals(listOf("listenbrainz", "lastfm"), merged.single().sources)
     }
+
+    // --- what a merged entry may be labelled with ---
+
+    @Test
+    fun `a group keeps the disambiguation of the member carrying the group's own id`() {
+        // Given - a described ListenBrainz row and an undescribed Last.fm row for the same MBID
+        val artists = listOf(
+            SimilarArtist(
+                name = "Loathe",
+                identifiers = EnrichmentIdentifiers(musicBrainzId = "56eb02c4-1f16-4613-8bb3-b4a752283fc3"),
+                matchScore = 0.5f,
+                sources = listOf("listenbrainz"),
+                disambiguation = "UK experimental metal",
+            ),
+            SimilarArtist(
+                name = "Loathe",
+                identifiers = EnrichmentIdentifiers(musicBrainzId = "56eb02c4-1f16-4613-8bb3-b4a752283fc3"),
+                matchScore = 0.4f,
+                sources = listOf("lastfm"),
+            ),
+        )
+
+        // When - merging the two entries
+        val merged = SimilarArtistMerger.mergeArtists(artists)
+
+        // Then - the merged entry carries the text, because it came from this group's own MusicBrainz record
+        assertEquals("UK experimental metal", merged.single().disambiguation)
+    }
+
+    @Test
+    fun `a same-name member carrying no id may not describe the group it was attached to`() {
+        // Given - an identified act, and a described row under the same name carrying no MBID at all.
+        // groupArtists attaches the second to the first by contributor order rather than by evidence,
+        // so its text is exactly as likely to belong to the other act of the same name.
+        val artists = listOf(
+            SimilarArtist(
+                name = "Bad Omens",
+                identifiers = EnrichmentIdentifiers(musicBrainzId = "8834d8b5-72a4-4a6e-9d35-3a041b8579fa"),
+                matchScore = 0.5f,
+                sources = listOf("lastfm"),
+            ),
+            SimilarArtist(
+                name = "Bad Omens",
+                matchScore = 0.4f,
+                sources = listOf("deezer"),
+                disambiguation = "metalcore/post-metal",
+            ),
+        )
+
+        // When - merging the two entries
+        val merged = SimilarArtistMerger.mergeArtists(artists)
+
+        // Then - one group, and it is not labelled: a blank beats the other act's description
+        assertEquals(1, merged.size)
+        assertEquals(null, merged.single().disambiguation)
+    }
+
+    @Test
+    fun `describing a group does not add a source it never had`() {
+        // Given - a described ListenBrainz row
+        val artists = listOf(
+            SimilarArtist(
+                name = "Spiritbox",
+                identifiers = EnrichmentIdentifiers(musicBrainzId = "9c935736-7530-41e4-b776-1dbcf534c061"),
+                matchScore = 0.5f,
+                sources = listOf("listenbrainz"),
+                disambiguation = "Canadian metalcore",
+            ),
+        )
+
+        // When - merging it
+        val merged = SimilarArtistMerger.mergeArtists(artists)
+
+        // Then - sources still names who recommended the artist, not who described it
+        assertEquals(listOf("listenbrainz"), merged.single().sources)
+        assertEquals("Canadian metalcore", merged.single().disambiguation)
+    }
 }

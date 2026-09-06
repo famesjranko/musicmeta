@@ -1,0 +1,56 @@
+[
+  {
+    "artist_mbid": "a74b1b7f-71a5-4011-9441-d0b5e4122711",
+    "name": "Radiohead",
+    "comment": "",
+    "type": "Group",
+    "gender": null,
+    "score": 6682,
+    "reference_mbid": "87c5dedd-371d-4a53-9f7f-80522fb7f3cb"
+  },
+  {
+    "artist_mbid": "8f6bd1e4-fbe1-4f50-aa9b-94c450ec0f11",
+    "name": "Portishead",
+    "comment": "",
+    "type": "Group",
+    "gender": null,
+    "score": 4936,
+    "reference_mbid": "87c5dedd-371d-4a53-9f7f-80522fb7f3cb"
+  },
+  {
+    "artist_mbid": "10adbe5e-a2c0-4bf3-8249-2b4cbf6e6ca8",
+    "name": "Massive Attack",
+    "comment": "",
+    "type": "Group",
+    "gender": null,
+    "score": 4912,
+    "reference_mbid": "87c5dedd-371d-4a53-9f7f-80522fb7f3cb"
+  },
+  {
+    "artist_mbid": "5441c29d-3602-4898-b1a1-b77fa23b8e50",
+    "name": "David Bowie",
+    "comment": "English singer‐songwriter",
+    "type": "Person",
+    "gender": "Male",
+    "score": 3775,
+    "reference_mbid": "87c5dedd-371d-4a53-9f7f-80522fb7f3cb"
+  },
+  {
+    "artist_mbid": "b10bbbfc-cf9e-42e0-be17-e2c3e1d2600d",
+    "name": "The Beatles",
+    "comment": "UK rock band, “The Fab Four”",
+    "type": "Group",
+    "gender": null,
+    "score": 3681,
+    "reference_mbid": "87c5dedd-371d-4a53-9f7f-80522fb7f3cb"
+  },
+  {
+    "artist_mbid": "cb67438a-7f50-4f2b-a6f1-2bb2729fd538",
+    "name": "Air",
+    "comment": "French band",
+    "type": "Group",
+    "gender": null,
+    "score": 3658,
+    "reference_mbid": "87c5dedd-371d-4a53-9f7f-80522fb7f3cb"
+  }
+]

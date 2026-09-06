@@ -260,6 +260,40 @@ class SchemaPinVerdictTest {
     }
 
     @Test
+    fun `a star index is present when any one element carries the field`() {
+        // Given - an array whose first element leaves the field blank and whose third fills it
+        val body = org.json.JSONArray(
+            """[{"comment":""},{"comment":null},{"comment":"Scottish electronic duo"}]""",
+        )
+        // When - the field is asked for at a fixed index and at a star index
+        // Then - the fixed index reports the blank, and the star index finds the element that has it
+        assertTrue(!isPresent(body, "[0].comment"))
+        assertTrue(isPresent(body, "[*].comment"))
+    }
+
+    @Test
+    fun `a star index reaches inside a named array and past a fixed index`() {
+        // Given - a body whose described artist is not the first one
+        val body = JSONObject("""{"artists":[{"id":"a"},{"id":"b","disambiguation":"Dutch post-rock"}]}""")
+        // When - each path is resolved
+        // Then - the star index finds it wherever it sits, and still reports a field no element has
+        assertTrue(isPresent(body, "artists[*].disambiguation"))
+        assertTrue(isPresent(body, "artists[*].id"))
+        assertTrue(!isPresent(body, "artists[*].country"))
+    }
+
+    @Test
+    fun `a star index over an empty or non-array value is absent`() {
+        // Given - a body carrying an empty array and a scalar where an array was pinned
+        val body = JSONObject("""{"artists":[],"count":4}""")
+        // When - each path is resolved
+        // Then - neither can satisfy a star index, which must never pass by finding nothing
+        assertTrue(!isPresent(body, "artists[*].id"))
+        assertTrue(!isPresent(body, "count[*].id"))
+        assertTrue(!isPresent(body, "missing[*].id"))
+    }
+
+    @Test
     fun `a json null reads as absent, the same as a field that never arrived`() {
         // Given - a body whose pinned field is an explicit JSON null
         val body = JSONObject("""{"artists":[{"id":null,"name":"Radiohead"}]}""")

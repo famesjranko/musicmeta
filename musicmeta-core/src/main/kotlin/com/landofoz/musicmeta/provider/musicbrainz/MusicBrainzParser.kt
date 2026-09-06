@@ -6,6 +6,26 @@ import org.json.JSONObject
 /** Parses MusicBrainz JSON API responses into internal DTOs. */
 internal object MusicBrainzParser {
 
+    /**
+     * `artists[].id` to its non-blank `disambiguation`, ids lowercased so a caller can join on the
+     * id it asked with.
+     *
+     * An artist MusicBrainz describes with nothing is absent from the map rather than present with
+     * an empty string: `org.json` answers a missing key with a default rather than failing
+     * (`docs/pitfalls.md` §3), and a blank description is not a description.
+     */
+    fun parseArtistDisambiguations(json: JSONObject): Map<String, String> {
+        val artists = json.optJSONArray("artists") ?: return emptyMap()
+        val texts = mutableMapOf<String, String>()
+        for (index in 0 until artists.length()) {
+            val artist = artists.getJSONObject(index)
+            val id = artist.optString("id").trim().lowercase().takeIf { it.isNotBlank() } ?: continue
+            val text = artist.optString("disambiguation").trim().takeIf { it.isNotBlank() } ?: continue
+            texts.putIfAbsent(id, text)
+        }
+        return texts
+    }
+
     fun parseReleases(json: JSONObject): List<MusicBrainzRelease> {
         val releases = json.optJSONArray("releases") ?: return emptyList()
         return (0 until releases.length()).map { i ->

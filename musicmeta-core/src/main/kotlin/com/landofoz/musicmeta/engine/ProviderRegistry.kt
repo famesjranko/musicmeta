@@ -5,6 +5,7 @@ import com.landofoz.musicmeta.EnrichmentProvider
 import com.landofoz.musicmeta.EnrichmentType
 import com.landofoz.musicmeta.ProviderInfo
 import com.landofoz.musicmeta.http.CircuitBreaker
+import com.landofoz.musicmeta.provider.musicbrainz.MusicBrainzProvider
 
 /**
  * Ids the engine itself puts in [com.landofoz.musicmeta.EnrichmentResult.provider], for results no
@@ -59,6 +60,25 @@ internal class ProviderRegistry(
 
     fun chainFor(type: EnrichmentType): ProviderChain? = chains[type]
     fun supportedTypes(): Set<EnrichmentType> = chains.keys
+
+    /**
+     * The registered MusicBrainz provider, or null where a consumer registered none.
+     *
+     * Matched by type rather than through [identityProvider]: a consumer may register another
+     * identity provider ahead of it, and this is the lookup where being wrong means silently never
+     * labelling anything.
+     */
+    fun musicBrainzProvider(): MusicBrainzProvider? =
+        allProviders.filterIsInstance<MusicBrainzProvider>().firstOrNull()
+
+    /**
+     * Whether [id]'s breaker currently admits a call — the gate [ProviderChain] applies, exposed for
+     * the one caller that reaches a provider without going through a chain.
+     *
+     * A caller that reads this must not report its own outcome back: a breaker is opened by the
+     * failures of the answers a provider owes, never by a best-effort extra asked alongside them.
+     */
+    fun allowsRequest(id: String): Boolean = circuitBreakers[id]?.allowRequest() ?: true
 
     fun identityProvider(): EnrichmentProvider? =
         allProviders.firstOrNull { it.isIdentityProvider }

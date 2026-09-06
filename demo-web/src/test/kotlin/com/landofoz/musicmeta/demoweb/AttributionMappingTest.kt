@@ -84,6 +84,42 @@ class AttributionMappingTest {
     }
 
     @Test
+    fun `a same-name pair renders each act's own disambiguation ahead of its rank`() {
+        // Given - the split pair a reader cannot tell apart from the name alone
+        val merged = EnrichmentData.SimilarArtists(
+            artists = listOf(
+                SimilarArtist(
+                    name = "Loathe",
+                    matchScore = 0.9f,
+                    sources = listOf("listenbrainz"),
+                    disambiguation = "UK experimental metal",
+                ),
+                SimilarArtist(
+                    name = "Loathe",
+                    matchScore = 0.4f,
+                    sources = listOf("lastfm"),
+                    disambiguation = "Maltese death metal band",
+                ),
+            ),
+        )
+        val results = resultsWith(
+            entries = arrayOf(Triple(EnrichmentType.SIMILAR_ARTISTS, "similar_artist_merger", merged)),
+        )
+        val profile = ArtistProfile(name = "Sleep Token", results = results)
+
+        // When - mapping to a demo response
+        val response = profile.toDemoResponse(elapsedMs = 0)
+
+        // Then - both rows are still named Loathe, and each carries its own act's description first
+        val items = response.sections.first { it.key == "similar_artists" }.items
+        assertEquals(listOf("Loathe", "Loathe"), items.map { it.primary })
+        assertEquals(
+            listOf("UK experimental metal · rank 0.90", "Maltese death metal band · rank 0.40"),
+            items.map { it.secondary },
+        )
+    }
+
+    @Test
     fun `a synthesized card credits the upstreams behind the types it was derived from`() {
         // Given - a timeline the engine synthesized from a Deezer discography and MusicBrainz members
         val timeline = EnrichmentData.ArtistTimeline(

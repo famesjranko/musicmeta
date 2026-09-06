@@ -311,7 +311,10 @@ object Formatter {
         is EnrichmentData.Biography -> textSnippet(data.text)
         is EnrichmentData.SimilarArtists ->
             "${data.artists.size} artists: " +
-                data.artists.take(3).joinToString(", ") { "${it.name} (rank ${formatScore(it.matchScore)})" }
+                data.artists.take(3).joinToString(", ") {
+                    val named = it.disambiguation?.let { text -> "${it.name} — $text" } ?: it.name
+                    "$named (rank ${formatScore(it.matchScore)})"
+                }
         is EnrichmentData.Popularity -> buildString {
             data.listenerCount?.let { append("listeners=$it ") }
             data.listenCount?.let { append("plays=$it ") }

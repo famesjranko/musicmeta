@@ -9,6 +9,7 @@ import kotlinx.coroutines.test.runTest
 import org.json.JSONArray
 import org.json.JSONObject
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
@@ -148,6 +149,74 @@ class SchemaPinBrowseTargetsTest {
         val verdict = probeWith(pinned, body.toString())
         // Then - a name the mapper can still read, in a place the pin is not watching, is drift
         assertEquals(PinVerdict.Drift(listOf("[0].release_group.name")), verdict)
+    }
+
+    @Test
+    fun `the labs similar artists pin watches comment, and holds against a real answer`() = runTest {
+        // Given - the pin, and the Labs answer for the very artist it is aimed at
+        val pinned = target("listenbrainz", "labs similar artists")
+        val body = UpstreamPools.body("similar-artist-disambiguation", "labs-similar-artists-radiohead.json")
+        // When - the pin probes a route answering with that capture
+        val verdict = probeWith(pinned, body)
+        // Then - every path resolves, comment among them: the field is watched, not merely read
+        assertEquals(PinVerdict.Ok, verdict)
+        assertTrue("comment is pinned, got ${pinned.requiredPaths}", pinned.requiredPaths.contains("[*].comment"))
+    }
+
+    @Test
+    fun `a healthy Labs answer whose first rows are undescribed is not drift`() = runTest {
+        // Given - a live capture of the same route whose first three rows carry an empty comment
+        val pinned = target("listenbrainz", "labs similar artists")
+        val body = UpstreamPools.body("similar-artist-disambiguation", "labs-similar-artists-bjork.json")
+        // When - the pin probes a route answering with it
+        val verdict = probeWith(pinned, body)
+        // Then - nothing is reported: Labs is sending comment, and a reorder onto a blank row is not drift.
+        // This is why the path is `[*]` — the same body against `[0].comment` is the alarm that cries wolf.
+        assertEquals(PinVerdict.Ok, verdict)
+        assertEquals(
+            PinVerdict.Drift(listOf("[0].comment")),
+            classifyBody(JSONArray(body), listOf("[0].comment")),
+        )
+    }
+
+    @Test
+    fun `a Labs answer that has shed comment entirely is drift`() = runTest {
+        // Given - the same capture with comment removed from every row, as a retired field would arrive
+        val pinned = target("listenbrainz", "labs similar artists")
+        val body = JSONArray(
+            UpstreamPools.body("similar-artist-disambiguation", "labs-similar-artists-radiohead.json"),
+        )
+        for (index in 0 until body.length()) body.getJSONObject(index).remove("comment")
+        // When - the pin probes a route answering with the mutated capture
+        val verdict = probeWith(pinned, body.toString())
+        // Then - it is drift: `[*]` tolerates a blank row, never a field that left the payload
+        assertEquals(PinVerdict.Drift(listOf("[*].comment")), verdict)
+    }
+
+    @Test
+    fun `the batched arid pin holds against the captured batch search`() = runTest {
+        // Given - the batch pin, and the live arid search the design was measured on
+        val pinned = target("musicbrainz", "artist disambiguation batch search")
+        val body = UpstreamPools.body("similar-artist-disambiguation", "musicbrainz-arid-batch.json")
+        // When - the pin probes a route answering with that capture
+        val verdict = probeWith(pinned, body)
+        // Then - both the id the text is joined on and the text itself are where the pin says
+        assertEquals(PinVerdict.Ok, verdict)
+    }
+
+    @Test
+    fun `a batch answer that has shed disambiguation is drift`() = runTest {
+        // Given - the same capture with the text removed from every artist
+        val pinned = target("musicbrainz", "artist disambiguation batch search")
+        val body = JSONObject(
+            UpstreamPools.body("similar-artist-disambiguation", "musicbrainz-arid-batch.json"),
+        )
+        val artists = body.getJSONArray("artists")
+        for (index in 0 until artists.length()) artists.getJSONObject(index).remove("disambiguation")
+        // When - the pin probes a route answering with the mutated capture
+        val verdict = probeWith(pinned, body.toString())
+        // Then - it names the path, which is the whole answer this route exists to fetch
+        assertEquals(PinVerdict.Drift(listOf("artists[*].disambiguation")), verdict)
     }
 
     private companion object {

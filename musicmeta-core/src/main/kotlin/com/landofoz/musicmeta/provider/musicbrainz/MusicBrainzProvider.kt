@@ -75,6 +75,17 @@ public class MusicBrainzProvider(
     override suspend fun resolveIdentity(request: EnrichmentRequest): EnrichmentResult =
         enrich(request, EnrichmentType.GENRE)
 
+    /**
+     * MusicBrainz's disambiguation for each of [mbids], keyed by lowercased id, in one search.
+     *
+     * The engine's similar-artist labelling calls this after a merge. It is annotation, not
+     * enrichment: an id MusicBrainz does not describe is absent from the map, and a failed request
+     * is an empty one. See [MusicBrainzArtistEnrichment.describeArtists] for the memo and the
+     * failure contract.
+     */
+    internal suspend fun describeArtists(mbids: List<String>): Map<String, String> =
+        enricher().describeArtists(mbids)
+
     /** The probe behind [com.landofoz.musicmeta.EnrichmentEngine.discoverMbidEntityType], which holds its contract. */
     internal suspend fun discoverEntityType(mbid: String): MusicBrainzEntityType? =
         enricher().discoverEntityType(mbid)

@@ -66,6 +66,39 @@ internal class MusicBrainzArtistEnrichment(
         artistSearchMemo.get(name) { api.searchArtists(name) }
 
     /**
+     * The batched `arid:` search behind a similar artist's disambiguation, keyed on the id set it
+     * sends — the question actually asked upstream, never a folded form of it.
+     *
+     * The memo holds a **failed** lookup's empty map as readily as a successful one. A memo that
+     * held only successes would charge a shed MusicBrainz once per reader (`docs/pitfalls.md` §23),
+     * and for this call "we asked and got nothing" is the answer: the only reader's only reaction
+     * is to leave the field null, so there is no second reader for a false absence to mislead
+     * (§12).
+     */
+    private val disambiguationMemo = CallMemo<String, Map<String, String>>()
+
+    /**
+     * MusicBrainz's disambiguation for each of [mbids], or an empty map where it could not be asked.
+     *
+     * Best-effort by contract: this labels a similar-artist list that has already been merged, so a
+     * failure leaves entries unlabelled rather than turning a good answer into an error.
+     */
+    // SwallowedException: every failure is the empty map, which is this function's contract.
+    @Suppress("SwallowedException")
+    internal suspend fun describeArtists(mbids: List<String>): Map<String, String> {
+        val ids = mbids.map { it.trim().lowercase() }.filter { it.isNotEmpty() }.distinct().sorted()
+        if (ids.isEmpty()) return emptyMap()
+        return disambiguationMemo.get(ids.joinToString(",")) {
+            try {
+                api.searchArtistDisambiguations(ids)
+            } catch (e: Exception) {
+                currentCoroutineContext().ensureActive()
+                emptyMap()
+            }
+        }
+    }
+
+    /**
      * Near-miss suggestions for an artist name nothing strict resolves, keyed as [artistSearchMemo]
      * is and memoized for the reason `MusicBrainzAlbumEnrichment.albumFuzzyMemo` is: the pool that
      * decides they are needed is memoized, so an absent artist would otherwise pay a full

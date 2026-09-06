@@ -59,8 +59,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The top-level `discoverMbidEntityType` extension is removed, superseded by that member: drop `import com.landofoz.musicmeta.discoverMbidEntityType`; an old `.jar` throws `NoSuchMethodError`
 - `EnrichmentRequest.forAlbum`'s pre-`trackCount`/`year` overload is removed: source is unaffected (both default), but a `.jar` compiled against 0.12.0 throws `NoSuchMethodError` until recompiled
 - `SimilarArtist.matchScore` is now rank in its own merged list, top entry 1.0, not a sum clamped at 1.0: merged order and every score move; a cached list reads on the old scale until you clear it
+- `SimilarArtist` gains a trailing `disambiguation` parameter: source-compatible via named arguments, but its constructor and `copy` descriptors move, so an older `.jar` needs recompiling (#357)
 
 ### Added
+- `SimilarArtist.disambiguation` carries MusicBrainz's words for the act — "Canadian metalcore" — so two similar artists sharing a name read apart; null where nothing described it (#357)
 - Deezer, iTunes and Discogs verify a candidate against the alias pool identity resolution found, so a non-Latin request reaches a romanizing catalogue; an alias match scores lower
 - ListenBrainz now serves `SIMILAR_ARTISTS` (priority 50) from its keyless Labs host, on a resolved artist MBID: merged similar-artist lists grow, Radiohead's from 31 to 109 entries
 - `docs/guides/migration.md`: every break since 0.10.0 grouped by version, each with the edit it asks of you and a before/after pair; linked from the README documentation table

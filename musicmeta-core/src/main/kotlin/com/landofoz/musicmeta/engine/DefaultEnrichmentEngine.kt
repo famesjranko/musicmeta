@@ -18,6 +18,7 @@ import com.landofoz.musicmeta.MusicBrainzEntityType
 import com.landofoz.musicmeta.ProviderInfo
 import com.landofoz.musicmeta.SearchCandidate
 import com.landofoz.musicmeta.http.EnrichDeadline
+import com.landofoz.musicmeta.http.enrichDeadlineRemainingMs
 import com.landofoz.musicmeta.provider.musicbrainz.MusicBrainzProvider
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineExceptionHandler
@@ -893,17 +894,58 @@ internal class DefaultEnrichmentEngine(
             // provider id is not a consumer's override key.
             demoteUnanswered(guardedStrategy(logger, mergeType, "merger") { merger.merge(filtered) })
         }
+        val labelled = if (mergeType == EnrichmentType.SIMILAR_ARTISTS) withDisambiguations(merged) else merged
         // The merger sees only successes, so "nobody succeeded" reaches it as the same empty list
         // whether the providers had nothing or never answered. The chain's own failure tells those
         // apart — but only where no provider produced a Success at all, so a result this gate
         // dropped for confidence still counts as the chain having been answered. That is the test
         // [ProviderChain.resolve] applies to its own lastFailure.
-        val outcome = if (merged is EnrichmentResult.NotFound && allResults?.successes.isNullOrEmpty()) {
-            allResults?.failure ?: merged
+        val outcome = if (labelled is EnrichmentResult.NotFound && allResults?.successes.isNullOrEmpty()) {
+            allResults?.failure ?: labelled
         } else {
-            merged
+            labelled
         }
         return reclassifyTransientGap(chain, request.identifiers, mergeType, outcome) to execution
+    }
+
+    /**
+     * [merged] with MusicBrainz's disambiguation on the same-name entries no contributor described.
+     *
+     * Best-effort labelling of a list that has **already been merged**, which is what every rule
+     * here follows from. It runs at merge time so the text is cached with the payload rather than
+     * re-fetched on every warm read; it declines, silently and without a request, whenever the
+     * answer would cost more than it is worth; and a failure leaves entries unlabelled rather than
+     * turning a good answer into an error.
+     *
+     * This is the one place the engine reaches a provider without a [ProviderChain] around it, so
+     * the gate a chain would have applied is applied here instead: an open breaker means MusicBrainz
+     * is shedding, and a merge is not a reason to ask it one more question. The step never records
+     * an outcome back to that breaker — a label's failure must not help open the circuit that gates
+     * the answers MusicBrainz actually owes.
+     */
+    private suspend fun withDisambiguations(merged: EnrichmentResult): EnrichmentResult {
+        val success = merged as? EnrichmentResult.Success ?: return merged
+        val similar = success.data as? EnrichmentData.SimilarArtists ?: return merged
+        val mbids = SimilarArtistDisambiguation.undescribedSplitPairMbids(similar.artists)
+        if (mbids.isEmpty()) return merged
+        val musicBrainz = registry.musicBrainzProvider() ?: return merged
+        if (!registry.allowsRequest(musicBrainz.id)) return merged
+        // The ceiling is the point, and it must be the *smaller* of the two bounds. Bounding this
+        // by what is left of the run buys nothing: the two clocks expire together, so a batch stuck
+        // behind MusicBrainz's shared 1 req/s limiter would hold the fan-out until the enclosing
+        // enrich() deadline fired — which fails every type in the run and skips the cache write-back
+        // for all of them, to add a label to two entries. A run with less than the ceiling left
+        // bounds it lower still, and one with nothing left does not ask at all.
+        val remaining = enrichDeadlineRemainingMs()
+        if (remaining != null && remaining <= 0) return merged
+        val budget = minOf(remaining ?: Long.MAX_VALUE, DISAMBIGUATION_BUDGET_MS)
+        val texts = withTimeoutOrNull(budget) {
+            musicBrainz.describeArtists(mbids)
+        }.orEmpty()
+        if (texts.isEmpty()) return merged
+        return success.copy(
+            data = similar.copy(artists = SimilarArtistDisambiguation.describedWith(similar.artists, texts)),
+        )
     }
 
     /**
@@ -1027,6 +1069,13 @@ internal class DefaultEnrichmentEngine(
             EnrichmentType.GENRE, EnrichmentType.LABEL, EnrichmentType.RELEASE_DATE,
             EnrichmentType.RELEASE_TYPE, EnrichmentType.COUNTRY,
         )
+
+        /**
+         * The longest a similar-artist label may hold the fan-out, whatever the run's own deadline
+         * allows. Always applied: it is a ceiling, and what is left of an `enrich()` deadline only
+         * ever lowers it further.
+         */
+        private const val DISAMBIGUATION_BUDGET_MS = 3_000L
 
         /** @see entityKeyFor */
         fun entityKeyFor(request: EnrichmentRequest, type: EnrichmentType): String =

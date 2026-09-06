@@ -795,6 +795,30 @@ a live response — including the ugly trailing part — and keep an emptiness-a
 beside the happy path, because a payload that is non-blank and still carries no content is the one
 the engine's blank check cannot demote.
 
+## 37. A schema pin at a fixed array index asserts the field is populated at that index
+
+A `SchemaTarget.requiredPaths` entry like `[0].comment` makes two claims at once: that the field
+still exists, and that the *first element of this particular response* has a value in it. For a
+field an upstream fills for every entity those are the same claim. For an optional one they are
+not, and the pin fails on the second while the mapper is perfectly healthy.
+
+ListenBrainz Labs' similar-artists rows carry `comment` — MusicBrainz's `disambiguation` — and
+leave it blank for more than half of them: 45 of 100 non-blank on the pinned Radiohead query, and
+the Björk capture in `pools/similar-artist-disambiguation/` has its first *three* rows undescribed.
+Labs reorders as its session data moves, so a `[0].comment` pin reports drift on a reorder, at
+roughly the rate a coin lands heads. The pin does not become wrong; it becomes noise, and a daily
+drift mail whose reader has learned to skip it is worth less than no pin at all.
+
+`isPresent` treats blank as absent deliberately (a mapper cannot tell `""` from a missing key), so
+the blank cannot be excluded by loosening that. The path grammar gained `[*]` instead: present and
+non-blank in **at least one** element. It still fails when the field leaves the payload — the drift
+worth an email — and does not fire when a described row moves down the list.
+
+The test to write is not "the pin passes". It is the pin passing against a real capture whose first
+rows are blank, beside `classifyBody(body, listOf("[0].comment"))` returning `Drift` on that same
+body — otherwise nothing records why the path is not the obvious one, and the next reader tidies it
+back to `[0]`.
+
 ## 30. A check that rebuilds a provider's URL asserts against a document the library never receives
 
 The shape of an upstream answer depends on the parameters that asked for it, so a drift check that

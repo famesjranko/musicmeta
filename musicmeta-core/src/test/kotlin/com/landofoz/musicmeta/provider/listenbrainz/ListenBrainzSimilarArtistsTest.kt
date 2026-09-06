@@ -61,6 +61,21 @@ class ListenBrainzSimilarArtistsTest {
     }
 
     @Test
+    fun `enrich carries the row's comment as the artist's disambiguation, and a blank one as nothing`() = runTest {
+        // Given - the same captured answer, whose second row carries an empty comment and the others real text
+        httpClient.givenJsonArrayResponse("similar-artists/json", RADIOHEAD_ANSWER)
+
+        // When - enriching that artist
+        val result = provider.enrich(radioheadRequest(), EnrichmentType.SIMILAR_ARTISTS)
+
+        // Then - each described row keeps MusicBrainz's own words, and the blank one is null rather than empty
+        val similar = (result as EnrichmentResult.Success).data as EnrichmentData.SimilarArtists
+        assertEquals("1980s-1990s US grunge band", similar.artists[0].disambiguation)
+        assertEquals(null, similar.artists[1].disambiguation)
+        assertEquals("UK rock band", similar.artists[2].disambiguation)
+    }
+
+    @Test
     fun `enrich answers a long-tail artist with the thin list Labs has for it`() = runTest {
         // Given - the live route's whole answer for an artist with one neighbour, captured 2026-09-05
         httpClient.givenJsonArrayResponse("similar-artists/json", THIN_ANSWER)

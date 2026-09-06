@@ -6,6 +6,7 @@ import com.landofoz.musicmeta.engine.ProviderCallScope
 import com.landofoz.musicmeta.http.HttpClient
 import com.landofoz.musicmeta.http.RateLimiter
 import com.landofoz.musicmeta.http.bodyOrThrowTransient
+import com.landofoz.musicmeta.isMusicBrainzIdShape
 import com.landofoz.musicmeta.provider.encodePathSegment
 import com.landofoz.musicmeta.provider.encodeQueryValue
 import kotlinx.coroutines.currentCoroutineContext
@@ -29,6 +30,29 @@ internal class MusicBrainzApi(
             httpClient.fetchJsonResult(releaseSearchUrl(title, artist, limit)).bodyOrThrowTransient()
         } ?: return emptyList()
         return MusicBrainzParser.parseReleases(json)
+    }
+
+    /**
+     * MusicBrainz's `disambiguation` for each of [mbids], keyed by lowercased id, in one search.
+     *
+     * Every `arid:` term matches exactly one artist, so the answer needs no ranking and never a
+     * second page: `limit` is the id count. That is the whole reason this is a search and not a
+     * lookup each — labelling the split pairs of a twelve-artist workload cost 2 requests this way
+     * against 4, and 1 in the worst single call against 3.
+     *
+     * An id MusicBrainz has no text for, or does not hold at all, is simply absent from the map.
+     * Callers cap the list at [DISAMBIGUATION_BATCH_LIMIT].
+     */
+    suspend fun searchArtistDisambiguations(mbids: List<String>): Map<String, String> {
+        // Shape-checked rather than escaped. These ids arrive on other providers' responses, so they
+        // are upstream input reaching a Lucene query; an id that is not a UUID is dropped rather
+        // than escaped into a term that cannot match anything anyway.
+        val ids = mbids.filter { it.isMusicBrainzIdShape() }
+        if (ids.isEmpty()) return emptyMap()
+        val json = rateLimiter.execute {
+            httpClient.fetchJsonResult(artistDisambiguationSearchUrl(ids)).bodyOrThrowTransient()
+        } ?: return emptyMap()
+        return MusicBrainzParser.parseArtistDisambiguations(json)
     }
 
     /** Broader fuzzy search (unquoted + Lucene ~) for near-miss suggestions. */
@@ -446,6 +470,26 @@ internal class MusicBrainzApi(
             return "$BASE_URL/artist?query=$query&fmt=json&limit=$limit"
         }
 
+        /**
+         * The URL [searchArtistDisambiguations] requests. [mbids] must already be shape-checked
+         * with `isMusicBrainzIdShape`: a UUID carries no Lucene metacharacter, so terms go in unescaped
+         * and the URL names the ids it is asking about.
+         */
+        fun artistDisambiguationSearchUrl(mbids: List<String>): String {
+            val query = encodeQueryValue(mbids.joinToString(" OR ") { "arid:$it" })
+            return "$BASE_URL/artist?query=$query&fmt=json&limit=${mbids.size}"
+        }
+
+        /**
+         * How many ids one [searchArtistDisambiguations] may name.
+         *
+         * Well under the 100 above which MusicBrainz stops clamping and silently serves 25 instead
+         * (see [CANONICAL_SEARCH_LIMIT]). A similar-artist list holding more than this many
+         * undescribed same-name entries loses the tail rather than paying a second round trip: this
+         * is a label, and the limiter runs at one request a second.
+         */
+        const val DISAMBIGUATION_BATCH_LIMIT = 25
+
         /** The URL [browseReleaseGroups] requests. */
         fun artistReleaseGroupBrowseUrl(artistMbid: String, limit: Int, offset: Int): String =
             // The pipes reach MusicBrainz as %7C: java.net.URI rejects a raw | in a query.
@@ -473,6 +517,22 @@ internal class MusicBrainzApi(
          * browse rather than a lookup.
          */
         val SCHEMA_PIN_TARGETS: List<SchemaTarget> = listOf(
+            SchemaTarget(
+                provider = "musicbrainz",
+                route = "artist disambiguation batch search",
+                // Both ids are the two acts named Loathe, and MusicBrainz describes both, so the pin
+                // holds whichever order the search ranks them in.
+                url = artistDisambiguationSearchUrl(
+                    listOf(
+                        "56eb02c4-1f16-4613-8bb3-b4a752283fc3",
+                        "e9ea0fbc-ccc7-4e98-9290-0a41aa848fa2",
+                    ),
+                ),
+                requiredPaths = listOf(
+                    "artists[*].id",
+                    "artists[*].disambiguation",
+                ),
+            ),
             SchemaTarget(
                 provider = "musicbrainz",
                 route = "artist search",
