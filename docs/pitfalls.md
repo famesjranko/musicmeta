@@ -1289,6 +1289,36 @@ finding, not a footnote**: a test verified only against unmutated code is proven
 to fail, and only the second claim is worth anything.
 
 
+## 38. A wall-clock bound in a concurrency test asserts the runner's load, not the code
+
+`AliasLockConcurrencyTest` timed `runBlocking(Dispatchers.Default) { withTimeoutOrNull(500) { … } }`
+and asserted `elapsed < DEADLINE_MS * 4`. The property it was written for is that a waiter behind
+the shared alias lookup is **suspended, not parked**, and that the deadline cancels every waiter and
+the in-flight source. None of those is a duration. What the assertion actually read was the sum of
+the deadline, `Dispatchers.Default`'s first-use warm-up, and however long a shared CI runner took to
+schedule six coroutines — so it passed on every developer machine and went red on CI with `readers
+outlived the deadline by 2002ms`, a message naming a cause the number cannot distinguish from a
+busy runner (§19).
+
+A parked waiter is a run that **never returns**, not a run that returns late, so the structural form
+of each claim is available and strictly stronger:
+
+- *the deadline reached the waiters* — count the readers that leave `aliases()` through
+  `catch (e: CancellationException)`, and assert the count is every reader. Deleting `aliases()`'
+  `currentCoroutineContext().ensureActive()` turns all five into readers that answer with an empty
+  pool, and the counter reads 0.
+- *the deadline reached the source* — have the source register
+  `invokeOnCancellation { latch.countDown() }` and await the latch. Removing `sharedLookup`'s
+  `withTimeout(budgetMs)` leaves nothing to cancel it.
+- *nothing is parked* — `withTimeoutOrNull` returning at all is the whole claim; a parked waiter
+  cannot reach the return. One loose bound stands in for "never returns", wide enough that no loaded
+  machine can spend it, and its message says it is a sanity bound rather than the property.
+
+The rule this leaves: a duration in one of these tests is either the **subject** — the deadline the
+test is about — or a **guard** sized so only a hang reaches it. There is no third kind, and a
+constant that sits between the two is the flake. Where a test genuinely does measure real time, the
+KDoc says which duration is the subject and what slack it has.
+
 ## 18. A test-results directory outlives the tree that produced it
 
 `build/test-results/` is not cleared when the sources that produced it are reverted, and Gradle
