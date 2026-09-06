@@ -13,6 +13,13 @@ import com.landofoz.musicmeta.SimilarTrack
  * (genuine track-level similarity) and Deezer (artist-similarity applied to an artist's top tracks,
  * see [SimilarTrack.matchScore]) agree on the same track. There, summing would let an
  * artist-derived approximation inflate a real score, so Last.fm's score wins outright instead.
+ *
+ * The scores are then rescaled against the merged list's own maximum rather than clamped, so a
+ * [SimilarTrack.matchScore] is a position within *this* merge and nothing else — it is not
+ * comparable against another list's, nor against the figure a provider reported. That position is
+ * fixed at merge time; a served result can still differ from it, because catalog filtering
+ * (`catalogFilterMode`) runs afterward and may drop the top-scored entry or reorder the list
+ * without touching any score.
  */
 internal object SimilarTrackMerger : ResultMerger {
 
@@ -42,6 +49,23 @@ internal object SimilarTrackMerger : ResultMerger {
         )
     }
 
+    /**
+     * Merges a list of similar tracks from multiple providers.
+     *
+     * - Deduplicates by normalized title and artist
+     * - Takes the Last.fm score outright for a group Last.fm contributed to, and sums the rest;
+     *   then divides every score by the largest of them, so the top entry of *this returned list*
+     *   is 1.0 and the spacing below it survives. A list whose maximum is not positive is left as
+     *   it is.
+     * - Merges sources lists
+     * - Merges identifiers: prefers MBID when available, combines extra maps
+     * - Returns results sorted by matchScore descending
+     *
+     * Both the 1.0 top entry and the descending sort are properties of this return value, before
+     * catalog filtering (`catalogFilterMode`) — a caller sees them only when no `CatalogProvider`
+     * is configured or the mode is `UNFILTERED`. `AVAILABLE_ONLY` can remove the top entry;
+     * `AVAILABLE_FIRST` reorders without touching a score.
+     */
     internal fun mergeTracks(tracks: List<SimilarTrack>): List<SimilarTrack> {
         if (tracks.isEmpty()) return emptyList()
 
@@ -51,14 +75,13 @@ internal object SimilarTrackMerger : ResultMerger {
             grouped.getOrPut(key) { mutableListOf() }.add(track)
         }
 
-        return grouped.values
+        val summed = grouped.values
             .map { group ->
                 val first = group.first()
                 val genuineEntry = group.firstOrNull { GENUINE_SOURCE in it.sources }
                 val totalScore = genuineEntry?.matchScore ?: group
                     .map { it.matchScore }
                     .fold(0f) { acc, s -> acc + s }
-                    .coerceAtMost(1.0f)
                 val allSources = group.flatMap { it.sources }.distinct()
                 val mergedIdentifiers = ResultMerger.mergeIdentifiers(group.map { it.identifiers })
 
@@ -70,6 +93,12 @@ internal object SimilarTrackMerger : ResultMerger {
                     sources = allSources,
                 )
             }
+
+        // A list whose maximum is not positive has no scale to divide by, so it passes through
+        // untouched — every contributor scoring zero must stay at zero, not become NaN.
+        val scale = summed.maxOfOrNull { it.matchScore }?.takeIf { it > 0f } ?: 1f
+        return summed
+            .map { it.copy(matchScore = it.matchScore / scale) }
             .sortedByDescending { it.matchScore }
     }
 

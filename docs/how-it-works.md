@@ -200,12 +200,12 @@ Types where multiple providers contribute complementary data. The chain calls **
 | `GenreMerger` | GENRE | Normalizes tags, deduplicates, sums confidence (capped 1.0), merges sources; curated genres rank ahead of community tags |
 | `ArtworkMerger` | All 8 artwork types | Highest-confidence as primary, others as `alternatives` |
 | `SimilarArtistMerger` | SIMILAR_ARTISTS | Deduplicates by MusicBrainz id where one is present and by name otherwise, so two acts sharing a name stay apart; sums matchScores then rescales them against the merged maximum, merges sources; carries each entry's `disambiguation` from the contributor holding that entry's own MBID |
-| `SimilarTrackMerger` | SIMILAR_TRACKS | Deduplicates by name, sums matchScores, merges sources |
+| `SimilarTrackMerger` | SIMILAR_TRACKS | Deduplicates by title and artist; keeps Last.fm's score outright where Last.fm contributed and sums the rest, then rescales against the merged maximum; merges sources |
 | `TopTrackMerger` | ARTIST_TOP_TRACKS | Deduplicates by MBID or title, sums listen counts |
 
-`SimilarArtistMerger`'s rescaled-to-1.0 top and descending sort describe this merge step's own
-output, not necessarily what a caller receives: Step 6 below runs after it and can remove the top
-entry or reorder the list.
+The rescaled-to-1.0 top and descending sort of either similar-list merger describe this merge step's
+own output, not necessarily what a caller receives: Step 6 below runs after it and can remove the
+top entry or reorder the list.
 
 Example merged genre result: `alternative rock (0.70, [musicbrainz, lastfm])` — higher confidence when multiple providers agree.
 
@@ -288,7 +288,7 @@ For recommendation types only (SIMILAR_ARTISTS, SIMILAR_ALBUMS, ARTIST_RADIO, AR
 - **UNFILTERED** (default) — no filtering
 
 This lets a music player show only recommendations the user can actually play. It also means a
-merger's own contract — `SimilarArtistMerger`'s 1.0 top entry, either merger's descending sort —
+merger's own contract — either similar-list merger's 1.0 top entry and descending sort —
 holds only up to this step: `AVAILABLE_ONLY` can remove the top-scored entry, and `AVAILABLE_FIRST`
 reorders the list without touching a score.
 

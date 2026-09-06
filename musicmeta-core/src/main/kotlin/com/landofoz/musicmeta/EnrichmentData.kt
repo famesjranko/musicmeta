@@ -296,6 +296,13 @@ public data class SimilarTrack(
      * kept (rather than a distinct field per source, as [SimilarAlbum.artistMatchScore] does for
      * albums) because [SimilarTrackMerger][com.landofoz.musicmeta.engine.SimilarTrackMerger]
      * already keeps the genuine Last.fm score on overlap, so provenance is enough to interpret it.
+     *
+     * On a merged answer the merger divides every score by the largest, so the top entry is 1.0 and
+     * a score says where a track sat in *that* merge — comparing one against a score from another
+     * answer, or against the number a provider reported, means nothing. A list in which every entry
+     * scored zero stays at zero, having no scale to rank against. Catalog filtering
+     * (`catalogFilterMode`) runs after the merge and reads this score for nothing: `AVAILABLE_ONLY`
+     * can remove the 1.0 entry outright, and `AVAILABLE_FIRST` reorders without touching a score.
      */
     val matchScore: Float,
     val identifiers: EnrichmentIdentifiers = EnrichmentIdentifiers(),

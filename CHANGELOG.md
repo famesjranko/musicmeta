@@ -110,6 +110,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Two published-surface conventions documented: every score is a `Float` on 0.0-1.0, every date a `String` in ISO-8601 and every `year` an `Int?` — with their frozen exceptions named
 
 ### Fixed
+- `SimilarTrack.matchScore` is rescaled against the merged list's own maximum instead of clamped at 1.0, so a third similar-track provider no longer flattens the head of the list into one long tie
 - `SimilarTrack` MusicBrainz ids from Last.fm documented as dead in MusicBrainz over half the time, and still passed through: validating by search would drop 12.5% of the ids that work
 - Last.fm's similar-artist MusicBrainz ids documented as sometimes naming the wrong act (not stale) and passed through unchanged; corroboration was measured and costs more than it corrects
 - `SIMILAR_ALBUMS` now seeds from the requested album's own Deezer artist id, not a name search that broke a homonym tie on fan count; an unresolvable homonym is `NotFound`, not another act's list
