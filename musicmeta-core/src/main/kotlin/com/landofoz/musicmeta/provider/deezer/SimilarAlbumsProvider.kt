@@ -148,7 +148,9 @@ public class SimilarAlbumsProvider internal constructor(
      *
      * 1. A Deezer id on the request. The caller asserted it; nothing here checks it.
      * 2. The album search's own `artist.id`, the seam
-     *    [DeezerProvider.enrichSimilarTracks] takes off the track search. The requested *title* is
+     *    [DeezerProvider.enrichSimilarTracks] takes off the track search. It is the search
+     *    [DeezerAlbumScope] already holds for this call, so asking for it costs a request only when
+     *    no `ALBUM_*` type asked first. The requested *title* is
      *    what only one of the same-named acts recorded, so the hit identifies the artist even where
      *    the name does not. Selection is [selectAlbum]'s, so a remaster suffix is tolerated and a
      *    live or deluxe edition of a bare request is not — but its ranking puts the title tier
@@ -167,8 +169,7 @@ public class SimilarAlbumsProvider internal constructor(
         request.identifiers.get(IdentifierNamespace.DEEZER)?.toLongOrNull()
             ?.let { return SeedArtist(it, NameMatchTier.CANONICAL) }
 
-        val albumMatch = api.searchAlbums("${request.artist} ${request.title}", ALBUM_SEARCH_LIMIT)
-            .selectAlbum(request)
+        val albumMatch = api.albumScope().resolveAlbum(request)
         if (albumMatch != null && albumMatch.artistQuality == ArtistMatcher.QUALITY_SAME_NAME) {
             albumMatch.candidate.artistId?.let { return SeedArtist(it, albumMatch.nameTier) }
         }
@@ -195,10 +196,3 @@ public class SimilarAlbumsProvider internal constructor(
         }
     }
 }
-
-/**
- * Candidate pool for the seed's album search — enough hits for the requested edition to surface.
- * File-private rather than a companion constant: a `const val` in a private companion of a public
- * class is still a public static field, and moves a line in the published API dump.
- */
-private const val ALBUM_SEARCH_LIMIT = 5

@@ -11,39 +11,33 @@ import com.landofoz.musicmeta.LookupProvenance
 import com.landofoz.musicmeta.ProviderCapability
 import com.landofoz.musicmeta.SearchCandidate
 import com.landofoz.musicmeta.SimilarTrack
-import com.landofoz.musicmeta.engine.AlbumMatch
 import com.landofoz.musicmeta.engine.ConfidenceCalculator
 import com.landofoz.musicmeta.engine.NameMatchTier
-import com.landofoz.musicmeta.engine.ProviderCallScope
 import com.landofoz.musicmeta.engine.trustedProviderIdentifier
 import com.landofoz.musicmeta.http.HttpClient
 import com.landofoz.musicmeta.http.RateLimiter
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
-import kotlinx.coroutines.sync.Mutex
-import kotlinx.coroutines.sync.withLock
 
 /**
  * Enrichment provider using Deezer's public search API.
  * Provides album art, artist discography, and album tracks (no API key needed).
  */
-public class DeezerProvider(
-    httpClient: HttpClient,
-    rateLimiter: RateLimiter = RateLimiter(100),
+public class DeezerProvider internal constructor(
+    private val api: DeezerApi,
     private val radioLimit: Int = 50,
 ) : EnrichmentProvider {
 
-    private val api = DeezerApi(httpClient, rateLimiter)
-
     /**
-     * This call's [DeezerAlbumScope], shared by ALBUM_TRACKS, ALBUM_METADATA and ALBUM_ART so no
-     * two of them search or fetch the same album twice in one `enrich()` fan-out
-     * ([ProviderCallScope], `docs/pitfalls.md` §12). Called directly (no engine context), each
-     * call gets its own.
+     * Constructs the provider from HTTP infrastructure. [DeezerApi] is an internal implementation
+     * detail, so this is the public entry point consumers use to register the provider with the
+     * engine.
      */
-    private suspend fun albumScope(): DeezerAlbumScope =
-        currentCoroutineContext()[ProviderCallScope]?.slot(this) { DeezerAlbumScope(api) }
-            ?: DeezerAlbumScope(api)
+    public constructor(
+        httpClient: HttpClient,
+        rateLimiter: RateLimiter = RateLimiter(100),
+        radioLimit: Int = 50,
+    ) : this(DeezerApi(httpClient, rateLimiter), radioLimit)
 
     override val id: String = "deezer"
     override val displayName: String = "Deezer"
@@ -335,7 +329,7 @@ public class DeezerProvider(
         val albumRequest = request as? EnrichmentRequest.ForAlbum
             ?: return EnrichmentResult.NotFound(EnrichmentType.ALBUM_TRACKS, id)
 
-        val match = albumScope().resolveAlbum(albumRequest)
+        val match = api.albumScope().resolveAlbum(albumRequest)
             ?: return EnrichmentResult.NotFound(EnrichmentType.ALBUM_TRACKS, id)
         val album = match.candidate
 
@@ -357,7 +351,7 @@ public class DeezerProvider(
         if (request !is EnrichmentRequest.ForAlbum) {
             return EnrichmentResult.NotFound(type, id)
         }
-        val scope = albumScope()
+        val scope = api.albumScope()
         val match = scope.resolveAlbum(request)
             ?: return EnrichmentResult.NotFound(type, id)
         val result = match.candidate
@@ -377,7 +371,7 @@ public class DeezerProvider(
     ): EnrichmentResult {
         val albumRequest = request.toAlbumArtRequest(type) ?: return EnrichmentResult.NotFound(type, id)
 
-        val match = albumScope().resolveAlbum(albumRequest)
+        val match = api.albumScope().resolveAlbum(albumRequest)
             ?: return EnrichmentResult.NotFound(type, id)
         val result = match.candidate
 
@@ -480,58 +474,5 @@ public class DeezerProvider(
 
         /** Cap on the final SIMILAR_TRACKS list — mirrors SimilarAlbumsProvider's SIMILAR_ALBUMS cap. */
         private const val SIMILAR_TRACKS_LIMIT = 20
-    }
-}
-
-/**
- * One `enrich()` call's album search hit and album-resource detail, held only long enough to
- * serve ALBUM_TRACKS, ALBUM_METADATA and ALBUM_ART from one search and (for ALBUM_METADATA) one
- * `/album/{id}` fetch instead of one search per type — see [DeezerProvider.albumScope]. Dies with
- * the call ([ProviderCallScope]), so a mis-resolved artist/title never outlives a `forceRefresh`.
- */
-private class DeezerAlbumScope(private val api: DeezerApi) {
-
-    /** Every field [selectAlbum] reads, so two requests differing only in one still key distinctly. */
-    private data class SelectionKey(val artist: String, val title: String, val trackCount: Int?)
-
-    private val searchMutex = Mutex()
-    private val searchResults = mutableMapOf<SelectionKey, AlbumMatch<DeezerAlbumResult>?>()
-
-    private val detailMutex = Mutex()
-    private val details = mutableMapOf<Long, DeezerAlbum?>()
-
-    /**
-     * The accepted-and-ranked search hit for [request], with its selection evidence, one search per
-     * distinct complete selection input per call. Selection is [selectAlbum]'s: artist floor, then
-     * title tier, then artist quality, then [EnrichmentRequest.ForAlbum.trackCount] evidence — never
-     * bare artist-match order. Keyed on every field selection reads, not just artist/title: two
-     * requests differing only in `trackCount` must not reuse each other's selection.
-     */
-    suspend fun resolveAlbum(request: EnrichmentRequest.ForAlbum): AlbumMatch<DeezerAlbumResult>? {
-        val key = SelectionKey(request.artist, request.title, request.trackCount)
-        return searchMutex.withLock {
-            if (searchResults.containsKey(key)) {
-                searchResults.getValue(key)
-            } else {
-                val results = api.searchAlbums("${request.artist} ${request.title}", ALBUM_SEARCH_LIMIT)
-                val match = results.selectAlbum(request)
-                searchResults[key] = match
-                match
-            }
-        }
-    }
-
-    /** The `/album/{id}` resource for [albumId], one fetch per distinct id per call. */
-    suspend fun albumDetail(albumId: Long): DeezerAlbum? = detailMutex.withLock {
-        if (details.containsKey(albumId)) {
-            details.getValue(albumId)
-        } else {
-            api.getAlbum(albumId).also { details[albumId] = it }
-        }
-    }
-
-    private companion object {
-        /** Candidate pool size for the artist-matched album search — enough hits for the requested edition to surface. */
-        const val ALBUM_SEARCH_LIMIT = 5
     }
 }

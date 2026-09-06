@@ -575,20 +575,35 @@ class DeezerProviderTest {
     }
 
     @Test
-    fun `enrich retries the album search after a transient failure instead of memoizing it as NotFound`() = runTest {
+    fun `enrich reports a transient album-search failure to a repeat reader rather than a false NotFound`() = runTest {
         // Given - the album search fails transiently on every attempt
         httpClient.givenIoException("search/album")
         val request = EnrichmentRequest.forAlbum(title = "Album", artist = "Artist")
 
-        // When - the same request is enriched twice in immediate succession
+        // When - this provider asks the same question twice inside one call
         val (first, second) = withContext(ProviderCallScope()) {
             provider.enrich(request, EnrichmentType.ALBUM_ART) to
                 provider.enrich(request, EnrichmentType.ALBUM_ART)
         }
 
-        // Then - both calls surface the transient failure as Error, so the first failure was never
-        // memoized as a false NotFound that the second call could reuse without searching again
+        // Then - the repeat read surfaces the failure as Error, never as the empty answer a memo
+        // that held the failure as an absence would repeat, and the attempt is charged once
         assertTrue(first is EnrichmentResult.Error)
+        assertTrue(second is EnrichmentResult.Error)
+        assertEquals(1, httpClient.requestedUrls.count { it.contains("search/album") })
+    }
+
+    @Test
+    fun `enrich attempts the album search again in the next call after a transient failure`() = runTest {
+        // Given - the album search fails transiently, and one call has already spent its attempt
+        httpClient.givenIoException("search/album")
+        val request = EnrichmentRequest.forAlbum(title = "Album", artist = "Artist")
+        withContext(ProviderCallScope()) { provider.enrich(request, EnrichmentType.ALBUM_ART) }
+
+        // When - a second call enriches the same request
+        val second = withContext(ProviderCallScope()) { provider.enrich(request, EnrichmentType.ALBUM_ART) }
+
+        // Then - the held failure died with the first call, so the endpoint is tried again
         assertTrue(second is EnrichmentResult.Error)
         assertEquals(2, httpClient.requestedUrls.count { it.contains("search/album") })
     }

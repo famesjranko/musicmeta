@@ -86,6 +86,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - demo-cli's track profile shows `Album:`/`Duration:` from `TrackProfile.trackMetadata`, and `config` reaches the `ttl`, per-provider confidence and priority override maps
 
 ### Changed
+- An album enrich asking `SIMILAR_ALBUMS` beside any `ALBUM_*` type now costs one Deezer album search instead of two
+- A failing Deezer album search is attempted once per call, not once per type: the four share one attempt budget, so an upstream recovering mid-call now reaches none of them
 - `EnrichmentData.Discography.albums` now arrives in ascending `year` order, undated albums last, from providers and cache alike; a shared year and the undated run keep the provider's order
 - A Discogs artist whose own `realname` or `namevariations` hold the requested name now reports full confidence, not the alias tier, and is no longer rejected when its `name` alone disagrees
 - `enrichProgressive` emits one extra snapshot the moment live identity resolution settles, before any type does: collectors see the verdict and its suggestions without waiting on enrichment

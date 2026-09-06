@@ -50,9 +50,11 @@ two response shapes under one cache key. `MusicBrainzQualifierFallback.kt` strip
   fans out to related artists and scores their albums, up to eight HTTP calls per request: an album
   search — because the requested *title* is the only thing that tells two same-named artists apart —
   an artist search where that misses, the related-artists call, and one album list per related
-  artist. On a call that also asks for an `ALBUM_*` type, that album search repeats the query
-  `DeezerAlbumScope.resolveAlbum` already made: the two providers are separate objects, so they
-  cannot share a `ProviderCallScope` slot. Its class
+  artist. On a call that also asks for an `ALBUM_*` type that album search is made once, not twice:
+  both providers hold one `DeezerApi`, which owns the call-scoped `DeezerAlbumScope` they resolve
+  through, so whichever type asks first pays for it and the other reads the answer — including the
+  failure, which is charged once per call and not once per type. Two providers a consumer wires with
+  a `DeezerApi` each keep a scope each and pay for both searches. Its class
   comment says why it is not a `CompositeSynthesizer`: keeping the calls in a plain provider means
   the engine schedules and rate-limits it like any other.
 
