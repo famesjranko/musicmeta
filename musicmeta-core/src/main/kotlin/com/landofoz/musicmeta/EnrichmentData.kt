@@ -203,6 +203,8 @@ public data class SimilarArtist(
      */
     val matchScore: Float,
     val sources: List<String> = emptyList(),
+    /** What the contributing upstream calls this act, when it says — MusicBrainz's own disambiguation where the source is ListenBrainz Labs. */
+    val disambiguation: String? = null,
 )
 
 /**

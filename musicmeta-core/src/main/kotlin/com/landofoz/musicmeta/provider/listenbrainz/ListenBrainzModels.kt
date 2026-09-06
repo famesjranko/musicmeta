@@ -66,4 +66,6 @@ internal data class ListenBrainzSimilarArtist(
     val artistMbid: String,
     val name: String,
     val score: Int,
+    /** The route's `comment`, which is MusicBrainz's `disambiguation` verbatim. */
+    val comment: String? = null,
 )
