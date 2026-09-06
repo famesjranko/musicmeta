@@ -2,8 +2,8 @@ package com.landofoz.musicmeta.provider.wikidata
 
 import com.landofoz.musicmeta.EnrichmentData
 import com.landofoz.musicmeta.EnrichmentIdentifiers
-import com.landofoz.musicmeta.ExternalLink
 import com.landofoz.musicmeta.IdentifierNamespace
+import com.landofoz.musicmeta.externalLink
 
 /** Maps Wikidata responses to EnrichmentData subclasses. */
 internal object WikidataMapper {
@@ -12,7 +12,7 @@ internal object WikidataMapper {
         EnrichmentData.Artwork(url = imageUrl)
 
     fun toArtistLinks(officialWebsite: String): EnrichmentData.ArtistLinks =
-        EnrichmentData.ArtistLinks(links = listOf(ExternalLink(type = "official homepage", url = officialWebsite)))
+        EnrichmentData.ArtistLinks(links = listOf(externalLink(type = "official homepage", url = officialWebsite)))
 
     /**
      * The external-id claims as identifiers, or null when the entity carries none. Spotify (P1902)

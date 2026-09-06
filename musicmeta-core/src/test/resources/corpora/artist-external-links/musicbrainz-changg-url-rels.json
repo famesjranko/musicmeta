@@ -1,0 +1,56 @@
+{
+  "id": "8b3a264b-aafc-46b9-84cc-6ede9ca17349",
+  "name": "Changg",
+  "relations": [
+    {
+      "type": "free streaming",
+      "type-id": "769085a1-c2f7-4c24-a532-2375a77693bd",
+      "direction": "forward",
+      "target-type": "url",
+      "url": {
+        "id": "d8258c1c-4c4f-4b95-a6f9-a0892457c261",
+        "resource": "https://open.spotify.com/artist/1nX1HVIUo1Zfs3e2v3lFb9"
+      }
+    },
+    {
+      "type": "social network",
+      "type-id": "99429741-f3f6-484b-84f8-23af51991770",
+      "direction": "forward",
+      "target-type": "url",
+      "url": {
+        "id": "57af1f35-65db-4331-99b6-08f786a30679",
+        "resource": "https://www.facebook.com/chandoublegwithf"
+      }
+    },
+    {
+      "type": "social network",
+      "type-id": "99429741-f3f6-484b-84f8-23af51991770",
+      "direction": "forward",
+      "target-type": "url",
+      "url": {
+        "id": "61fe24cc-c663-4969-9b3f-ffa3ed31c3e9",
+        "resource": "https://www.instagram.com/rsrm.changg/"
+      }
+    },
+    {
+      "type": "soundcloud",
+      "type-id": "89e4a949-0976-440d-bda1-5f772c1e5710",
+      "direction": "forward",
+      "target-type": "url",
+      "url": {
+        "id": "92497d32-2664-44d6-8ca4-672c835c9500",
+        "resource": "https://soundcloud.com/user-66380925"
+      }
+    },
+    {
+      "type": "youtube",
+      "type-id": "6a540e5b-58c6-4192-b6ba-dbc71ec8fcf0",
+      "direction": "forward",
+      "target-type": "url",
+      "url": {
+        "id": "25f4bbed-1807-49cc-8a2b-7e78ccc788e1",
+        "resource": "https://www.youtube.com/@Changg"
+      }
+    }
+  ]
+}
