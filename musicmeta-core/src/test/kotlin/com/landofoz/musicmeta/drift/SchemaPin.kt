@@ -82,26 +82,50 @@ internal fun classifyBody(body: Any, requiredPaths: List<String>): PinVerdict {
  * `[0].trackName`, `entities.Q44190.claims.P434[0].mainsnak.datavalue.value`. A segment name is
  * matched literally, so a provider whose keys contain a `.` cannot be pinned by this grammar.
  *
+ * A segment may instead carry `[*]`, which holds when **any one** element of the array satisfies
+ * the rest of the path. That is the form for a field an upstream fills for some entities and not
+ * others: ListenBrainz Labs describes fewer than half its similar-artist rows, so `[0].comment`
+ * would report drift every time the route reordered onto an undescribed neighbour, and an alarm
+ * that fires on a reorder is one its reader learns to skip. `[*]` still fails if the field leaves
+ * the response entirely, which is the drift worth an email. `[*]` over an empty array, a non-array
+ * or a missing key is absent — it may never pass by finding nothing.
+ *
  * Blank counts as absent. A mapper that defaults a missing field to `""` produces exactly the
  * empty answer the pin exists to catch, so the two must not be distinguished here.
  */
 internal fun isPresent(root: Any, path: String): Boolean {
+    val star = path.indexOf(ANY_INDEX)
+    if (star < 0) return resolve(root, path)?.let { !isBlank(it) } == true
+    val array = resolve(root, path.take(star).removeSuffix(".")) as? JSONArray ?: return false
+    val rest = path.substring(star + ANY_INDEX.length).removePrefix(".")
+    return (0 until array.length()).any { index ->
+        val element = array.get(index)
+        if (rest.isEmpty()) !isBlank(element) else isPresent(element, rest)
+    }
+}
+
+/** The value [path] names in [root], or null where any segment of it is missing. Fixed indices only. */
+private fun resolve(root: Any, path: String): Any? {
     var current: Any = root
+    if (path.isEmpty()) return current
     for (segment in path.split('.')) {
         val name = segment.substringBefore('[')
         if (name.isNotEmpty()) {
-            val obj = current as? JSONObject ?: return false
-            if (!obj.has(name)) return false
+            val obj = current as? JSONObject ?: return null
+            if (!obj.has(name)) return null
             current = obj.get(name)
         }
         for (index in indicesIn(segment)) {
-            val array = current as? JSONArray ?: return false
-            if (index >= array.length()) return false
+            val array = current as? JSONArray ?: return null
+            if (index >= array.length()) return null
             current = array.get(index)
         }
     }
-    return !isBlank(current)
+    return current
 }
+
+/** The path segment suffix meaning "any one element of this array". */
+private const val ANY_INDEX = "[*]"
 
 /** The `[n]` indices in one path segment, in order. */
 private fun indicesIn(segment: String): List<Int> =
