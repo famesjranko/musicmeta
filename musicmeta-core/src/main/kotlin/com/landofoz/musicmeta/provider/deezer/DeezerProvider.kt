@@ -464,7 +464,7 @@ public class DeezerProvider internal constructor(
     }
 
     private companion object {
-        const val SEARCH_SCORE = 0.75f
+        private const val SEARCH_SCORE = 0.75f
 
         /** Related-artist fan-out bound for SIMILAR_TRACKS — mirrors SimilarAlbumsProvider. */
         private const val RELATED_ARTISTS_LIMIT = 5

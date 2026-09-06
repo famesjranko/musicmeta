@@ -369,6 +369,6 @@ private class ITunesAlbumScope(private val api: ITunesApi) {
 
     private companion object {
         /** Candidate pool size for the name-search selection — enough hits for the requested edition to surface. */
-        const val ALBUM_SEARCH_LIMIT = 5
+        private const val ALBUM_SEARCH_LIMIT = 5
     }
 }

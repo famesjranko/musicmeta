@@ -172,6 +172,15 @@ no line to read: `CacheEnvelope<out T : EnrichmentResult>` dumps as a bare `Cach
 Narrowing a bound, flipping variance, or removing `reified` from an inline function is a source
 break that moves no `.api` line, so any change to one is reviewed from the `.kt`.
 
+A `const val` in a **private companion object** is a `public static final` field on the *enclosing*
+class. Kotlin honours the private companion and the JVM does not, so the constant is unreachable
+from Kotlin, reachable from Java, and recorded by `apiCheck` as published surface — six of them
+were, a log tag and a base URL among them, until they were removed under a `### Breaking Changes`
+line for constants nobody meant to publish. `private const val` in the same companion does not leak
+and the enclosing class still reads it unqualified, so the fix costs nothing at any call site.
+`scripts/checks/check_private_companion_consts.py` gates the bare form now; what it cannot tell you
+is whether a constant in a *public* companion belongs there.
+
 The surface was narrowed to the four-role boundary in v0.10.0 (#5). `CircuitBreaker`,
 `MusicBrainzParser` and the built-in mergers/synthesizers are `internal`, so a refactor confined to
 them leaves `apiCheck` green. `RateLimiter` is public only because it is a parameter of nearly every

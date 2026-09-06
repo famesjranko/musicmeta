@@ -185,6 +185,6 @@ public class RoomEnrichmentCache(
     }
 
     private companion object {
-        const val TAG = "RoomEnrichmentCache"
+        private const val TAG = "RoomEnrichmentCache"
     }
 }

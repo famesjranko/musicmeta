@@ -14,6 +14,25 @@ The full per-release list, additions and fixes included, is [CHANGELOG.md](../..
 
 ## Unreleased
 
+### Six provider constants leave the published surface
+
+`WikipediaProvider.TAG`, `WikipediaProvider.WIKIDATA_API`, `ListenBrainzProvider.PRIORITY`,
+`ListenBrainzProvider.FALLBACK_PRIORITY`, `DeezerProvider.SEARCH_SCORE` and
+`RoomEnrichmentCache.TAG` were internal constants that the JVM published as `public static final`
+fields anyway, because a `const val` in a *private* companion object is still a field on the
+enclosing class. No Kotlin caller could ever see them, so Kotlin code needs no change.
+
+A Java caller reading one has to stop:
+
+```java
+String tag = WikipediaProvider.TAG;                 // no longer compiles
+int priority = ListenBrainzProvider.PRIORITY;       // no longer compiles
+```
+
+They were log tags, a base URL and internal scoring numbers, none of them a value the library
+promises to keep. Use your own constant, or read the equivalent from the public surface —
+`ProviderCapability.priority` on the capability the provider declares, for the two priorities.
+
 ### `RadioDiscoveryMode.apiValue` is internal
 
 It carried ListenBrainz's wire strings, which are that provider's business rather than a contract
