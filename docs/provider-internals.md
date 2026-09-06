@@ -353,7 +353,10 @@ title, not the first artist-plausible one, then the result is accepted on the pa
 well as the artist before `ALBUM_ART`, `LABEL`, `RELEASE_TYPE` and `ALBUM_METADATA` share it
 (`docs/pitfalls.md` §7). The artist half may credit several artists, joined by `", "`; a request
 naming one of them is accepted at that artist's own tier, matching a credited name whole and never
-partially (`docs/pitfalls.md` §33). `country` is free text: a country name is normalised to the ISO 3166-1
+partially (`docs/pitfalls.md` §33). A credited name Discogs printed as a *variation* of the artist's
+published name carries a trailing `*` — 13% of the credit strings in a 2589-hit release-search
+sample — and is compared without it. The convention is positional: an asterisk anywhere but the end
+is a character of the name and is kept. `country` is free text: a country name is normalised to the ISO 3166-1
 alpha-2 code `Metadata.country` reports (`UK` included, which is not an ISO code), while a value
 naming no *current* ISO country — a multi-country region (`Europe`, `Scandinavia`, `UK & Europe`) or
 a historical state (`Yugoslavia`, `Czechoslovakia`) — has no code and is passed through as Discogs

@@ -54,6 +54,16 @@ internal fun parseDiscogsRelease(
 private const val CREDIT_SEPARATOR = ", "
 
 /**
+ * Discogs marks a credited name that is a *variation* of the artist's published name — not a
+ * different act — by appending this to it. The convention is positional: only a trailing one is the
+ * marker, and an asterisk anywhere else is a character of the name.
+ */
+private const val NAME_VARIATION_MARKER = "*"
+
+/** [credit] as the name it stands for, with Discogs' trailing variation marker off. */
+private fun creditedName(credit: String): String = credit.removeSuffix(NAME_VARIATION_MARKER).trim()
+
+/**
  * How [requestedArtist] matched [credit], or null if no artist [credit] names is theirs.
  *
  * A release credited to more than one artist reaches here as one string —
@@ -61,9 +71,11 @@ private const val CREDIT_SEPARATOR = ", "
  * its combined display field. A request naming one of those artists is otherwise compared against a
  * name no upstream holds for anyone, which is why every candidate for such a release was refused.
  *
- * The whole credit is tested first, so splitting can never displace a match the credit already has,
- * and an act whose own name holds a comma (`Earth, Wind & Fire`) is matched as itself. Only `", "`
- * separates: an artist name holds `&` far more often than a Discogs credit joins on it.
+ * Every name compared is first taken past Discogs' [NAME_VARIATION_MARKER], which decorates a
+ * credited string without being part of the name it decorates. The whole credit is tested first, so
+ * splitting can never displace a match the credit already has, and an act whose own name holds a
+ * comma (`Earth, Wind & Fire`) is matched as itself. Only `", "` separates: an artist name holds `&`
+ * far more often than a Discogs credit joins on it.
  *
  * A part is accepted at same name only ([sameNameTier]). The tier is then the one that part earns,
  * undemoted — this path identifies a *release*, and a release credited to the requested artist and
@@ -76,8 +88,8 @@ private fun creditNameTier(
     credit: String,
     aliases: List<AlternativeName>,
 ): NameMatchTier? {
-    artistNameTier(requestedArtist, credit, aliases)?.let { return it }
-    val credited = credit.split(CREDIT_SEPARATOR).map { it.trim() }.filter { it.isNotEmpty() }
+    artistNameTier(requestedArtist, creditedName(credit), aliases)?.let { return it }
+    val credited = credit.split(CREDIT_SEPARATOR).map { creditedName(it.trim()) }.filter { it.isNotEmpty() }
     if (credited.size < 2) return null
     return credited.mapNotNull { sameNameTier(requestedArtist, it, aliases) }.minByOrNull { it.ordinal }
 }
