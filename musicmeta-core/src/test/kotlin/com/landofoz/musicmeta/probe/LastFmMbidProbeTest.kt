@@ -24,19 +24,46 @@ import java.net.URLDecoder
  *
  * `ARM_NAME` and `applyArm` are the only two things that differ between branches.
  */
-private const val ARM_NAME = "control"
+private const val ARM_NAME = "corroborate-all"
 
 /**
  * The arm's whole property: what a Last.fm row's MBID becomes, and what asking cost.
  *
- * The control asks nothing and changes nothing.
+ * B2 is B1's rule with one thing changed — the candidate set. Where B1 asks only about ids another
+ * contributor already put in the list, B2 asks MusicBrainz who else carries the row's name, so a
+ * wrong id no other contributor contradicts is reachable. `plan.md`'s three-step rule, unchanged.
+ *
+ * The extra reach is bought with requests, and every one of them is billed: a url-rels lookup for
+ * every row that carries an id, then, only for the rows that lookup does not corroborate, one
+ * `artist:"name"` search and a url-rels lookup for each artist it names.
  */
 private fun applyArm(
+    ctx: ArmContext,
     rows: List<LastFmRow>,
     others: List<SimilarArtist>,
     mb: MbTable,
     ledger: Ledger,
-): List<LastFmRow> = rows
+): List<LastFmRow> {
+    val asked = mutableSetOf<String>()
+    fun pagesOf(mbid: String): List<String> {
+        if (asked.add(mbid.lowercase())) ledger.bill("GET /ws/2/artist/{mbid}?inc=url-rels", mbid)
+        return mb.lastfmPages(mbid)
+    }
+    val searched = mutableSetOf<String>()
+
+    return rows.map { row ->
+        val mine = row.artist.mbid?.trim()?.lowercase()?.takeIf { it.isNotEmpty() } ?: return@map row
+        val page = row.page ?: return@map row
+        if (page in pagesOf(mine)) return@map row
+        if (searched.add(key(row.artist.name))) {
+            ledger.bill("GET /ws/2/artist?query=artist:\"name\"", row.artist.name)
+        }
+        val candidates = mb.sameNameCandidates(row.artist.name).orEmpty()
+            .map { it.lowercase() }.distinct().filter { it != mine }
+        val owners = candidates.filter { page in pagesOf(it) }
+        if (owners.size != 1) row else row.copy(artist = row.artist.copy(mbid = owners.single()))
+    }
+}
 
 // ---- Shared harness below this line; identical on every branch ------------------------------
 
@@ -69,6 +96,9 @@ internal data class LastFmRow(
     val mbidIndex: Int,
 )
 
+/** Which workload the arm is running over, so an arm may read that artist's own pool. */
+internal data class ArmContext(val set: String, val slug: String)
+
 /** One arm's request ledger. Every consultation of [MbTable] bills the request it stands in for. */
 internal class Ledger {
     val lines = mutableListOf<String>()
@@ -98,6 +128,27 @@ internal class MbTable(private val root: JSONObject) {
     }
 
     fun isKnown(mbid: String): Boolean = root.getJSONObject("artists").has(mbid.lowercase())
+
+    /**
+     * The requested artist's own curated genres and vote-carrying tags, from the lookup
+     * `MusicBrainzApi.lookupArtistWithRels` already makes on every artist enrich.
+     */
+    fun requestedVocabulary(slug: String): Set<String> {
+        val requested = root.optJSONObject("requested")?.optJSONObject(slug) ?: return emptySet()
+        val out = mutableSetOf<String>()
+        for (field in listOf("tags", "genres")) {
+            val arr = requested.optJSONArray(field) ?: continue
+            for (i in 0 until arr.length()) out += arr.getString(i)
+        }
+        return out
+    }
+
+    /** A similar entry's vote-carrying tags — the only vocabulary a *search* hit carries. */
+    fun searchHitTags(mbid: String): Set<String> {
+        val a = root.getJSONObject("artists").optJSONObject(mbid.lowercase()) ?: return emptySet()
+        val arr = a.optJSONArray("tags") ?: return emptySet()
+        return (0 until arr.length()).map { arr.getString(it) }.toSet()
+    }
 
     /** Every same-name MusicBrainz artist, for the names a search was captured for. */
     fun sameNameCandidates(name: String): List<String>? {
@@ -247,7 +298,7 @@ class LastFmMbidProbeTest {
             val w = Workload(set, slug)
             val ledger = Ledger()
             val others = w.deezer + w.labs
-            val after = applyArm(w.lastFm, others, mb, ledger)
+            val after = applyArm(ArmContext(set, slug), w.lastFm, others, mb, ledger)
             val before = w.lastFm
 
             val controlTop = topTen(w.flattened(before))
