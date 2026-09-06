@@ -29,6 +29,10 @@ import java.util.concurrent.TimeUnit
  *
  * Neither is observable from a result — a hung source degrades to an empty pool either way — so the
  * fake reports its own cancellation.
+ *
+ * Every wall-clock number here bounds a latch that a correct run has already counted down before it
+ * is awaited, never a duration under measurement: [GRACE_MS] is what a hang spends and a correct run
+ * does not, and the 60s `enrichTimeoutMs` is a budget these tests are asserting never fires.
  */
 class AliasLookupLifetimeTest {
 
