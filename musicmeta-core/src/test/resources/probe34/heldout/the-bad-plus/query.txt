@@ -1,0 +1,6 @@
+artist=The Bad Plus
+musicbrainz=b9bede5d-89b6-4c43-9c45-ca3930cf4db8
+deezer=1717
+lastfm=https://ws.audioscrobbler.com/2.0/?method=artist.getsimilar&artist=The%20Bad%20Plus&api_key=<LASTFM_API_KEY>&format=json&limit=20
+labs=https://labs.api.listenbrainz.org/similar-artists/json?artist_mbids=b9bede5d-89b6-4c43-9c45-ca3930cf4db8&algorithm=session_based_days_7500_session_300_contribution_5_threshold_10_limit_100_filter_True_skip_30
+deezer_url=https://api.deezer.com/artist/1717/related?limit=20
