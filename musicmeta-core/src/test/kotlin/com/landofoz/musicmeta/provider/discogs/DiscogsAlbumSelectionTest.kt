@@ -74,6 +74,58 @@ class DiscogsAlbumSelectionTest {
     }
 
     @Test
+    fun `a credit marked as a name variation matches the name under the marker`() {
+        // Given - Discogs' name-variation marker on a credit whose script leaves it unnormalizable
+        val combined = "東京事変* - 教育"
+
+        // When - parsing against the very name the marker is attached to
+        val parsed = parseDiscogsRelease(combined, requestedArtist = "東京事変", requestedTitle = "教育")
+
+        // Then - the marker is punctuation of Discogs' own, not part of the name it decorates
+        assertEquals("東京事変*" to "教育", parsed)
+    }
+
+    @Test
+    fun `only the marked part of a comma-joined credit loses its marker`() {
+        // Given - a two-artist credit whose second name is a variation
+        val combined = "Χάρις Αλεξίου, Αντώνη Βαρδή* - Ξημερώνει"
+
+        // When - parsing against that second, marked name
+        val parsed = parseDiscogsRelease(combined, requestedArtist = "Αντώνη Βαρδή", requestedTitle = "Ξημερώνει")
+
+        // Then - the credit is the artist side whole, marker included, as Discogs printed it
+        assertEquals("Χάρις Αλεξίου, Αντώνη Βαρδή*" to "Ξημερώνει", parsed)
+    }
+
+    @Test
+    fun `a marker sitting after the homonym counter does not hide it`() {
+        // Given - a credit carrying both of Discogs' trailing conventions, counter then marker
+        val combined = "Кино (2)* - Ночь"
+
+        // When - parsing against the name under both
+        val parsed = parseDiscogsRelease(combined, requestedArtist = "Кино", requestedTitle = "Ночь")
+
+        // Then - the marker comes off first, or the counter's end-anchored pattern never matches
+        assertEquals("Кино (2)*" to "Ночь", parsed)
+    }
+
+    @Test
+    fun `an asterisk inside a credit is part of the name and survives`() {
+        // Given - a live credit carrying markers between its names as well as at the end
+        val combined = "Αλεξίου* • Μάλαμας* • Ιωαννίδης* - Ζωντανή Ηχογράφηση"
+
+        // When - parsing against the same string with every asterisk gone, interior ones included
+        val parsed = parseDiscogsRelease(
+            combined,
+            requestedArtist = "Αλεξίου • Μάλαμας • Ιωαννίδης",
+            requestedTitle = "Ζωντανή Ηχογράφηση",
+        )
+
+        // Then - the convention is positional, so an interior asterisk is never dropped
+        assertNull(parsed)
+    }
+
+    @Test
     fun `a credited artist is accepted at same name only, never by containment`() {
         // Given - a credit the request does not match whole, one of whose parts it contains
         val combined = "Chuck D, Public Enemy - Album"
