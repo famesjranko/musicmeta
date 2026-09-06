@@ -6,6 +6,7 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.currentCoroutineContext
 import org.json.JSONObject
+import java.util.concurrent.atomic.AtomicInteger
 
 /**
  * Cancels the caller and throws on its first `fetchJsonResult` call (either overload), then
@@ -13,7 +14,7 @@ import org.json.JSONObject
  * fixture shared by every HTTP-backed provider test.
  */
 class CancellingOnceHttpClient(private val delegate: HttpClient) : HttpClient by delegate {
-    private var calls = 0
+    private val calls = AtomicInteger()
 
     override suspend fun fetchJsonResult(url: String): HttpResult<JSONObject> {
         cancelOnFirstCall()
@@ -25,9 +26,10 @@ class CancellingOnceHttpClient(private val delegate: HttpClient) : HttpClient by
         return delegate.fetchJsonResult(url, headers)
     }
 
+    // The counter is atomic because "first" must name one call: two callers racing a `var` can both
+    // read 1 and both cancel, which is a second cancellation the fixture never promised.
     private suspend fun cancelOnFirstCall() {
-        calls++
-        if (calls == 1) {
+        if (calls.incrementAndGet() == 1) {
             currentCoroutineContext()[Job]?.cancel()
             throw CancellationException("simulated cancellation")
         }

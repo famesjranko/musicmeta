@@ -5,16 +5,21 @@ import com.landofoz.musicmeta.CanonicalStatus
 import com.landofoz.musicmeta.EnrichmentCache
 import com.landofoz.musicmeta.EnrichmentResult
 import com.landofoz.musicmeta.EnrichmentType
+import java.util.concurrent.ConcurrentHashMap
 
 /** A cache operation that [FakeEnrichmentCache] can be told to fail, to exercise cache-failure paths. */
 enum class CacheOp { GET, GET_INCLUDING_EXPIRED, PUT, INVALIDATE }
 
 // `open`, like FakeProvider: a test that needs one operation to misbehave in a way `failing` cannot
 // express — suspending, or raising a CancellationException — subclasses and overrides that one.
+// Every store here is concurrent, though nothing calls this cache from more than one coroutine
+// today: `put` writes three maps, and the caller that fans those writes out arrives without
+// changing a line of this file. No entry can be null — a `ConcurrentHashMap` refusing one would be
+// a compile error here, not a surprise at runtime.
 open class FakeEnrichmentCache : EnrichmentCache {
-    val stored = mutableMapOf<String, EnrichmentResult.Success>()
-    val storedTtls = mutableMapOf<String, Long>()
-    val expiredStore = mutableMapOf<String, EnrichmentResult.Success>()
+    val stored: MutableMap<String, EnrichmentResult.Success> = ConcurrentHashMap()
+    val storedTtls: MutableMap<String, Long> = ConcurrentHashMap()
+    val expiredStore: MutableMap<String, EnrichmentResult.Success> = ConcurrentHashMap()
 
     /**
      * [CanonicalStatus] each [stored]/[expiredStore] entry was written under, by the same key. A
@@ -22,12 +27,12 @@ open class FakeEnrichmentCache : EnrichmentCache {
      * [getIncludingExpired] fall back to [CanonicalStatus.NOT_ATTEMPTED_CACHE_HIT] — a status that
      * claims nothing, matching a cache that never learned to preserve one either.
      */
-    val storedStatuses = mutableMapOf<String, CanonicalStatus>()
+    val storedStatuses: MutableMap<String, CanonicalStatus> = ConcurrentHashMap()
 
     /** Negative-cache counterpart to [stored]/[storedStatuses]. See [getNegative]/[putNegative]. */
-    val negativeStored = mutableMapOf<String, EnrichmentResult.NotFound>()
-    val negativeStatuses = mutableMapOf<String, CanonicalStatus>()
-    private val manualSelections = mutableSetOf<String>()
+    val negativeStored: MutableMap<String, EnrichmentResult.NotFound> = ConcurrentHashMap()
+    val negativeStatuses: MutableMap<String, CanonicalStatus> = ConcurrentHashMap()
+    private val manualSelections: MutableSet<String> = ConcurrentHashMap.newKeySet()
 
     /** Operations that throw instead of running. Empty by default, so existing tests are unaffected. */
     var failing: Set<CacheOp> = emptySet()

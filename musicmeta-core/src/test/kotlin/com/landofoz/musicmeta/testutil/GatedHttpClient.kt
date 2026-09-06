@@ -5,6 +5,7 @@ import com.landofoz.musicmeta.http.HttpResult
 import kotlinx.coroutines.CompletableDeferred
 import org.json.JSONArray
 import org.json.JSONObject
+import java.util.concurrent.atomic.AtomicInteger
 
 /**
  * Holds every request whose URL contains [urlContains] inside the fetch until [release], so that a
@@ -19,9 +20,10 @@ class GatedHttpClient(
 
     private val gate = CompletableDeferred<Unit>()
 
-    /** A plain `var`, safe only because `runTest` runs every caller on one thread. */
-    var arrivals: Int = 0
-        private set
+    private val arrived = AtomicInteger()
+
+    /** How many callers got inside the gate. Atomic: the callers it counts are the ones racing. */
+    val arrivals: Int get() = arrived.get()
 
     /** Lets every parked caller, and every later one, through. */
     fun release() {
@@ -45,7 +47,7 @@ class GatedHttpClient(
 
     private suspend fun awaitGate(url: String) {
         if (!url.contains(urlContains)) return
-        arrivals++
+        arrived.incrementAndGet()
         gate.await()
     }
 }
