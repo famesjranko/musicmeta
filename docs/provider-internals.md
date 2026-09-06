@@ -276,6 +276,18 @@ All three leave the caller without a title, so none of them changes an answer; t
 what stops a shape change reading as an artist Wikipedia has never heard of. `WikipediaProvider`
 holds this client, so both routes on this host queue on one rate limiter.
 
+**A merged id needs no handling on either route, and that is a property of `wbgetentities` rather
+than of this code.** Wikidata merges duplicate items and keeps the old id as a redirect forever, so
+a stored `wikidataId` going stale is ordinary ageing — 46,384 redirects point at an item carrying a
+MusicBrainz artist id. The `redirects` parameter defaults to `yes`, and a resolved answer is keyed
+under the id that was **asked for**: `entities.<requested id>` carries the target's claims and
+sitelinks, and names the target only in the inner `id` field beside a `redirects` object. So one
+request resolves a merged id, and `redirects.to` is a fact about the answer that nothing reads.
+Measured 2026-09-07 over 347 distinct Wikidata ids taken from MusicBrainz `wikidata` URL relations:
+347 answered under their own key, none as a redirect and none missing — MusicBrainz republishes the
+relation after a merge, so the stale id arrives from a consumer or an aged cache rather than from
+the lookup that filled it.
+
 **Wikipedia.** Two surfaces. The bio comes from the Action API
 (`action=query&prop=extracts|pageimages|pageprops&exintro&explaintext`), one request carrying the
 lead text, the ~320px thumbnail and the page properties. Parsed and dropped from it:

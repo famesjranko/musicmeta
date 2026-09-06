@@ -40,8 +40,9 @@ internal sealed interface WikidataProperties {
     data object NoClaims : WikidataProperties
 
     /**
-     * Wikidata answered, and holds no entity under the requested id — it is marked `missing`, or
-     * the answer is keyed under a different id because the requested one is now a redirect.
+     * Wikidata answered, and holds no entity under the requested id: it is marked `missing`. An id
+     * that has been merged away is not this — it answers under the id that was asked for, carrying
+     * the target's claims, so it reaches [Claims] like any other (§40).
      */
     data object NoEntity : WikidataProperties
 
@@ -72,8 +73,9 @@ internal sealed interface EnwikiSitelink {
     data object NoArticle : EnwikiSitelink
 
     /**
-     * Wikidata answered, and holds no entity under the requested id — it is marked `missing`, or
-     * the answer is keyed under a different id because the requested one is now a redirect.
+     * Wikidata answered, and holds no entity under the requested id: it is marked `missing`. An id
+     * that has been merged away is not this — it answers under the id that was asked for, carrying
+     * the target's `sitelinks`, so it reaches [Title] or [NoArticle] like any other (§40).
      */
     data object NoEntity : EnwikiSitelink
 

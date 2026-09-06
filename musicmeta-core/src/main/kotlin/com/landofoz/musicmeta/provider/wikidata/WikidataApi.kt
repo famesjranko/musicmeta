@@ -33,9 +33,11 @@ internal class WikidataApi(
      * `claims` key is the payload having changed shape, not an artist with nothing recorded, which
      * is the pair [WikidataProperties.UnreadableShape] and [WikidataProperties.NoClaims].
      *
-     * An id Wikidata does not hold comes back as `entities.<id>` carrying a `missing` marker, or
-     * keyed under the target id when the requested one is now a redirect: both are
-     * [WikidataProperties.NoEntity].
+     * An id Wikidata does not hold comes back as `entities.<id>` carrying a `missing` marker, which
+     * is [WikidataProperties.NoEntity]. An id Wikidata has **merged away** is not that: it still
+     * answers under the id that was asked for, carrying the target's claims and naming the target
+     * only in the inner `id` field beside a `redirects` object. `redirects=yes` is the parameter
+     * default, so reading `entities.<id>` resolves a merged id in one request.
      *
      * A top-level `error` key is [WikidataProperties.UnreadableShape] too. It is how this route
      * rejects a *request* — `param-invalid` is the shape that regressed the old `wbgetclaims` call
@@ -74,8 +76,12 @@ internal class WikidataApi(
      * than an artist without a page, which is the pair [EnwikiSitelink.UnreadableShape] and
      * [EnwikiSitelink.NoArticle] keep apart.
      *
-     * A requested id that Wikidata has since redirected answers under the *target* id, so
-     * `entities.<requested id>` is absent and the outcome is [EnwikiSitelink.NoEntity].
+     * An id Wikidata has since merged away still answers under the id that was **asked for**,
+     * carrying the target's `sitelinks` and naming the target only in the inner `id` field beside a
+     * `redirects` object. `redirects=yes` is the parameter default, and reading `entities.<id>`
+     * therefore resolves a merged id without a second request. Keying off `redirects.to`, or off
+     * the sole entity, would be wrong on both counts: it is not where the answer lives, and one
+     * request may name up to fifty ids.
      *
      * No body at all is [EnwikiSitelink.UnreadableShape], not [EnwikiSitelink.NoEntity]:
      * [bodyOrThrowTransient] hands back `null` for a 4xx, and this route answers an id it does not
@@ -213,6 +219,13 @@ internal class WikidataApi(
          * two levels [getEnwikiSitelink] tells apart: an empty `sitelinks` is an artist with no
          * English article and is not drift, so only its *absence* may be reported, and the pin says
          * which of the two moved rather than leaving a report that reads as either.
+         *
+         * The same route is pinned a second time at a **merged** id, Q53265341, which is where the
+         * paths say something the Q44190 pin cannot: that Wikidata still keys a merged entity's
+         * answer under the id that was asked for. Nothing else watches that. Every path here is
+         * required, so it takes an id that is a redirect today — `redirects.to` is absent from
+         * every answer that is not one, and pinning it at Q44190 would report drift daily. If
+         * Wikidata ever splits this id again, the pin says so once and takes a new one.
          */
         val SCHEMA_PIN_TARGETS: List<SchemaTarget> = listOf(
             SchemaTarget(
@@ -232,6 +245,15 @@ internal class WikidataApi(
                 requiredPaths = listOf(
                     "entities.Q44190.sitelinks",
                     "entities.Q44190.sitelinks.enwiki.title",
+                ),
+            ),
+            SchemaTarget(
+                provider = "wikidata",
+                route = "enwiki sitelink of a merged id",
+                url = enwikiSitelinkUrl("Q53265341"),
+                requiredPaths = listOf(
+                    "entities.Q53265341.redirects.to",
+                    "entities.Q53265341.sitelinks.enwiki.title",
                 ),
             ),
         )
