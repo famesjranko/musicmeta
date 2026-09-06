@@ -113,14 +113,16 @@ class DeezerSharedAlbumSearchTest {
         val engine = engine()
         engine.enrich(request, setOf(EnrichmentType.ALBUM_METADATA, EnrichmentType.SIMILAR_ALBUMS))
 
-        // When - the consumer asks again for fresh data
+        // When - the consumer asks again for fresh data, and once more without asking
         engine.enrich(
             request,
             setOf(EnrichmentType.ALBUM_METADATA, EnrichmentType.SIMILAR_ALBUMS),
             forceRefresh = true,
         )
+        engine.enrich(request, setOf(EnrichmentType.ALBUM_METADATA, EnrichmentType.SIMILAR_ALBUMS))
 
-        // Then - the second call reaches upstream, so nothing the scope held outlived the first
+        // Then - only the refresh reached upstream: nothing the scope held outlived its own call,
+        // and a warm read is still answered from the cache without touching Deezer
         assertEquals(2, albumSearches())
     }
 

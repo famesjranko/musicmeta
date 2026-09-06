@@ -38,7 +38,9 @@ internal class DeezerAlbumScope(private val api: DeezerApi) {
      * be failing (`docs/pitfalls.md` §23). `ensureActive()` decides which failures are eligible —
      * only this job's own cancellation escapes the memo, leaving nothing for a sibling to inherit.
      * The cost of sharing is that a transient recovering *between* two readers no longer reaches the
-     * second.
+     * second. The other half of §23 — handing the waiters a `Deferred` rather than the right to run
+     * the call — buys nothing here: no deadline reaches one reader alone, so a cancellation that
+     * takes the lock holder has already taken every reader queued behind it.
      */
     suspend fun resolveAlbum(request: EnrichmentRequest.ForAlbum): AlbumMatch<DeezerAlbumResult>? {
         val key = SelectionKey(request.artist, request.title, request.trackCount)

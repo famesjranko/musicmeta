@@ -575,19 +575,19 @@ class DeezerProviderTest {
     }
 
     @Test
-    fun `enrich reports a transient album-search failure to both readers rather than a false NotFound`() = runTest {
+    fun `enrich reports a transient album-search failure to a repeat reader rather than a false NotFound`() = runTest {
         // Given - the album search fails transiently on every attempt
         httpClient.givenIoException("search/album")
         val request = EnrichmentRequest.forAlbum(title = "Album", artist = "Artist")
 
-        // When - the same request is enriched twice in immediate succession
+        // When - this provider asks the same question twice inside one call
         val (first, second) = withContext(ProviderCallScope()) {
             provider.enrich(request, EnrichmentType.ALBUM_ART) to
                 provider.enrich(request, EnrichmentType.ALBUM_ART)
         }
 
-        // Then - both readers surface the failure as Error, never as the empty answer a memo that
-        // held the failure as an absence would repeat, and the attempt behind it is charged once
+        // Then - the repeat read surfaces the failure as Error, never as the empty answer a memo
+        // that held the failure as an absence would repeat, and the attempt is charged once
         assertTrue(first is EnrichmentResult.Error)
         assertTrue(second is EnrichmentResult.Error)
         assertEquals(1, httpClient.requestedUrls.count { it.contains("search/album") })
