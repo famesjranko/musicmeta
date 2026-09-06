@@ -8,6 +8,7 @@ import java.io.IOException
 import java.net.URI
 import java.net.URISyntaxException
 import java.util.Collections
+import java.util.concurrent.CopyOnWriteArrayList
 
 class FakeHttpClient : HttpClient {
     private val jsonResponses = mutableMapOf<String, String>()
@@ -18,7 +19,11 @@ class FakeHttpClient : HttpClient {
     private val sequencedHttpResults = mutableMapOf<String, MutableList<HttpResult<JSONObject>>>()
     private val httpResultArrayResponses = mutableMapOf<String, HttpResult<JSONArray>>()
     private val redirectResults = mutableMapOf<String, HttpResult<String>>()
-    val requestedUrls = mutableListOf<String>()
+    private val sequenceLock = Any()
+
+    // CopyOnWriteArrayList: a fanned-out provider chain issues its requests from several threads at
+    // once, and tests iterate this log lockless — a synchronizedList would leave those reads racy.
+    val requestedUrls: MutableList<String> = CopyOnWriteArrayList()
 
     /**
      * The name of every thread a request was issued from. An engine's fan-out is detached, so this
@@ -74,7 +79,9 @@ class FakeHttpClient : HttpClient {
             }
         }
     }
-    val requestedHeaders = mutableListOf<Map<String, String>>()
+
+    /** Every request's headers, in arrival order. A [CopyOnWriteArrayList] for the reason [requestedUrls] is. */
+    val requestedHeaders: MutableList<Map<String, String>> = CopyOnWriteArrayList()
 
     fun givenJsonResponse(urlContains: String, json: String) { jsonResponses[urlContains] = json }
 
@@ -179,10 +186,18 @@ class FakeHttpClient : HttpClient {
         return if (json != null) HttpResult.Ok(JSONArray(json)) else UNSTUBBED
     }
 
-    /** A sequenced stub answers first, so a URL can be given an order as well as a body. */
+    /**
+     * A sequenced stub answers first, so a URL can be given an order as well as a body.
+     *
+     * The queue is popped while requests are in flight rather than during arrangement, so two
+     * callers of one stubbed URL can otherwise take the same entry or step off the end. Taking the
+     * next entry is not one operation, so a concurrent collection cannot express it; the lock is
+     * held over a `size` and a `removeAt`, neither of which suspends. Every other stub map is
+     * written only during arrangement, which happens-before the fan-out that reads it.
+     */
     private fun bodyFor(url: String): String? {
         val queued = sequencedResponses.entries.firstOrNull { url.contains(it.key) }?.value
-        if (queued != null) return if (queued.size > 1) queued.removeAt(0) else queued.first()
+        if (queued != null) return synchronized(sequenceLock) { takeNext(queued) }
         return jsonResponses.entries.firstOrNull { url.contains(it.key) }?.value
     }
 
@@ -194,9 +209,12 @@ class FakeHttpClient : HttpClient {
      */
     private fun httpResultFor(url: String): HttpResult<JSONObject>? {
         val queued = sequencedHttpResults.entries.firstOrNull { url.contains(it.key) }?.value
-        if (queued != null) return if (queued.size > 1) queued.removeAt(0) else queued.first()
+        if (queued != null) return synchronized(sequenceLock) { takeNext(queued) }
         return httpResultResponses.entries.firstOrNull { url.contains(it.key) }?.value
     }
+
+    /** The queue's next entry, the last one repeating. Call under [sequenceLock]. */
+    private fun <T> takeNext(queued: MutableList<T>): T = if (queued.size > 1) queued.removeAt(0) else queued.first()
 
     companion object {
         /** A query parameter's name, as every `*Api` template in this module writes one. */
