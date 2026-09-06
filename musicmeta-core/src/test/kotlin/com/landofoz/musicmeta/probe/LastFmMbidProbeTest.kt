@@ -24,12 +24,22 @@ import java.net.URLDecoder
  *
  * `ARM_NAME` and `applyArm` are the only two things that differ between branches.
  */
-private const val ARM_NAME = "control"
+private const val ARM_NAME = "genre"
 
 /**
  * The arm's whole property: what a Last.fm row's MBID becomes, and what asking cost.
  *
- * The control asks nothing and changes nothing.
+ * C changes no id at all. It asks whether a *free* signal could say which rows are worth
+ * corroborating: one batched `arid:` search — the request shape the engine already sends — brings
+ * back every Last.fm-supplied id's vote-carrying tags, and a row whose tags share nothing with the
+ * requested artist's own genre-and-tag pool is flagged suspect.
+ *
+ * Both vocabularies are the upstream's own. No word list is written here, and the plan forbids one:
+ * the question is whether MusicBrainz's tags separate a wrong id from a right one, not whether a
+ * hand-written list of genres can be made to.
+ *
+ * A row neither side describes cannot be judged and is never flagged — an empty pool on either side
+ * would otherwise flag the whole list.
  */
 private fun applyArm(
     ctx: ArmContext,
@@ -37,7 +47,25 @@ private fun applyArm(
     others: List<SimilarArtist>,
     mb: MbTable,
     ledger: Ledger,
-): List<LastFmRow> = rows
+): List<LastFmRow> {
+    val pool = mb.requestedVocabulary(ctx.slug)
+    val ids = rows.mapNotNull { it.artist.mbid?.trim()?.lowercase()?.takeIf(String::isNotEmpty) }
+        .distinct()
+        .take(BATCHED_SEARCH_LIMIT)
+    if (ids.isEmpty() || pool.isEmpty()) return rows
+    ledger.bill("GET /ws/2/artist?query=arid:… OR arid:…", "${ids.size} ids")
+    for (row in rows) {
+        val mbid = row.artist.mbid?.trim()?.lowercase() ?: continue
+        if (row.mbidIndex < 0 || mbid !in ids) continue
+        val tags = mb.searchHitTags(mbid)
+        if (tags.isEmpty()) continue
+        ARM_FLAGS[Triple(ctx.set, ctx.slug, row.mbidIndex)] = tags.intersect(pool).isEmpty()
+    }
+    return rows
+}
+
+/** `MusicBrainzApi.DISAMBIGUATION_BATCH_LIMIT`, which one batched `arid:` search may not exceed. */
+private const val BATCHED_SEARCH_LIMIT = 25
 
 // ---- Shared harness below this line; identical on every branch ------------------------------
 

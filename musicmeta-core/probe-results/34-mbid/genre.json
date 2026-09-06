@@ -1,0 +1,158 @@
+{
+ "frozen": {
+  "mismatchRows": 8,
+  "metric5_flagged": 10,
+  "metric1_corrected": 0,
+  "matchRows": 130,
+  "changes": [],
+  "metric3_totalRequests": 10,
+  "metric5_flaggedMismatch": 2,
+  "rowsChanged": 0,
+  "perArtist": {
+   "fleetwood-mac": {
+    "ledger": ["GET /ws/2/artist?query=arid:\u2026 OR arid:\u2026 18 ids"],
+    "requests": 1,
+    "top10Moved": 0
+   },
+   "aphex-twin": {
+    "ledger": ["GET /ws/2/artist?query=arid:\u2026 OR arid:\u2026 18 ids"],
+    "requests": 1,
+    "top10Moved": 0
+   },
+   "burial": {
+    "ledger": ["GET /ws/2/artist?query=arid:\u2026 OR arid:\u2026 17 ids"],
+    "requests": 1,
+    "top10Moved": 0
+   },
+   "kendrick-lamar": {
+    "ledger": ["GET /ws/2/artist?query=arid:\u2026 OR arid:\u2026 17 ids"],
+    "requests": 1,
+    "top10Moved": 0
+   },
+   "changg": {
+    "ledger": [],
+    "requests": 0,
+    "top10Moved": 0
+   },
+   "bjork": {
+    "ledger": ["GET /ws/2/artist?query=arid:\u2026 OR arid:\u2026 18 ids"],
+    "requests": 1,
+    "top10Moved": 0
+   },
+   "fela-kuti": {
+    "ledger": ["GET /ws/2/artist?query=arid:\u2026 OR arid:\u2026 13 ids"],
+    "requests": 1,
+    "top10Moved": 0
+   },
+   "boards-of-canada": {
+    "ledger": ["GET /ws/2/artist?query=arid:\u2026 OR arid:\u2026 18 ids"],
+    "requests": 1,
+    "top10Moved": 0
+   },
+   "tigran-hamasyan": {
+    "ledger": ["GET /ws/2/artist?query=arid:\u2026 OR arid:\u2026 20 ids"],
+    "requests": 1,
+    "top10Moved": 0
+   },
+   "sleep-token": {
+    "ledger": ["GET /ws/2/artist?query=arid:\u2026 OR arid:\u2026 16 ids"],
+    "requests": 1,
+    "top10Moved": 0
+   },
+   "4wheel": {
+    "ledger": [],
+    "requests": 0,
+    "top10Moved": 0
+   },
+   "radiohead": {
+    "ledger": ["GET /ws/2/artist?query=arid:\u2026 OR arid:\u2026 20 ids"],
+    "requests": 1,
+    "top10Moved": 0
+   }
+  },
+  "metric4_top10Moved": 0,
+  "capturedOn": "2026-09-06",
+  "metric3_worstArtist": 1,
+  "metric6_flaggedMatch": 7,
+  "arm": "genre",
+  "metric2_wronglyChanged": 0
+ },
+ "heldout": {
+  "mismatchRows": 5,
+  "metric5_flagged": 10,
+  "metric1_corrected": 0,
+  "matchRows": 152,
+  "changes": [],
+  "metric3_totalRequests": 12,
+  "metric5_flaggedMismatch": 0,
+  "rowsChanged": 0,
+  "perArtist": {
+   "blackpink": {
+    "ledger": ["GET /ws/2/artist?query=arid:\u2026 OR arid:\u2026 13 ids"],
+    "requests": 1,
+    "top10Moved": 0
+   },
+   "four-tet": {
+    "ledger": ["GET /ws/2/artist?query=arid:\u2026 OR arid:\u2026 18 ids"],
+    "requests": 1,
+    "top10Moved": 0
+   },
+   "shakira": {
+    "ledger": ["GET /ws/2/artist?query=arid:\u2026 OR arid:\u2026 20 ids"],
+    "requests": 1,
+    "top10Moved": 0
+   },
+   "nico": {
+    "ledger": ["GET /ws/2/artist?query=arid:\u2026 OR arid:\u2026 18 ids"],
+    "requests": 1,
+    "top10Moved": 0
+   },
+   "the-bad-plus": {
+    "ledger": ["GET /ws/2/artist?query=arid:\u2026 OR arid:\u2026 19 ids"],
+    "requests": 1,
+    "top10Moved": 0
+   },
+   "alison-krauss": {
+    "ledger": ["GET /ws/2/artist?query=arid:\u2026 OR arid:\u2026 19 ids"],
+    "requests": 1,
+    "top10Moved": 0
+   },
+   "a-tribe-called-quest": {
+    "ledger": ["GET /ws/2/artist?query=arid:\u2026 OR arid:\u2026 17 ids"],
+    "requests": 1,
+    "top10Moved": 0
+   },
+   "trouble": {
+    "ledger": ["GET /ws/2/artist?query=arid:\u2026 OR arid:\u2026 19 ids"],
+    "requests": 1,
+    "top10Moved": 0
+   },
+   "the-zombies": {
+    "ledger": ["GET /ws/2/artist?query=arid:\u2026 OR arid:\u2026 19 ids"],
+    "requests": 1,
+    "top10Moved": 0
+   },
+   "claude-debussy": {
+    "ledger": ["GET /ws/2/artist?query=arid:\u2026 OR arid:\u2026 15 ids"],
+    "requests": 1,
+    "top10Moved": 0
+   },
+   "kino": {
+    "ledger": ["GET /ws/2/artist?query=arid:\u2026 OR arid:\u2026 17 ids"],
+    "requests": 1,
+    "top10Moved": 0
+   },
+   "alvvays": {
+    "ledger": ["GET /ws/2/artist?query=arid:\u2026 OR arid:\u2026 20 ids"],
+    "requests": 1,
+    "top10Moved": 0
+   }
+  },
+  "metric4_top10Moved": 0,
+  "capturedOn": "2026-09-06",
+  "metric3_worstArtist": 1,
+  "metric6_flaggedMatch": 6,
+  "arm": "genre",
+  "metric2_wronglyChanged": 0
+ }
+}
