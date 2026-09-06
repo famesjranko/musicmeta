@@ -25,36 +25,68 @@ import java.io.File
  * touches grouping, scoring or order; the harness asserts that the merged list is unchanged.
  */
 // ---- ARM BLOCK START ----
-private const val ARM_NAME = "control"
+private const val ARM_NAME = "mblookup"
 
-/** The string this arm would attach to a merged group. */
+/** The 2026-09-06 capture of every split-pair MBID's MusicBrainz `disambiguation`. */
+private val CAPTURED_DISAMBIGUATION: Map<String, String> by lazy {
+    val json = JSONObject(File("src/test/resources/probe/fixtures/musicbrainz-disambiguation.json").readText())
+    json.keys().asSequence().associate { it.lowercase() to json.getString(it) }
+}
+
+/** Every merged group that shares its name key with another, per artist — the split pairs. */
+private var splitGroupMbids: Set<String> = emptySet()
+
+/**
+ * Arm C bills one `/ws/2/artist/{mbid}` request per entry it asks about.
+ *
+ * `calls` is the ledger: one line per request this arm would have made.
+ */
+private fun bill(calls: MutableList<String>, mbid: String) {
+    calls += "GET /ws/2/artist/$mbid"
+}
+
+/**
+ * The string this arm would attach: Labs' `comment` where there is one, and otherwise a MusicBrainz
+ * lookup, made only for an entry inside a split pair.
+ *
+ * A same-name member carrying no MBID is never asked and never looked up, because `groupArtists`
+ * attached it by contributor order rather than by evidence.
+ */
 private fun armLabel(
     group: List<SimilarArtist>,
     groupMbid: String?,
     calls: MutableList<String>,
-): String? = null
+): String? {
+    val fromLabs = group.firstOrNull { mbidOf(it) != null && mbidOf(it) == groupMbid }
+        ?.disambiguation
+        ?.takeIf { it.isNotBlank() }
+    if (fromLabs != null) return fromLabs
+    if (groupMbid == null || groupMbid !in splitGroupMbids) return null
+    bill(calls, groupMbid)
+    return CAPTURED_DISAMBIGUATION[groupMbid]?.takeIf { it.isNotBlank() }
+}
 
-/** The URL this arm would attach to a merged group. */
+/** The URL this arm would attach to a merged group. This arm surfaces no link. */
 private fun armLink(
     group: List<SimilarArtist>,
     groupMbid: String?,
 ): String? = null
 
-private fun lastFmRow(obj: JSONObject) =
-    LastFmSimilarArtist(
-        name = obj.optString("name", ""),
-        matchScore = obj.optString("match", "0").toFloatOrNull() ?: 0f,
-        mbid = obj.optString("mbid").takeIf { it.isNotBlank() },
-    )
+private fun lastFmRow(obj: JSONObject) = LastFmSimilarArtist(
+    name = obj.optString("name", ""),
+    matchScore = obj.optString("match", "0").toFloatOrNull() ?: 0f,
+    mbid = obj.optString("mbid").takeIf { it.isNotBlank() },
+)
 
-private fun deezerRow(obj: JSONObject) = DeezerRelatedArtist(id = obj.optLong("id"), name = obj.optString("name", ""))
+private fun deezerRow(obj: JSONObject) =
+    DeezerRelatedArtist(id = obj.optLong("id"), name = obj.optString("name", ""))
 
-private fun labsRow(obj: JSONObject) =
-    ListenBrainzSimilarArtist(
-        artistMbid = obj.optString("artist_mbid"),
-        name = obj.optString("name"),
-        score = obj.optInt("score", 0),
-    )
+private fun labsRow(obj: JSONObject) = ListenBrainzSimilarArtist(
+    artistMbid = obj.optString("artist_mbid"),
+    name = obj.optString("name"),
+    score = obj.optInt("score", 0),
+    comment = obj.optString("comment").takeIf { it.isNotBlank() },
+)
 // ---- ARM BLOCK END ----
 
 private const val PROVIDER_LASTFM = "lastfm"
@@ -197,11 +229,17 @@ class DisambigProbeTest {
         for (a in artists) {
             val groups = SimilarArtistMerger.groupArtists(a.flattened)
             val merged = SimilarArtistMerger.mergeArtists(a.flattened)
-            val artistCallsBefore = calls.size
+            splitGroupMbids = groups.groupBy { key(it.first().name) }
+                .filterValues { it.size > 1 }
+                .values
+                .flatten()
+                .mapNotNull { groupMbidOf(it) }
+                .toSet()
+            val artistCalls = mutableListOf<String>()
             val labelled =
                 groups.map { group ->
                     val gm = groupMbidOf(group)
-                    Triple(group, armLabel(group, gm, calls), armLink(group, gm))
+                    Triple(group, armLabel(group, gm, artistCalls), armLink(group, gm))
                 }
             groupsTotal += groups.size
             groupsLabelled += labelled.count { !it.second.isNullOrBlank() }
@@ -227,13 +265,14 @@ class DisambigProbeTest {
                 splitPairs.put(entry)
             }
 
+            calls += artistCalls
             perArtist.put(
                 JSONObject()
                     .put("artist", a.slug)
                     .put("groups", groups.size)
                     .put("labelled", labelled.count { !it.second.isNullOrBlank() })
                     .put("linked", labelled.count { !it.third.isNullOrBlank() })
-                    .put("extraCalls", calls.size - artistCallsBefore)
+                    .put("extraCalls", artistCalls.size)
                     .put(
                         "mergedTop10",
                         JSONArray(merged.take(10).map { "${it.name}|${"%.4f".format(it.matchScore)}" }),
