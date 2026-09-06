@@ -4,6 +4,7 @@ import com.landofoz.musicmeta.EnrichmentData
 import com.landofoz.musicmeta.EnrichmentResult
 import com.landofoz.musicmeta.EnrichmentType
 import com.landofoz.musicmeta.GenreAffinity
+import com.landofoz.musicmeta.SimilarAlbum
 import com.landofoz.musicmeta.SimilarArtist
 import com.landofoz.musicmeta.SimilarTrack
 import org.junit.Assert.assertFalse
@@ -81,7 +82,76 @@ class ResultRowsTest {
         val output = render(raw)
 
         // Then - the number carries the same unit as the artist rows
-        assertTrue(output, output.contains("Glory Box (rank 0.80)"))
+        assertTrue(output, output.contains("Glory Box — Portishead (rank 0.80)"))
+    }
+
+    @Test
+    fun `two same-title similar tracks are told apart by their artist`() {
+        // Given - a cover and its original, sharing a title
+        val raw = mapOf(
+            EnrichmentType.SIMILAR_TRACKS to success(
+                EnrichmentType.SIMILAR_TRACKS,
+                EnrichmentData.SimilarTracks(
+                    listOf(
+                        SimilarTrack(title = "Where Is My Mind?", artist = "Pixies", matchScore = 0.9f),
+                        SimilarTrack(title = "Where Is My Mind?", artist = "Placebo", matchScore = 0.4f),
+                    ),
+                ),
+            ),
+        )
+
+        // When - rendering the results block
+        val output = render(raw)
+
+        // Then - each row carries its own act's name between the title and the rank
+        assertTrue(output, output.contains("Where Is My Mind? — Pixies (rank 0.90)"))
+        assertTrue(output, output.contains("Where Is My Mind? — Placebo (rank 0.40)"))
+    }
+
+    @Test
+    fun `a similar album's year is shown when known`() {
+        // Given - a similar-albums payload with a year resolved
+        val raw = mapOf(
+            EnrichmentType.SIMILAR_ALBUMS to success(
+                EnrichmentType.SIMILAR_ALBUMS,
+                EnrichmentData.SimilarAlbums(
+                    listOf(
+                        SimilarAlbum(
+                            title = "Dummy",
+                            artist = "Portishead",
+                            year = 1994,
+                            artistMatchScore = 0.9f,
+                        ),
+                    ),
+                ),
+            ),
+        )
+
+        // When - rendering the results block
+        val output = render(raw)
+
+        // Then - the year sits after the artist, matching the played-by shape
+        assertTrue(output, output.contains("Dummy by Portishead (1994)"))
+    }
+
+    @Test
+    fun `a similar album with no year omits the year parenthetical`() {
+        // Given - a similar-albums payload with no year resolved
+        val raw = mapOf(
+            EnrichmentType.SIMILAR_ALBUMS to success(
+                EnrichmentType.SIMILAR_ALBUMS,
+                EnrichmentData.SimilarAlbums(
+                    listOf(SimilarAlbum(title = "Dummy", artist = "Portishead", artistMatchScore = 0.9f)),
+                ),
+            ),
+        )
+
+        // When - rendering the results block
+        val output = render(raw)
+
+        // Then - no dangling parenthetical appears for an unresolved year
+        assertTrue(output, output.contains("Dummy by Portishead"))
+        assertFalse(output, output.contains("Dummy by Portishead ("))
     }
 
     @Test
