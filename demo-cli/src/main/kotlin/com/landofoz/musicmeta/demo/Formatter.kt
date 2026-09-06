@@ -326,7 +326,7 @@ object Formatter {
             data.tracks.take(3).joinToString(", ") {
                 "${it.title} — ${it.artist} (rank ${formatScore(it.matchScore)})"
             }
-        is EnrichmentData.ArtistLinks -> data.links.take(3).joinToString(", ") { it.type }
+        is EnrichmentData.ArtistLinks -> data.links.take(3).joinToString(", ") { it.label ?: it.type }
         is EnrichmentData.Credits -> {
             val cats = data.credits.groupBy { it.roleCategory ?: "other" }
             cats.entries.joinToString(", ") { "${it.value.size} ${it.key}" }
