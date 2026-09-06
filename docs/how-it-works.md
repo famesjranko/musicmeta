@@ -517,7 +517,7 @@ when a key is present, and CAA is a fallback, not a second entry in the same res
 | ARTIST_RADIO | Deezer(100) | Tracks for a "radio station" seeded by artist |
 | ARTIST_RADIO_DISCOVERY | ListenBrainz(100) | Community-driven radio via LB Radio; requires `ApiKey.LISTENBRAINZ_USER_TOKEN`. Its only route has been withdrawn upstream before — see [providers.md](providers.md) § Routes ListenBrainz has withdrawn before |
 | ARTIST_TOP_TRACKS | Last.fm(100), ListenBrainz(100), Deezer(50) | **Mergeable** — deduplicates, sums listen counts |
-| SIMILAR_ALBUMS | Deezer(100) | **Artist-derived** — Deezer has no album-similarity endpoint, so this is albums by artists related to the seed *artist*, era-weighted (re-ranked, nothing dropped). Two albums by one artist give near-identical lists |
+| SIMILAR_ALBUMS | Deezer(100) | **Artist-derived** — Deezer has no album-similarity endpoint, so this is albums by artists related to the seed *artist*, era-weighted (re-ranked, nothing dropped). Two albums by one artist give near-identical lists. The seed artist comes from the album search's own hit, so an album title Deezer does not carry, under an artist name two acts share, returns `NotFound` rather than the other act's list |
 | GENRE_DISCOVERY | GenreAffinityMatcher | **Composite** — taxonomy lookup from resolved GENRE tags |
 
 ### Preview (1 type)

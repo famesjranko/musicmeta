@@ -630,6 +630,33 @@ Bunny. Rank on `matchQuality` first and let popularity break ties only *within* 
 popularity signal must never outrank name quality, only settle candidates whose names are equally
 good.
 
+**Within a rank, though, popularity is not a tiebreak between two spellings — it is a guess between
+two acts.** The ghost case (one act listed twice) and the homonym case (two different acts of the
+same name) are indistinguishable in a search pool, and the second is common: over nine
+homonym-prone names, six returned two or more exactly-named Deezer artists and **five had a
+different act than the one the fan count picked**, twice an act MusicBrainz links no page for at all
+(`Trouble` resolved to the Atlanta rapper, `Alaska` to a Brazilian rap act). An alias pool cannot
+help — both acts already match the name. Where a route has other evidence on the request, spend it:
+`SimilarAlbumsProvider` seeds from the *album* search's `artist.id` and `DeezerProvider`'s
+`SIMILAR_TRACKS` from the track search's, because the title is what only one of the two recorded.
+Where it has none, `DeezerArtistSearchResult.ambiguousName` says so, and a route whose whole answer
+derives from the seed refuses rather than answering as the wrong act at full confidence.
+
+**Counting same names is not counting acts, and the difference is a guard against an outage.** A
+pool for a well-known artist is full of same-name entries that are not second acts: "Radiohead"
+live-returns "Radio Head" (436 fans, and `ArtistMatcher` reads it as the same name once spacing is
+dropped), a tribute band, and a zero-album ghost. A first cut that called any second same-name entry
+ambiguous would have refused `SIMILAR_ALBUMS` for Radiohead on every request whose title Deezer does
+not carry — a wrong answer traded for no answer. What separates a rival from a shadow is on the
+payload: its own discography (`nb_album > 0`) *and* an audience within an order of magnitude of the
+winner's. Each half alone admits one of the two shapes.
+
+The seam an accepted hit reaches the seed through needs the same care. `acceptAndRankAlbum` ranks
+title tier **above** artist quality over a deliberately loose artist floor, so a `Psalm 9` by
+"Trouble Andrew" (exact title, containment name) outranks `Psalm 9 (Remastered 2020)` by "Trouble"
+(edition title, same name). Good enough to *rank* a pool is not good enough to *identify* an artist:
+read `AlbumMatch.artistQuality` and take the id only at `QUALITY_SAME_NAME`.
+
 **The tiebreak must be a signal the payload actually sends, and "same name" is not always one.**
 `ITunesApi.searchArtist` and `DiscogsApi.searchArtist` got the same treatment, and neither could
 copy the Deezer tail: an iTunes `musicArtist` result carries no popularity field at all (only
@@ -664,7 +691,12 @@ narrow tolerance: a bare request (no qualifier at all) may accept a candidate wh
 provider-added edition decoration — a remaster suffix, nothing else. `Live`, `Remix`, `Deluxe`,
 `Anniversary`, and box-set qualifiers stay identity-bearing and are never admitted by a bare request,
 and a qualifier the caller *did* supply still must match exactly; `titleTier` only ever loosens the
-"no qualifier at all" case. Discogs's pressing search has no measured decoration convention, so it
+"no qualifier at all" case. **A decoration vocabulary written from one upstream's spelling silently
+rejects another's**: `isEditionDecoration` matched `2020 Remaster` but not `Remastered 2020`, which
+is the form Deezer's own catalogue uses (`Psalm 9 (Remastered 2020)`, the only hit for that album),
+so every request for such an album fell through to whatever the name search picked. The regex is one
+line and looked complete; nothing but a live payload shows which spellings are missing. Discogs's
+pressing search has no measured decoration convention, so it
 stays at full-title equivalence and declares no tier at all. Rank accepted candidates by tier first,
 then artist quality, then any edition evidence the payload actually carries (Deezer's `nbTracks`,
 iTunes's `trackCount`/`releaseDate`, Discogs's `year`, each against the matching request field) —
