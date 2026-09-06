@@ -903,6 +903,22 @@ it, so a merge-side change makes every such constant's stated argument suspect e
 constant survives. Grep the merger's own vocabulary out of `provider/` before changing it, and
 re-derive each justification you find rather than checking that the number still looks reasonable.
 
+## 39. An identifier-keyed guard has power only where two contributors populate the same namespace
+
+The similar-artist merger's identifier guard works because Last.fm and ListenBrainz Labs both carry
+a MusicBrainz *artist* id, so two rows can hold that one field and disagree. Carrying the same rule
+to the similar-track merger looked like a generalisation and was not: Last.fm's row there carries a
+MusicBrainz *recording* id and Deezer's carries a Deezer track id, and neither carries the other's.
+Two rows that name different recordings therefore disagree in no namespace at all, so the guard
+groups them exactly as the name key does. Measured over 24 seeds, 419 Last.fm rows and 344 Deezer
+rows, the arm's output was byte-identical to the control's — including on the case that motivated it.
+
+The shape to watch: an identifier key's strength is a property of the *contributor set*, not of the
+rule, and it is worth nothing on a type whose providers' identifier spaces are disjoint. Count how
+many contributors populate the namespace before writing the guard; where the answer is one, the fix
+is a cross-namespace resolution — a lookup per row — and that is a different change with a different
+cost.
+
 ## Area — Transport and provider state
 
 ## 11. A retry ladder's coverage is not its trigger

@@ -83,7 +83,7 @@ class SimilarTrackMergerTest {
 
     @Test
     fun `merge keeps Last_fm's score outright on overlap with Deezer, does not sum`() {
-        // Given - same track from both providers; Deezer's score is artist-derived, not genuine
+        // Given - a track both providers name, beside a Deezer-only track Last.fm scored level with
         val lastfmResult = EnrichmentResult.Success(
             type = EnrichmentType.SIMILAR_TRACKS,
             data = EnrichmentData.SimilarTracks(tracks = listOf(
@@ -96,6 +96,7 @@ class SimilarTrackMergerTest {
             type = EnrichmentType.SIMILAR_TRACKS,
             data = EnrichmentData.SimilarTracks(tracks = listOf(
                 SimilarTrack("Lucky", "Radiohead", matchScore = 0.8f, sources = listOf("deezer")),
+                SimilarTrack("No Surprises", "Radiohead", matchScore = 0.9f, sources = listOf("deezer")),
             )),
             provider = "deezer",
             confidence = 0.8f,
@@ -104,39 +105,51 @@ class SimilarTrackMergerTest {
         // When - merging the lastfm and deezer results
         val result = SimilarTrackMerger.merge(listOf(lastfmResult, deezerResult))
 
-        // Then - matchScore is Last.fm's 0.9 outright, not 0.9 + 0.8 (would overstate the match)
+        // Then - "Lucky" carries Last.fm's 0.9, so it does not outrank the 0.9 beside it
         val data = (result as EnrichmentResult.Success).data as EnrichmentData.SimilarTracks
-        assertEquals(0.9f, data.tracks[0].matchScore, 0.001f)
-        assertTrue("lastfm" in data.tracks[0].sources)
-        assertTrue("deezer" in data.tracks[0].sources)
+        val lucky = data.tracks.first { it.title == "Lucky" }
+        // 0.9 + 0.8 would rescale "No Surprises" to 0.9 / 1.7 and put "Lucky" alone at the top.
+        assertEquals(1.0f, lucky.matchScore, 0.001f)
+        assertEquals(1.0f, data.tracks.first { it.title == "No Surprises" }.matchScore, 0.001f)
+        assertTrue("lastfm" in lucky.sources)
+        assertTrue("deezer" in lucky.sources)
     }
 
     @Test
-    fun `merge sums scores capped at 1_0 when neither source is Last_fm`() {
-        // Given - same track recommended by two non-genuine sources, both artist-derived
-        val sourceAResult = EnrichmentResult.Success(
+    fun `merge ranks a Last_fm track below one two other contributors agree on`() {
+        // Given - Last.fm's best track, and a different track two artist-derived sources both top
+        val lastfmResult = EnrichmentResult.Success(
             type = EnrichmentType.SIMILAR_TRACKS,
             data = EnrichmentData.SimilarTracks(tracks = listOf(
-                SimilarTrack("Lucky", "Radiohead", matchScore = 0.9f, sources = listOf("sourceA")),
+                SimilarTrack("Nude", "Radiohead", matchScore = 1.0f, sources = listOf("lastfm")),
             )),
-            provider = "sourceA",
+            provider = "lastfm",
             confidence = 0.9f,
         )
-        val sourceBResult = EnrichmentResult.Success(
+        val deezerResult = EnrichmentResult.Success(
             type = EnrichmentType.SIMILAR_TRACKS,
             data = EnrichmentData.SimilarTracks(tracks = listOf(
-                SimilarTrack("Lucky", "Radiohead", matchScore = 0.8f, sources = listOf("sourceB")),
+                SimilarTrack("Lucky", "Radiohead", matchScore = 1.0f, sources = listOf("deezer")),
             )),
-            provider = "sourceB",
+            provider = "deezer",
+            confidence = 0.8f,
+        )
+        val thirdResult = EnrichmentResult.Success(
+            type = EnrichmentType.SIMILAR_TRACKS,
+            data = EnrichmentData.SimilarTracks(tracks = listOf(
+                SimilarTrack("Lucky", "Radiohead", matchScore = 1.0f, sources = listOf("third")),
+            )),
+            provider = "third",
             confidence = 0.8f,
         )
 
-        // When - merging the two non-Last.fm results
-        val result = SimilarTrackMerger.merge(listOf(sourceAResult, sourceBResult))
+        // When - merging all three contributors
+        val result = SimilarTrackMerger.merge(listOf(lastfmResult, deezerResult, thirdResult))
 
-        // Then - matchScore = min(0.9 + 0.8, 1.0) = 1.0, not 1.7 — additive agreement still applies
+        // Then - the agreed track tops the list and Last.fm's sits at half of it, no longer tied
         val data = (result as EnrichmentResult.Success).data as EnrichmentData.SimilarTracks
-        assertEquals(1.0f, data.tracks[0].matchScore, 0.001f)
+        assertEquals(listOf("Lucky", "Nude"), data.tracks.map { it.title })
+        assertEquals(listOf(1.0f, 0.5f), data.tracks.map { it.matchScore })
     }
 
     @Test
@@ -235,10 +248,10 @@ class SimilarTrackMergerTest {
         // When - merging the lastfm and deezer results
         val result = SimilarTrackMerger.merge(listOf(lastfmResult, deezerResult))
 
-        // Then - sorted by matchScore descending
+        // Then - sorted by matchScore descending, each score a fraction of the 0.9 the list tops out at
         val data = (result as EnrichmentResult.Success).data as EnrichmentData.SimilarTracks
-        val scores = data.tracks.map { it.matchScore }
-        assertEquals(listOf(0.9f, 0.75f, 0.6f), scores)
+        assertEquals(listOf("No Surprises", "Fake Plastic Trees", "Lucky"), data.tracks.map { it.title })
+        assertEquals(listOf(1.0f, 0.75f / 0.9f, 0.6f / 0.9f), data.tracks.map { it.matchScore })
     }
 
     @Test
@@ -298,5 +311,84 @@ class SimilarTrackMergerTest {
         // Then - 2 distinct entries (different artists means different tracks)
         val data = (result as EnrichmentResult.Success).data as EnrichmentData.SimilarTracks
         assertEquals(2, data.tracks.size)
+    }
+
+    @Test
+    fun `merge rescales summed scores against the merged maximum`() {
+        // Given - two artist-derived sources agreeing on "Lucky" and a third track only one names
+        val deezer = EnrichmentResult.Success(
+            type = EnrichmentType.SIMILAR_TRACKS,
+            data = EnrichmentData.SimilarTracks(
+                tracks = listOf(
+                    SimilarTrack("Lucky", "Radiohead", 0.9f, sources = listOf("deezer")),
+                    SimilarTrack("Nude", "Radiohead", 0.5f, sources = listOf("deezer")),
+                ),
+            ),
+            provider = "deezer",
+            confidence = 0.8f,
+        )
+        val other = EnrichmentResult.Success(
+            type = EnrichmentType.SIMILAR_TRACKS,
+            data = EnrichmentData.SimilarTracks(
+                tracks = listOf(SimilarTrack("Lucky", "Radiohead", 0.8f, sources = listOf("other"))),
+            ),
+            provider = "other",
+            confidence = 0.8f,
+        )
+
+        // When - merging the two artist-derived results
+        val result = SimilarTrackMerger.merge(listOf(deezer, other))
+
+        // Then - the 1.7 sum becomes the list's 1.0 and the 0.5 keeps its distance below it
+        val data = (result as EnrichmentResult.Success).data as EnrichmentData.SimilarTracks
+        assertEquals(1.0f, data.tracks[0].matchScore, 0.001f)
+        assertEquals(0.5f / 1.7f, data.tracks[1].matchScore, 0.001f)
+    }
+
+    @Test
+    fun `merge lifts a list whose every score is below 1_0 to the top of the scale`() {
+        // Given - one source whose best track scores 0.4
+        val deezer = EnrichmentResult.Success(
+            type = EnrichmentType.SIMILAR_TRACKS,
+            data = EnrichmentData.SimilarTracks(
+                tracks = listOf(
+                    SimilarTrack("Lucky", "Radiohead", 0.4f, sources = listOf("deezer")),
+                    SimilarTrack("Nude", "Radiohead", 0.2f, sources = listOf("deezer")),
+                ),
+            ),
+            provider = "deezer",
+            confidence = 0.8f,
+        )
+
+        // When - merging that single result
+        val result = SimilarTrackMerger.merge(listOf(deezer))
+
+        // Then - the top entry is 1.0 and the spacing below it survives
+        val data = (result as EnrichmentResult.Success).data as EnrichmentData.SimilarTracks
+        assertEquals(1.0f, data.tracks[0].matchScore, 0.001f)
+        assertEquals(0.5f, data.tracks[1].matchScore, 0.001f)
+    }
+
+    @Test
+    fun `merge leaves a list whose maximum is not positive untouched`() {
+        // Given - a source whose every track scores zero
+        val deezer = EnrichmentResult.Success(
+            type = EnrichmentType.SIMILAR_TRACKS,
+            data = EnrichmentData.SimilarTracks(
+                tracks = listOf(
+                    SimilarTrack("Lucky", "Radiohead", 0f, sources = listOf("deezer")),
+                    SimilarTrack("Nude", "Radiohead", 0f, sources = listOf("deezer")),
+                ),
+            ),
+            provider = "deezer",
+            confidence = 0.8f,
+        )
+
+        // When - merging that single result
+        val result = SimilarTrackMerger.merge(listOf(deezer))
+
+        // Then - every score is still zero rather than NaN
+        val data = (result as EnrichmentResult.Success).data as EnrichmentData.SimilarTracks
+        assertEquals(listOf(0f, 0f), data.tracks.map { it.matchScore })
     }
 }
