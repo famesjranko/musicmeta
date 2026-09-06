@@ -22,6 +22,10 @@ import org.junit.Test
  * for an entity Wikidata holds no claims for, so a route that stopped accepting our request read as
  * an artist with no photo, no country and no links — three capabilities blank while the provider
  * reported healthy (§31).
+ *
+ * A live capture of a **merged** id is here for the same reason and the mirror of it: the answer is
+ * keyed under the id that was asked for, so a merged id is none of the answerless cases and the
+ * parse needs no redirect handling (§40).
  */
 class WikidataEntityClaimsTest {
 
@@ -72,6 +76,25 @@ class WikidataEntityClaimsTest {
 
         // Then - no entity, read off the marker rather than off the claims object it also lacks
         assertEquals(WikidataProperties.NoEntity, outcome)
+    }
+
+    @Test
+    fun `an id Wikidata has merged away carries the target's claims, and is not no entity`() = runTest {
+        // Given - the live answer for an id merged into Q11036: keyed under the id that was asked
+        // for, carrying the target's claims, naming the target only in the inner `id` field
+        val http = FakeHttpClient()
+        http.givenJsonResponse("props=claims", MERGED_ID_CLAIMS)
+
+        // When - the entity-properties route is called with the merged-away id
+        val outcome = WikidataApi(http, RateLimiter(0)).getEntityProperties("Q53265341")
+
+        // Then - the target's P18, P495 and P856, which are what ARTIST_PHOTO, COUNTRY and
+        // ARTIST_LINKS each read, rather than the NoEntity a stale id was thought to report
+        assertNotEquals(WikidataProperties.NoEntity, outcome)
+        val props = (outcome as WikidataProperties.Claims).value
+        assertTrue(props.imageUrl.toString(), props.imageUrl!!.contains("Rolling_Stones_bow_post-show"))
+        assertEquals("GB", props.countryOfOrigin)
+        assertEquals("https://rollingstones.com", props.officialWebsite)
     }
 
     @Test
@@ -155,5 +178,28 @@ class WikidataEntityClaimsTest {
     private companion object {
         private const val UNREADABLE_LOG_LINE =
             "WikidataProvider: Wikidata answered Q44190 with no readable claims body"
+
+        // captured 2026-09-07: GET /w/api.php?action=wbgetentities&ids=Q53265341&props=claims&format=json,
+        // trimmed to the read properties; each statement keeps its real mainsnak, datatype and rank.
+        // Q53265341 was merged into Q11036, The Rolling Stones, and the outer key is the id that was
+        // asked for while `id` names the target — the one answer where the two differ, and the
+        // reason this fixture cannot be replaced by a hand-written one.
+        private val MERGED_ID_CLAIMS = """
+            {"entities":{"Q53265341":{"redirects":{"from":"Q53265341","to":"Q11036"},
+              "type":"item","id":"Q11036","claims":{
+              "P18":[{"mainsnak":{"snaktype":"value","property":"P18","datavalue":
+                {"value":"Rolling Stones bow post-show 22 May 2018 in London (41437870275).jpg","type":"string"},
+                "datatype":"commonsMedia"},"type":"statement","rank":"normal"}],
+              "P495":[{"mainsnak":{"snaktype":"value","property":"P495","datavalue":
+                {"value":{"entity-type":"item","numeric-id":145,"id":"Q145"},"type":"wikibase-entityid"},
+                "datatype":"wikibase-item"},"type":"statement","rank":"normal"}],
+              "P856":[{"mainsnak":{"snaktype":"value","property":"P856","datavalue":
+                {"value":"https://rollingstones.com","type":"string"},
+                "datatype":"url"},"type":"statement","rank":"normal"}],
+              "P434":[{"mainsnak":{"snaktype":"value","property":"P434","datavalue":
+                {"value":"b071f9fa-14b0-4217-8e97-eb41da73f598","type":"string"},
+                "datatype":"external-id"},"type":"statement","rank":"normal"}]
+            }}},"success":1}
+        """.trimIndent()
     }
 }

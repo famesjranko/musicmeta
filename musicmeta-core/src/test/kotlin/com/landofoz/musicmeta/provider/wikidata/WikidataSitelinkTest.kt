@@ -18,6 +18,10 @@ import org.junit.Test
  * one `optJSONObject` chain returns the same nothing for both, so Wikidata dropping the `sitelinks`
  * object would read as an artist with no English article — a silent blank on `ARTIST_BIO` and
  * `ARTIST_PHOTO` that nothing in the pipeline could tell from the truth.
+ *
+ * A fourth capture carries an id Wikidata merged away. It resolves to [EnwikiSitelink.Title] like
+ * any other, and pins why: the answer is keyed under the id that was *asked for*, so the parse needs
+ * no redirect handling and must not grow any.
  */
 class WikidataSitelinkTest {
 
@@ -59,6 +63,20 @@ class WikidataSitelinkTest {
 
         // Then - no entity, read off the marker rather than off the `sitelinks` it also lacks
         assertEquals(EnwikiSitelink.NoEntity, outcome)
+    }
+
+    @Test
+    fun `an id Wikidata has merged away resolves the article of the entity it became`() = runTest {
+        // Given - the live answer for an id merged into Q11036, keyed under the id that was asked
+        // for and carrying the target's sitelinks
+        val api = pool()
+
+        // When - the sitelink route is called with the merged-away id
+        val outcome = api.getEnwikiSitelink("Q53265341")
+
+        // Then - the target's article, resolved without a second request and without reading
+        // `redirects.to`, which is not where the answer lives
+        assertEquals(EnwikiSitelink.Title("The Rolling Stones"), outcome)
     }
 
     @Test

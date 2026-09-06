@@ -935,6 +935,27 @@ many contributors populate the namespace before writing the guard; where the ans
 is a cross-namespace resolution — a lookup per row — and that is a different change with a different
 cost.
 
+## 40. A response body quoted in a ticket is a transcription, and one key can move in it
+
+A ticket reported that a merged Wikidata id resolves no article, and quoted the live body as proof:
+`{"entities":{"Q5999113":{"redirects":{"from":"Q120000000","to":"Q5999113"},...}}}` — the answer
+keyed under the *target*, so `entities.<requested id>` misses. The real body keys it under
+`Q120000000`, and names the target in the inner `id` field. One key had moved outward by a level in
+the retelling, and everything the ticket concluded followed from that one key: the defect, the
+count of enrichment types losing an answer, and a proposed fix — read `redirects.to`, or take the
+sole entity — that would have **broken a route that works**, since `entities.<requested id>` is
+exactly where the answer lives and one request may name fifty ids.
+
+The tell was cheap and was not taken: the quoted body was never re-requested. Re-requesting it cost
+one `curl` and settled the whole ticket, and 30 further merged ids and the `redirects` parameter's
+own documentation (`redirects=yes` is the default) settled that it generalises.
+
+What this costs is a whole change. Treat a body pasted into a ticket, a commit message or a comment
+as a claim about an upstream, not as evidence from one: re-request it before building on it, and
+prefer a captured file to a quotation. This is what a pool exists for, which is why the fourth
+capture in `wikidata-enwiki-sitelink` is a merged id — the outer key and the inner `id` differ in
+exactly one answer, and no other fixture can show which of them the parse must read.
+
 ## Area — Transport and provider state
 
 ## 11. A retry ladder's coverage is not its trigger
