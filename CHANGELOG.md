@@ -110,6 +110,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Two published-surface conventions documented: every score is a `Float` on 0.0-1.0, every date a `String` in ISO-8601 and every `year` an `Int?` — with their frozen exceptions named
 
 ### Fixed
+- `SimilarTrack` MusicBrainz ids from Last.fm documented as dead in MusicBrainz over half the time, and still passed through: validating by search would drop 12.5% of the ids that work
 - Last.fm's similar-artist MusicBrainz ids documented as sometimes naming the wrong act (not stale) and passed through unchanged; corroboration was measured and costs more than it corrects
 - A slow alias lookup is now shared by every provider waiting on it, so one provider timing out mid-lookup no longer makes the next one repeat the whole call against `enrichTimeoutMs`
 - Two similar artists sharing a name but holding different MusicBrainz ids are no longer fused into one entry with their scores summed: each keeps its own entry, so ranks below the pair shift
