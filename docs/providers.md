@@ -210,6 +210,29 @@ either. `SimilarArtist.disambiguation` is how a consumer sees which act an id ac
 read from the MusicBrainz record the id itself points to, so a wrong id like this surfaces as a
 disambiguation that plainly doesn't fit the requested artist, rather than staying hidden.
 
+## Last.fm's similar-track ids are dead more often than not
+
+`SimilarTrack.identifiers.musicBrainzId` from `lastfm` is a **recording** id, and the recording ids
+are the stale ones. Measured 2026-09-06 over `track.getSimilar` — the top track of twelve artists
+and of a second, blind twelve, ten rows each — **52 of 95** MBID-carrying rows on the first sample
+(54.7%) and **46 of 90** on the second (51.1%) name a recording MusicBrainz answers `404` for under
+every entity type. A consumer's next lookup on such an id finds nothing. The rate tracks how obscure
+the neighbourhood is: one seed lost 1 row of 10, another lost all 10.
+
+The id is passed through unchanged, and it is worth saying why it is not simply validated away. A
+batched `recording?query=rid:…` would cost one request per answer and comfortably fit the budget —
+the worst answer in that sample carried 20 ids against a 25-id query cap — but it is answered from
+MusicBrainz's **search index**, which holds a merged recording only under the id it survives as. Of
+the ids that search missed, 14 were not dead but merged: `GET /ws/2/recording/{id}` answers them
+`301` to the survivor, and this library follows that redirect, so the id still reaches the right
+recording. Dropping what the search does not return would therefore discard **12.5% of the ids that
+still work** in order to remove the ones that do not — trading a dead identifier for a missing one.
+
+Being wrong about the *act* is rare here, unlike the artist ids above: of the rows that resolve, one
+in the first sample named a different recording outright, and the four in the second are
+performer-versus-composer credits on classical and compilation tracks, where Last.fm names the
+composer and MusicBrainz credits the performer.
+
 ## Terms, licences, attribution
 
 What each provider's terms said on **2026-08-12** — verify before relying on any of it. This is not

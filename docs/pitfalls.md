@@ -466,6 +466,17 @@ siblings.
   Those lists are the credit spellings contributors filed, never a complete alias set, so a name
   missing from one is not evidence of a different act and must not reject a candidate.
 
+- A MusicBrainz **search** and a MusicBrainz **lookup** disagree about a merged entity, and only the
+  lookup is right. `entity?query=…` is answered from the search index, which holds a merged record
+  only under the id it survives as; `GET /entity/{id}` answers the retired id `301` to the survivor,
+  and `DefaultHttpClient` follows that. So a batched `rid:`/`arid:` query returning nothing for an id
+  means "merged **or** gone", never "gone". Measured over 185 Last.fm similar-track ids on
+  2026-09-06: of the 110 the batched search missed, 14 were merged and live — so an arm that had
+  dropped every id the search could not confirm would have discarded 12.5% of the working ones while
+  removing the dead. Use the batch to *label* (`searchArtistDisambiguations` does only that, and an
+  absent id stays unlabelled); never to decide an identifier is worth removing. Distinguishing
+  the two costs a lookup per id, which is the request budget that shape exists to avoid.
+
 ## 3. `org.json` returns a default for a missing key — it does not fail
 
 ```kotlin
