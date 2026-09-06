@@ -112,6 +112,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 - `SimilarTrack` MusicBrainz ids from Last.fm documented as dead in MusicBrainz over half the time, and still passed through: validating by search would drop 12.5% of the ids that work
 - Last.fm's similar-artist MusicBrainz ids documented as sometimes naming the wrong act (not stale) and passed through unchanged; corroboration was measured and costs more than it corrects
+- `SIMILAR_ALBUMS` now seeds from the requested album's own Deezer artist id, not a name search that broke a homonym tie on fan count; an unresolvable homonym is `NotFound`, not another act's list
+- A `(Remastered 2020)` suffix is now read as edition decoration like `(2020 Remaster)` already was, so a bare album title accepts the Deezer edition that carries the year after the word
 - A slow alias lookup is now shared by every provider waiting on it, so one provider timing out mid-lookup no longer makes the next one repeat the whole call against `enrichTimeoutMs`
 - Two similar artists sharing a name but holding different MusicBrainz ids are no longer fused into one entry with their scores summed: each keeps its own entry, so ranks below the pair shift
 - Two similar-artist entries holding one MusicBrainz id under different names now merge into one, keeping the first name reported, so a name the providers spell two ways stops appearing twice

@@ -9,7 +9,9 @@ import com.landofoz.musicmeta.EnrichmentType
 import com.landofoz.musicmeta.IdentifierNamespace
 import com.landofoz.musicmeta.ProviderCapability
 import com.landofoz.musicmeta.SimilarAlbum
+import com.landofoz.musicmeta.engine.ArtistMatcher
 import com.landofoz.musicmeta.engine.ConfidenceCalculator
+import com.landofoz.musicmeta.engine.NameMatchTier
 import com.landofoz.musicmeta.http.HttpClient
 import com.landofoz.musicmeta.http.RateLimiter
 
@@ -25,11 +27,11 @@ import com.landofoz.musicmeta.http.RateLimiter
  * on offer, so results are "albums by artists similar to the *artist*", weighted by era.
  * Nothing is dropped for its era — [eraMultiplier] only re-ranks.
  *
- * The consequence a consumer must plan for: the seed album's *title* is never sent anywhere.
- * The only album-level input is [EnrichmentRequest.ForAlbum.year], which feeds
- * [eraMultiplier] — so two albums by the same artist return a near-identical list, and an
- * identical one when the caller passes no `year`. Present it as "if you like this artist",
- * not "albums like this record".
+ * The consequence a consumer must plan for: the seed album's title identifies the *artist* and
+ * nothing more (see [resolveSeedArtist]). The only album-level input to the ranking is
+ * [EnrichmentRequest.ForAlbum.year], which feeds [eraMultiplier] — so two albums by the same artist
+ * return a near-identical list, and an identical one when the caller passes no `year`. Present it
+ * as "if you like this artist", not "albums like this record".
  *
  * Standalone provider (not composite): all Deezer API calls happen here,
  * not inside a synthesizer.
@@ -56,7 +58,8 @@ public class SimilarAlbumsProvider internal constructor(
     /**
      * `SIMILAR_ALBUMS` is derived from `/artist/{id}/related`, not from any album-similarity
      * endpoint — see the class KDoc for what that costs a consumer. No
-     * `identifierRequirement`: the artist is resolved by name search when `deezerId` is absent.
+     * `identifierRequirement`: the artist is resolved from the album search when `deezerId` is
+     * absent ([resolveSeedArtist]).
      */
     override val capabilities: List<ProviderCapability> = listOf(
         ProviderCapability(EnrichmentType.SIMILAR_ALBUMS, priority = 100),
@@ -82,14 +85,8 @@ public class SimilarAlbumsProvider internal constructor(
         val albumRequest = request as? EnrichmentRequest.ForAlbum
             ?: return EnrichmentResult.NotFound(EnrichmentType.SIMILAR_ALBUMS, id)
 
-        // Resolve seed artist Deezer ID — check cache first, fall back to search
-        val deezerId = request.identifiers.get(IdentifierNamespace.DEEZER)?.toLongOrNull()
-        val seedArtist = if (deezerId != null) {
-            DeezerArtistSearchResult(id = deezerId, name = albumRequest.artist)
-        } else {
-            api.searchArtist(albumRequest.artist)
-                ?: return EnrichmentResult.NotFound(EnrichmentType.SIMILAR_ALBUMS, id)
-        }
+        val seedArtist = resolveSeedArtist(albumRequest)
+            ?: return EnrichmentResult.NotFound(EnrichmentType.SIMILAR_ALBUMS, id)
 
         // Fetch up to 5 related artists
         val relatedArtists = api.getRelatedArtists(seedArtist.id, limit = 5)
@@ -124,8 +121,7 @@ public class SimilarAlbumsProvider internal constructor(
             data = EnrichmentData.SimilarAlbums(deduped),
             provider = id,
             // 0.8 scores the *lookup*, not the strength of the recommendation. Note it overstates
-            // on the `deezerId` branch above, which trusts the caller's id and runs no name
-            // search — only the search path actually verifies the name.
+            // on the caller-supplied `deezerId` branch, which trusts that id and verifies no name.
             // Deriving from related artists is a property of the type here (there is no
             // album-level source to be more confident than), so that caveat belongs in the KDoc
             // above, not smuggled into a number consumers rank providers by.
@@ -134,6 +130,51 @@ public class SimilarAlbumsProvider internal constructor(
             resolvedIdentifiers = EnrichmentIdentifiers()
                 .with(IdentifierNamespace.DEEZER, seedArtist.id.toString()),
         )
+    }
+
+    /** The Deezer artist `/artist/{id}/related` is walked from, and how sure we are it is the right one. */
+    private data class SeedArtist(val id: Long, val nameTier: NameMatchTier)
+
+    /**
+     * The artist whose neighbours become this list, or null when no evidence names one.
+     *
+     * A name search cannot separate two acts called the same thing: `bestArtistMatchOrAlias` breaks
+     * an exact-name tie on `nb_fan`, so the whole list would follow whichever homonym is more
+     * popular, at a confidence that reports the name as an exact match. Nor can the alias pool
+     * settle it — a pool of name forms widens the accept set, and both acts already match on the
+     * name itself.
+     *
+     * So the ladder is evidence first, in the order the evidence identifies an artist:
+     *
+     * 1. A Deezer id on the request. The caller asserted it; nothing here checks it.
+     * 2. The album search's own `artist.id`, the seam
+     *    [DeezerProvider.enrichSimilarTracks] takes off the track search. The requested *title* is
+     *    what only one of the same-named acts recorded, so the hit identifies the artist even where
+     *    the name does not. Selection is [selectAlbum]'s, so a remaster suffix is tolerated and a
+     *    live or deluxe edition of a bare request is not — but its ranking puts the title tier
+     *    above artist quality over a deliberately loose artist floor, so a same-titled album by
+     *    "Trouble Andrew" outranks the remastered one by "Trouble". Seeding from a hit whose artist
+     *    is merely *plausible* would be the same wrong answer by another route, so the id is taken
+     *    only at [ArtistMatcher.QUALITY_SAME_NAME].
+     * 3. The name search, but only when its pool held no second entry that could be another act of
+     *    that name ([DeezerArtistSearchResult.ambiguousName]).
+     *
+     * An ambiguous name that no album hit resolves therefore yields `NotFound`: a list of albums by
+     * the wrong act's neighbours is not a thinner answer than the right one, it is a different act's
+     * answer, and a consumer has nothing on the result to tell it so.
+     */
+    private suspend fun resolveSeedArtist(request: EnrichmentRequest.ForAlbum): SeedArtist? {
+        request.identifiers.get(IdentifierNamespace.DEEZER)?.toLongOrNull()
+            ?.let { return SeedArtist(it, NameMatchTier.CANONICAL) }
+
+        val albumMatch = api.searchAlbums("${request.artist} ${request.title}", ALBUM_SEARCH_LIMIT)
+            .selectAlbum(request)
+        if (albumMatch != null && albumMatch.artistQuality == ArtistMatcher.QUALITY_SAME_NAME) {
+            albumMatch.candidate.artistId?.let { return SeedArtist(it, albumMatch.nameTier) }
+        }
+
+        val byName = api.searchArtist(request.artist) ?: return null
+        return if (byName.ambiguousName) null else SeedArtist(byName.id, byName.nameTier)
     }
 
     /**
@@ -154,3 +195,10 @@ public class SimilarAlbumsProvider internal constructor(
         }
     }
 }
+
+/**
+ * Candidate pool for the seed's album search — enough hits for the requested edition to surface.
+ * File-private rather than a companion constant: a `const val` in a private companion of a public
+ * class is still a public static field, and moves a line in the published API dump.
+ */
+private const val ALBUM_SEARCH_LIMIT = 5

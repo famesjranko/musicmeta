@@ -218,8 +218,149 @@ class SimilarAlbumsProviderTest {
         assertTrue(httpClient.requestedUrls.none { it.contains("search/artist") })
     }
 
+    @Test
+    fun `enrich seeds from the album search hit rather than the most popular homonym`() = runTest {
+        // Given - four Deezer artists are named Trouble, and the album the request names belongs to
+        // the doom band, which has a twenty-fifth of the rapper's fans
+        httpClient.givenJsonResponse("search/album", TROUBLE_ALBUM_SEARCH)
+        httpClient.givenJsonResponse("search/artist", TROUBLE_ARTIST_SEARCH)
+        httpClient.givenJsonResponse("artist/10443928/related", RELATED_ARTISTS_3)
+        httpClient.givenJsonResponse("artist/166426/related", RELATED_ARTISTS_3)
+        httpClient.givenJsonResponse("artist/1001/albums", MUSE_ALBUMS)
+        httpClient.givenJsonResponse("artist/1002/albums", PORTISHEAD_ALBUMS)
+        httpClient.givenJsonResponse("artist/1003/albums", SIGUR_ROS_ALBUMS)
+        val request = EnrichmentRequest.forAlbum("Psalm 9", "Trouble")
+
+        // When - enriching for similar albums
+        val result = provider.enrich(request, EnrichmentType.SIMILAR_ALBUMS)
+
+        // Then - the seed is the album's own artist, and no name search is made at all
+        assertTrue(result is EnrichmentResult.Success)
+        val identifiers = (result as EnrichmentResult.Success).resolvedIdentifiers
+        assertEquals("10443928", identifiers?.get(IdentifierNamespace.DEEZER))
+        assertTrue(httpClient.requestedUrls.none { it.contains("artist/166426/") })
+        assertTrue(httpClient.requestedUrls.none { it.contains("search/artist") })
+    }
+
+    @Test
+    fun `enrich refuses a same-titled album by a different act as the seed`() = runTest {
+        // Given - the album pool ranks a same-titled album by Trouble Andrew above the remastered
+        // one by Trouble, because an exact title outranks an edition title before artist quality
+        httpClient.givenJsonResponse("search/album", TROUBLE_ALBUM_SEARCH_WRONG_ACT_FIRST)
+        httpClient.givenJsonResponse("search/artist", TROUBLE_ARTIST_SEARCH)
+        httpClient.givenJsonResponse("artist/166426/related", RELATED_ARTISTS_3)
+        httpClient.givenJsonResponse("artist/215177/related", RELATED_ARTISTS_3)
+        httpClient.givenJsonResponse("artist/1001/albums", MUSE_ALBUMS)
+        httpClient.givenJsonResponse("artist/1002/albums", PORTISHEAD_ALBUMS)
+        httpClient.givenJsonResponse("artist/1003/albums", SIGUR_ROS_ALBUMS)
+        val request = EnrichmentRequest.forAlbum("Psalm 9", "Trouble")
+
+        // When - enriching for similar albums
+        val result = provider.enrich(request, EnrichmentType.SIMILAR_ALBUMS)
+
+        // Then - the plausibly-named act is not the seed, and the name search decides instead
+        assertTrue(httpClient.requestedUrls.none { it.contains("artist/215177/") })
+        assertTrue(httpClient.requestedUrls.any { it.contains("search/artist") })
+    }
+
+    @Test
+    fun `enrich returns NotFound when no album hit resolves a name two comparable acts share`() = runTest {
+        // Given - Deezer has no album under this title, and the two Sungazers are within a fifth of
+        // each other's audience, so only the ambiguity of the name itself can reject the seed
+        httpClient.givenJsonResponse("search/album", """{"data":[]}""")
+        httpClient.givenJsonResponse("search/artist", SUNGAZER_ARTIST_SEARCH)
+        httpClient.givenJsonResponse("artist/15283019/related", RELATED_ARTISTS_3)
+        httpClient.givenJsonResponse("artist/152886542/related", RELATED_ARTISTS_3)
+        httpClient.givenJsonResponse("artist/1001/albums", MUSE_ALBUMS)
+        httpClient.givenJsonResponse("artist/1002/albums", PORTISHEAD_ALBUMS)
+        httpClient.givenJsonResponse("artist/1003/albums", SIGUR_ROS_ALBUMS)
+        val request = EnrichmentRequest.forAlbum("A Title Deezer Does Not Carry", "Sungazer")
+
+        // When - enriching for similar albums
+        val result = provider.enrich(request, EnrichmentType.SIMILAR_ALBUMS)
+
+        // Then - NotFound rather than one act's list reported as the other's
+        assertTrue(result is EnrichmentResult.NotFound)
+    }
+
+    @Test
+    fun `enrich seeds by name when the only same-name rival is a fraction of the artist's size`() = runTest {
+        // Given - Radiohead's own pool, which carries "Radio Head" (436 fans) beside the real
+        // artist (4,085,364), and no album hit to resolve the name with
+        httpClient.givenJsonResponse("search/album", """{"data":[]}""")
+        httpClient.givenJsonResponse("search/artist", RADIOHEAD_ARTIST_SEARCH)
+        httpClient.givenJsonResponse("artist/399/related", RELATED_ARTISTS_3)
+        httpClient.givenJsonResponse("artist/1001/albums", MUSE_ALBUMS)
+        httpClient.givenJsonResponse("artist/1002/albums", PORTISHEAD_ALBUMS)
+        httpClient.givenJsonResponse("artist/1003/albums", SIGUR_ROS_ALBUMS)
+        val request = EnrichmentRequest.forAlbum("Kid A Mnesia", "Radiohead")
+
+        // When - enriching for similar albums
+        val result = provider.enrich(request, EnrichmentType.SIMILAR_ALBUMS)
+
+        // Then - the list is served, because a mis-spaced entry that size is not a second act
+        assertTrue(result is EnrichmentResult.Success)
+        val identifiers = (result as EnrichmentResult.Success).resolvedIdentifiers
+        assertEquals("399", identifiers?.get(IdentifierNamespace.DEEZER))
+    }
+
     companion object {
         val ARTIST_SEARCH = """{"data":[{"id":399,"name":"Radiohead"}]}"""
+
+        // Live `/search/artist?q=Trouble&limit=10`, 2026-09-06, trimmed to the fields the parser
+        // reads: four artists are exactly "Trouble" and the fan tiebreak hands the name to 166426,
+        // the Atlanta rapper. 10443928 is the doom band that recorded Psalm 9.
+        const val TROUBLE_ARTIST_SEARCH = """{"data":[
+            {"id":72483672,"name":"Trouble","nb_album":2,"nb_fan":69},
+            {"id":281886551,"name":"Trouble","nb_album":2,"nb_fan":13},
+            {"id":1072454,"name":"Trouble & Strife","nb_album":1,"nb_fan":16},
+            {"id":166426,"name":"Trouble","nb_album":38,"nb_fan":61592},
+            {"id":10443928,"name":"Trouble","nb_album":21,"nb_fan":2458},
+            {"id":6082420,"name":"Trouble & Daughter","nb_album":1,"nb_fan":126},
+            {"id":1096354,"name":"Trouble Maker","nb_album":3,"nb_fan":12221},
+            {"id":215177,"name":"Trouble Andrew","nb_album":25,"nb_fan":1629},
+            {"id":509537,"name":"Double Trouble","nb_album":120,"nb_fan":28015},
+            {"id":1052500,"name":"VINTAGE TROUBLE","nb_album":32,"nb_fan":20729}
+        ]}"""
+
+        // Live `/search/album?q=Trouble Psalm 9&limit=5`, 2026-09-06. The only hit carries a
+        // remaster suffix, so `deezerAlbumTitleTier`'s EDITION tolerance is what accepts it.
+        const val TROUBLE_ALBUM_SEARCH = """{"data":[
+            {"id":284590542,"title":"Psalm 9 (Remastered 2020)","nb_tracks":9,"record_type":"album",
+             "artist":{"id":10443928,"name":"Trouble"}}
+        ]}"""
+
+        // The live Psalm 9 hit above, preceded by a same-titled album attributed to Trouble Andrew
+        // — an artist from the live `q=Trouble` pool, but a row Deezer does not carry. The pool is
+        // built to exercise the ranking: an exact title beats an edition title before artist
+        // quality is read at all, so the loosely-named act wins the selection.
+        const val TROUBLE_ALBUM_SEARCH_WRONG_ACT_FIRST = """{"data":[
+            {"id":900001,"title":"Psalm 9","nb_tracks":9,"record_type":"album",
+             "artist":{"id":215177,"name":"Trouble Andrew"}},
+            {"id":284590542,"title":"Psalm 9 (Remastered 2020)","nb_tracks":9,"record_type":"album",
+             "artist":{"id":10443928,"name":"Trouble"}}
+        ]}"""
+
+        // Live `/search/artist?q=Sungazer&limit=10`, 2026-09-06: two artists are exactly
+        // "Sungazer", 2441 fans against 1856, and they are two genuinely different acts.
+        const val SUNGAZER_ARTIST_SEARCH = """{"data":[
+            {"id":15283019,"name":"Sungazer","nb_album":18,"nb_fan":2441},
+            {"id":152886542,"name":"Sungazer","nb_album":8,"nb_fan":1856},
+            {"id":7680650,"name":"Sungazers","nb_album":9,"nb_fan":19},
+            {"id":144188302,"name":"Sundazer","nb_album":9,"nb_fan":386},
+            {"id":9262792,"name":"Sungaze","nb_album":27,"nb_fan":233}
+        ]}"""
+
+        // Live `/search/artist?q=Radiohead&limit=10`, 2026-09-06: "Radio Head" normalizes to the
+        // requested name once spacing is dropped, and "Radiodread" carries no albums at all.
+        // Neither is a second Radiohead.
+        const val RADIOHEAD_ARTIST_SEARCH = """{"data":[
+            {"id":399,"name":"Radiohead","nb_album":45,"nb_fan":4085364},
+            {"id":12189436,"name":"Radio Head","nb_album":7,"nb_fan":436},
+            {"id":53477202,"name":"DJ Radiohead","nb_album":30,"nb_fan":63},
+            {"id":14009761,"name":"Radiohead Tribute Band","nb_album":1,"nb_fan":414},
+            {"id":4674537,"name":"Radiodread","nb_album":0,"nb_fan":24}
+        ]}"""
 
         val RELATED_ARTISTS_3 = """{"data":[
             {"id":1001,"name":"Muse"},

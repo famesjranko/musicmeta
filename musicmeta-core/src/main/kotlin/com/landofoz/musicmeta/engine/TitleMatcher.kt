@@ -28,14 +28,16 @@ internal object TitleMatcher {
 
     /**
      * A qualifier is edition decoration, not a distinct release, when it names nothing but a
-     * remaster: `"2015 Remaster"`, `"Remastered"`, `"2016 Remastered Version"`. Anything else —
+     * remaster: `"2015 Remaster"`, `"Remastered"`, `"2016 Remastered Version"`, and the suffix form
+     * `"Remastered 2020"` that Deezer publishes. Anything else —
      * `"Live"`, `"Deluxe"`, `"Remix"`, `"Anniversary Edition"`, a box-set description — names a
      * different release and is never classified as edition decoration. Whether a provider's
      * acceptance policy tolerates this tier at all is that provider's own decision.
      */
     internal fun isEditionDecoration(qualifier: String): Boolean = EDITION_DECORATION_REGEX.matches(qualifier)
 
-    private val EDITION_DECORATION_REGEX = Regex("""^(\d{4}\s+)?remaster(ed)?(\s+version)?$""")
+    private val EDITION_DECORATION_REGEX =
+        Regex("""^(\d{4}\s+)?remaster(ed)?(\s+version)?(\s+\d{4})?$""")
 
     internal fun parse(title: String): Parts {
         val normalized = normalize(title)
