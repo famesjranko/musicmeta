@@ -98,6 +98,18 @@ class DiscogsAlbumSelectionTest {
     }
 
     @Test
+    fun `a marker sitting after the homonym counter does not hide it`() {
+        // Given - a credit carrying both of Discogs' trailing conventions, counter then marker
+        val combined = "Кино (2)* - Ночь"
+
+        // When - parsing against the name under both
+        val parsed = parseDiscogsRelease(combined, requestedArtist = "Кино", requestedTitle = "Ночь")
+
+        // Then - the marker comes off first, or the counter's end-anchored pattern never matches
+        assertEquals("Кино (2)*" to "Ночь", parsed)
+    }
+
+    @Test
     fun `an asterisk inside a credit is part of the name and survives`() {
         // Given - a live credit carrying markers between its names as well as at the end
         val combined = "Αλεξίου* • Μάλαμας* • Ιωαννίδης* - Ζωντανή Ηχογράφηση"
