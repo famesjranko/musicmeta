@@ -172,7 +172,12 @@ internal class ListenBrainzApi(
     private fun parseSimilarArtist(item: JSONObject): ListenBrainzSimilarArtist? {
         val mbid = item.optString("artist_mbid").takeIf { it.isNotBlank() } ?: return null
         val name = item.optString("name").takeIf { it.isNotBlank() } ?: return null
-        return ListenBrainzSimilarArtist(artistMbid = mbid, name = name, score = item.optInt("score", 0))
+        return ListenBrainzSimilarArtist(
+            artistMbid = mbid,
+            name = name,
+            score = item.optInt("score", 0),
+            comment = item.optString("comment").trim().takeIf { it.isNotBlank() },
+        )
     }
 
     /** GET /1/explore/lb-radio?prompt=artist:({prompt})&mode={mode}. Requires authToken. */
@@ -348,6 +353,11 @@ internal class ListenBrainzApi(
                     "[0].artist_mbid",
                     "[0].name",
                     "[0].score",
+                    // `[*]` rather than `[0]`: Labs leaves `comment` empty on more than half its
+                    // rows, so a fixed index would call a reorder onto an undescribed neighbour
+                    // drift (`docs/pitfalls.md` §37). The any-index form still fails if the field
+                    // leaves the payload, which is what would silently un-label every similar artist.
+                    "[*].comment",
                 ),
             ),
             SchemaTarget(

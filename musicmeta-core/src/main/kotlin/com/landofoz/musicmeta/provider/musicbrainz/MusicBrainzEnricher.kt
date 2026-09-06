@@ -48,6 +48,10 @@ internal class MusicBrainzEnricher(
         type: EnrichmentType,
     ): EnrichmentResult = tracks.enrichTrack(request, type)
 
+    /** [MusicBrainzArtistEnrichment.describeArtists], which holds the contract. */
+    internal suspend fun describeArtists(mbids: List<String>): Map<String, String> =
+        artists.describeArtists(mbids)
+
     /**
      * What entity [mbid] names, or null when MusicBrainz holds it under none of the three.
      *

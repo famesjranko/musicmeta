@@ -1,0 +1,114 @@
+{
+  "created": "2026-09-06T04:26:10.004Z",
+  "count": 4,
+  "offset": 0,
+  "artists": [
+    {
+      "id": "e9ea0fbc-ccc7-4e98-9290-0a41aa848fa2",
+      "type": "Group",
+      "type-id": "e431f5f6-b5d2-343d-8b36-72607fffb74b",
+      "score": 100,
+      "name": "Loathe",
+      "sort-name": "Loathe",
+      "country": "MT",
+      "area": {
+        "id": "050c94f7-1413-3a34-bb90-4a94f3bb2084",
+        "type": "Country",
+        "type-id": "06dd0ae4-8c74-30bb-b43d-95dcedf961de",
+        "name": "Malta",
+        "sort-name": "Malta",
+        "life-span": {
+          "ended": null
+        }
+      },
+      "disambiguation": "Maltese death metal band",
+      "life-span": {
+        "begin": "1999",
+        "ended": null
+      },
+      "tags": [
+        {
+          "count": 1,
+          "name": "death metal"
+        }
+      ]
+    },
+    {
+      "id": "a39ad456-a697-4f32-aa36-c107f654d318",
+      "type": "Group",
+      "type-id": "e431f5f6-b5d2-343d-8b36-72607fffb74b",
+      "score": 99,
+      "name": "Spiritbox",
+      "sort-name": "Spiritbox",
+      "country": "NL",
+      "area": {
+        "id": "ef1b7cc0-cd26-36f4-8ea0-04d9623786c7",
+        "type": "Country",
+        "type-id": "06dd0ae4-8c74-30bb-b43d-95dcedf961de",
+        "name": "Netherlands",
+        "sort-name": "Netherlands",
+        "life-span": {
+          "ended": null
+        }
+      },
+      "begin-area": {
+        "id": "ef1b7cc0-cd26-36f4-8ea0-04d9623786c7",
+        "type": "Country",
+        "type-id": "06dd0ae4-8c74-30bb-b43d-95dcedf961de",
+        "name": "Netherlands",
+        "sort-name": "Netherlands",
+        "life-span": {
+          "ended": null
+        }
+      },
+      "disambiguation": "Dutch post-rock",
+      "life-span": {
+        "begin": "2018",
+        "ended": null
+      }
+    },
+    {
+      "id": "21006fdb-2e22-4950-91ed-8575a1a96b58",
+      "type": "Group",
+      "type-id": "e431f5f6-b5d2-343d-8b36-72607fffb74b",
+      "score": 99,
+      "name": "Sungazer",
+      "sort-name": "Sungazer",
+      "country": "US",
+      "area": {
+        "id": "489ce91b-6658-3307-9877-795b68554c98",
+        "type": "Country",
+        "type-id": "06dd0ae4-8c74-30bb-b43d-95dcedf961de",
+        "name": "United States",
+        "sort-name": "United States",
+        "life-span": {
+          "ended": null
+        }
+      },
+      "disambiguation": "Colorado-based psychadelic, ambient, noise",
+      "life-span": {
+        "ended": null
+      }
+    },
+    {
+      "id": "8834d8b5-72a4-4a6e-9d35-3a041b8579fa",
+      "score": 97,
+      "name": "Bad Omens",
+      "sort-name": "Bad Omens",
+      "area": {
+        "id": "f5ffcc03-ebf2-466a-bb11-b38c6c0c84f5",
+        "type": "Subdivision",
+        "type-id": "fd3d44c5-80a1-3842-9745-2c4972d35afa",
+        "name": "Minnesota",
+        "sort-name": "Minnesota",
+        "life-span": {
+          "ended": null
+        }
+      },
+      "disambiguation": "60s garage rock band from Minnesota",
+      "life-span": {
+        "ended": true
+      }
+    }
+  ]
+}

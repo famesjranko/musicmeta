@@ -43,6 +43,29 @@ class ResultRowsTest {
     }
 
     @Test
+    fun `two same-name similar artists are told apart by their disambiguation`() {
+        // Given - the split pair a consumer cannot read from the name alone
+        val raw = mapOf(
+            EnrichmentType.SIMILAR_ARTISTS to success(
+                EnrichmentType.SIMILAR_ARTISTS,
+                EnrichmentData.SimilarArtists(
+                    listOf(
+                        SimilarArtist(name = "Loathe", matchScore = 0.9f, disambiguation = "UK experimental metal"),
+                        SimilarArtist(name = "Loathe", matchScore = 0.4f, disambiguation = "Maltese death metal band"),
+                    ),
+                ),
+            ),
+        )
+
+        // When - rendering the results block
+        val output = render(raw)
+
+        // Then - each row carries its own act's description between the name and the rank
+        assertTrue(output, output.contains("Loathe — UK experimental metal (rank 0.90)"))
+        assertTrue(output, output.contains("Loathe — Maltese death metal band (rank 0.40)"))
+    }
+
+    @Test
     fun `a similar-track score is labelled as a rank`() {
         // Given - a similar-tracks payload carrying the same kind of score
         val raw = mapOf(

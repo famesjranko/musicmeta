@@ -66,4 +66,10 @@ internal data class ListenBrainzSimilarArtist(
     val artistMbid: String,
     val name: String,
     val score: Int,
+    /**
+     * The route's `comment`, which is MusicBrainz's `disambiguation` for [artistMbid] verbatim.
+     * Null where the row carried none: Labs sends the key on every row and leaves it empty for
+     * fewer than half of them.
+     */
+    val comment: String? = null,
 )

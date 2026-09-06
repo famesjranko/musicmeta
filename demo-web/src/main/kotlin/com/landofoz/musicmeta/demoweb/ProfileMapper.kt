@@ -43,7 +43,10 @@ fun ArtistProfile.toDemoResponse(elapsedMs: Long, pending: Set<EnrichmentType> =
             r.similarArtists()?.artists?.map {
                 SectionItem(
                     primary = it.name,
-                    secondary = "rank %.2f".format(it.matchScore),
+                    // The disambiguation leads the line: it is what tells two entries sharing a name
+                    // apart, and the rank means nothing until the reader knows which act this is.
+                    secondary = listOfNotNull(it.disambiguation, "rank %.2f".format(it.matchScore))
+                        .joinToString(" · "),
                     meta = it.sources.joinToString(", ").ifBlank { null },
                     enrich = artistEnrich(it.name),
                 )

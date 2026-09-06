@@ -203,6 +203,20 @@ public data class SimilarArtist(
      */
     val matchScore: Float,
     val sources: List<String> = emptyList(),
+    /**
+     * MusicBrainz's own disambiguation for the act [identifiers]'s MusicBrainz id names — "Canadian
+     * metalcore", "Dutch post-rock" — or `null` where no source described it.
+     *
+     * `null` means unknown, never that the act has no description. The text always comes from the
+     * MusicBrainz record this entry's own id names, so rendering it beside [name] is what tells two
+     * entries sharing a name apart. It is never taken from a same-name contributor that carried no
+     * id, because the merge attaches such a contributor by order rather than by evidence — its text
+     * is as likely to belong to the other act.
+     *
+     * Not attributable through [sources], which names the contributors that put this artist in the
+     * list and gains nothing from the entry having been described.
+     */
+    val disambiguation: String? = null,
 )
 
 /**

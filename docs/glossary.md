@@ -42,6 +42,15 @@ The last column is the reason the table is short: most upstreams already say art
 The ones that do not are the ones whose mappers do the most translation — and ListenBrainz is
 MusicBrainz's vocabulary reached through a different API, not a fourth dialect.
 
+**disambiguation** is MusicBrainz's word, and the only one this library uses for it. It is the
+short phrase MusicBrainz files beside a name to separate acts that share one — "Canadian
+metalcore", "Dutch post-rock", "60s garage rock band from Minnesota". ListenBrainz Labs returns
+the same string under the name `comment`, and the mapper renames it on the way in, so
+`SimilarArtist.disambiguation` means one thing whichever upstream supplied it.
+
+It describes an act, never a match: it is not a reason two artists are similar, and it carries no
+ranking. `null` means nothing described the act, never that the act has no description.
+
 ## The traps that follow
 
 **`musicBrainzId` is polymorphic by request kind.** It holds a release id on an album request, an

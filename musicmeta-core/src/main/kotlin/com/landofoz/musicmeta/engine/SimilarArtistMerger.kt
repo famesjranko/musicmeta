@@ -1,6 +1,7 @@
 package com.landofoz.musicmeta.engine
 
 import com.landofoz.musicmeta.EnrichmentData
+import com.landofoz.musicmeta.EnrichmentIdentifiers
 import com.landofoz.musicmeta.EnrichmentResult
 import com.landofoz.musicmeta.EnrichmentType
 import com.landofoz.musicmeta.LookupProvenance
@@ -82,6 +83,7 @@ internal object SimilarArtistMerger : ResultMerger {
                 identifiers = mergedIdentifiers,
                 matchScore = totalScore,
                 sources = allSources,
+                disambiguation = describedBy(group, mergedIdentifiers),
             )
         }
 
@@ -116,8 +118,8 @@ internal object SimilarArtistMerger : ResultMerger {
         for (artist in artists) {
             // Blanked here rather than trusted: nothing normalizes EnrichmentIdentifiers, and a
             // blank id keys every entry carrying one into a single group whatever they are named.
-            val mbid = normalize(artist.identifiers.musicBrainzId.orEmpty()).takeIf { it.isNotEmpty() }
-            val key = normalize(artist.name)
+            val mbid = similarArtistMbidKey(artist.identifiers.musicBrainzId)
+            val key = similarArtistNameKey(artist.name)
             val index = if (mbid == null) {
                 groupKey.indexOfFirst { it == key }
             } else {
@@ -138,5 +140,22 @@ internal object SimilarArtistMerger : ResultMerger {
         return groups
     }
 
-    private fun normalize(name: String): String = name.trim().lowercase()
+    /**
+     * What this group may be labelled with: the text of a member whose own MusicBrainz id is the
+     * group's own, and nothing else.
+     *
+     * A member carrying no id may not describe the group. [groupArtists] attaches such a member to a
+     * same-name group by contributor order rather than by evidence, so its description belongs to
+     * the other act exactly as often as to this one — and the ticket this answers says an entry
+     * wearing the wrong act's label is worse than an entry wearing none.
+     */
+    private fun describedBy(group: List<SimilarArtist>, merged: EnrichmentIdentifiers): String? {
+        val groupMbid = similarArtistMbidKey(merged.musicBrainzId) ?: return null
+        return group
+            .firstOrNull { member ->
+                similarArtistMbidKey(member.identifiers.musicBrainzId) == groupMbid &&
+                    !member.disambiguation.isNullOrBlank()
+            }
+            ?.disambiguation
+    }
 }

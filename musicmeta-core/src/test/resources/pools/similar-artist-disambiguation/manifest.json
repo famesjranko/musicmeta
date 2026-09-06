@@ -1,0 +1,5 @@
+{
+  "labs-similar-artists-radiohead.json": "artist_mbids=a74b1b7f-71a5-4011-9441-d0b5e4122711",
+  "labs-similar-artists-bjork.json": "artist_mbids=f22942a1-6f70-4f48-866e-238cb2308fbd",
+  "musicbrainz-arid-batch.json": "artist?query=arid"
+}
