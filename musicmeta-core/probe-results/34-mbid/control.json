@@ -1,0 +1,78 @@
+{"frozen": {
+ "mismatchRows": 8,
+ "metric5_flagged": 0,
+ "metric1_corrected": 0,
+ "matchRows": 130,
+ "changes": [],
+ "metric3_totalRequests": 0,
+ "metric5_flaggedMismatch": 0,
+ "rowsChanged": 0,
+ "perArtist": {
+  "fleetwood-mac": {
+   "ledger": [],
+   "requests": 0,
+   "top10Moved": 0
+  },
+  "aphex-twin": {
+   "ledger": [],
+   "requests": 0,
+   "top10Moved": 0
+  },
+  "burial": {
+   "ledger": [],
+   "requests": 0,
+   "top10Moved": 0
+  },
+  "kendrick-lamar": {
+   "ledger": [],
+   "requests": 0,
+   "top10Moved": 0
+  },
+  "changg": {
+   "ledger": [],
+   "requests": 0,
+   "top10Moved": 0
+  },
+  "bjork": {
+   "ledger": [],
+   "requests": 0,
+   "top10Moved": 0
+  },
+  "fela-kuti": {
+   "ledger": [],
+   "requests": 0,
+   "top10Moved": 0
+  },
+  "boards-of-canada": {
+   "ledger": [],
+   "requests": 0,
+   "top10Moved": 0
+  },
+  "tigran-hamasyan": {
+   "ledger": [],
+   "requests": 0,
+   "top10Moved": 0
+  },
+  "sleep-token": {
+   "ledger": [],
+   "requests": 0,
+   "top10Moved": 0
+  },
+  "4wheel": {
+   "ledger": [],
+   "requests": 0,
+   "top10Moved": 0
+  },
+  "radiohead": {
+   "ledger": [],
+   "requests": 0,
+   "top10Moved": 0
+  }
+ },
+ "metric4_top10Moved": 0,
+ "capturedOn": "2026-09-06",
+ "metric3_worstArtist": 0,
+ "metric6_flaggedMatch": 0,
+ "arm": "control",
+ "metric2_wronglyChanged": 0
+}}

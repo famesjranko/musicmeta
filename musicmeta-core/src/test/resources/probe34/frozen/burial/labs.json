@@ -1,0 +1,902 @@
+[
+  {
+    "artist_mbid": "69158f97-4c07-4c4e-baf8-4e4ab1ed666e",
+    "name": "Boards of Canada",
+    "comment": "Scottish electronic duo",
+    "type": "Group",
+    "gender": null,
+    "score": 3405,
+    "reference_mbid": "9ddce51c-2b75-4b3e-ac8c-1db09e7c89c6"
+  },
+  {
+    "artist_mbid": "f22942a1-6f70-4f48-866e-238cb2308fbd",
+    "name": "Aphex Twin",
+    "comment": "",
+    "type": "Person",
+    "gender": "Male",
+    "score": 3258,
+    "reference_mbid": "9ddce51c-2b75-4b3e-ac8c-1db09e7c89c6"
+  },
+  {
+    "artist_mbid": "88b53a2c-aac3-426d-b179-73f2355fddd8",
+    "name": "The Spaceape",
+    "comment": "",
+    "type": "Person",
+    "gender": "Male",
+    "score": 3169,
+    "reference_mbid": "9ddce51c-2b75-4b3e-ac8c-1db09e7c89c6"
+  },
+  {
+    "artist_mbid": "3bcff06f-675a-451f-9075-99e8657047e8",
+    "name": "Four Tet",
+    "comment": "",
+    "type": "Person",
+    "gender": "Male",
+    "score": 3056,
+    "reference_mbid": "9ddce51c-2b75-4b3e-ac8c-1db09e7c89c6"
+  },
+  {
+    "artist_mbid": "a74b1b7f-71a5-4011-9441-d0b5e4122711",
+    "name": "Radiohead",
+    "comment": "",
+    "type": "Group",
+    "gender": null,
+    "score": 2356,
+    "reference_mbid": "9ddce51c-2b75-4b3e-ac8c-1db09e7c89c6"
+  },
+  {
+    "artist_mbid": "10adbe5e-a2c0-4bf3-8249-2b4cbf6e6ca8",
+    "name": "Massive Attack",
+    "comment": "",
+    "type": "Group",
+    "gender": null,
+    "score": 2148,
+    "reference_mbid": "9ddce51c-2b75-4b3e-ac8c-1db09e7c89c6"
+  },
+  {
+    "artist_mbid": "9a709693-b4f8-4da9-8cc1-038c911a61be",
+    "name": "Bonobo",
+    "comment": "UK electronic artist Simon Green",
+    "type": "Person",
+    "gender": "Male",
+    "score": 2065,
+    "reference_mbid": "9ddce51c-2b75-4b3e-ac8c-1db09e7c89c6"
+  },
+  {
+    "artist_mbid": "4a3a5fc0-af4b-4990-957b-8d94f7bfe706",
+    "name": "Mount Kimbie",
+    "comment": "English dubstep",
+    "type": "Group",
+    "gender": null,
+    "score": 1846,
+    "reference_mbid": "9ddce51c-2b75-4b3e-ac8c-1db09e7c89c6"
+  },
+  {
+    "artist_mbid": "fc7376fe-1a6f-4414-b4a7-83f50ed59c92",
+    "name": "Flying Lotus",
+    "comment": "",
+    "type": "Person",
+    "gender": "Male",
+    "score": 1823,
+    "reference_mbid": "9ddce51c-2b75-4b3e-ac8c-1db09e7c89c6"
+  },
+  {
+    "artist_mbid": "735e3514-a8ae-401f-af3b-6300df1b8d2c",
+    "name": "Caribou",
+    "comment": "electronic act from Dan Snaith",
+    "type": "Person",
+    "gender": "Male",
+    "score": 1708,
+    "reference_mbid": "9ddce51c-2b75-4b3e-ac8c-1db09e7c89c6"
+  },
+  {
+    "artist_mbid": "8dc08b1f-e393-4f85-a5dd-300f7693a8b8",
+    "name": "James Blake",
+    "comment": "English singer and producer",
+    "type": "Person",
+    "gender": "Male",
+    "score": 1705,
+    "reference_mbid": "9ddce51c-2b75-4b3e-ac8c-1db09e7c89c6"
+  },
+  {
+    "artist_mbid": "8ed2e0b3-aa4c-4e13-bec3-dc7393ed4d6b",
+    "name": "Thom Yorke",
+    "comment": "",
+    "type": "Person",
+    "gender": "Male",
+    "score": 1578,
+    "reference_mbid": "9ddce51c-2b75-4b3e-ac8c-1db09e7c89c6"
+  },
+  {
+    "artist_mbid": "cb67438a-7f50-4f2b-a6f1-2bb2729fd538",
+    "name": "Air",
+    "comment": "French band",
+    "type": "Group",
+    "gender": null,
+    "score": 1564,
+    "reference_mbid": "9ddce51c-2b75-4b3e-ac8c-1db09e7c89c6"
+  },
+  {
+    "artist_mbid": "21a6751e-887e-4eae-9989-de45d452feb6",
+    "name": "Zomby",
+    "comment": "",
+    "type": "Person",
+    "gender": "Male",
+    "score": 1548,
+    "reference_mbid": "9ddce51c-2b75-4b3e-ac8c-1db09e7c89c6"
+  },
+  {
+    "artist_mbid": "410c9baf-5469-44f6-9852-826524b80c61",
+    "name": "Autechre",
+    "comment": "electronic music duo",
+    "type": "Group",
+    "gender": null,
+    "score": 1523,
+    "reference_mbid": "9ddce51c-2b75-4b3e-ac8c-1db09e7c89c6"
+  },
+  {
+    "artist_mbid": "8f6bd1e4-fbe1-4f50-aa9b-94c450ec0f11",
+    "name": "Portishead",
+    "comment": "",
+    "type": "Group",
+    "gender": null,
+    "score": 1518,
+    "reference_mbid": "9ddce51c-2b75-4b3e-ac8c-1db09e7c89c6"
+  },
+  {
+    "artist_mbid": "cbef45a9-7acb-4325-94c9-70081ac8d1b8",
+    "name": "Tycho",
+    "comment": "US electronic producer/songwriter Scott Hansen from SF",
+    "type": "Person",
+    "gender": "Male",
+    "score": 1456,
+    "reference_mbid": "9ddce51c-2b75-4b3e-ac8c-1db09e7c89c6"
+  },
+  {
+    "artist_mbid": "efa2c11a-1a35-4b60-bc1b-66d37de88511",
+    "name": "DJ Shadow",
+    "comment": "US hip hop producer, DJ & instrumentalist",
+    "type": "Person",
+    "gender": "Male",
+    "score": 1427,
+    "reference_mbid": "9ddce51c-2b75-4b3e-ac8c-1db09e7c89c6"
+  },
+  {
+    "artist_mbid": "0b0c25f4-f31c-46a5-a4fb-ccbf53d663bd",
+    "name": "Jon Hopkins",
+    "comment": "",
+    "type": "Person",
+    "gender": "Male",
+    "score": 1425,
+    "reference_mbid": "9ddce51c-2b75-4b3e-ac8c-1db09e7c89c6"
+  },
+  {
+    "artist_mbid": "1c70a3fc-fa3c-4be1-8b55-c3192db8a884",
+    "name": "Röyksopp",
+    "comment": "",
+    "type": "Group",
+    "gender": null,
+    "score": 1380,
+    "reference_mbid": "9ddce51c-2b75-4b3e-ac8c-1db09e7c89c6"
+  },
+  {
+    "artist_mbid": "630662ea-1c7d-4208-99fd-ba3afec20f0c",
+    "name": "Amon Tobin",
+    "comment": "Brazilian electronic music artist",
+    "type": "Person",
+    "gender": "Male",
+    "score": 1378,
+    "reference_mbid": "9ddce51c-2b75-4b3e-ac8c-1db09e7c89c6"
+  },
+  {
+    "artist_mbid": "dc3dbfc1-f1f1-49c6-9d7c-425fabf3ae12",
+    "name": "Apparat",
+    "comment": "",
+    "type": "Person",
+    "gender": "Male",
+    "score": 1344,
+    "reference_mbid": "9ddce51c-2b75-4b3e-ac8c-1db09e7c89c6"
+  },
+  {
+    "artist_mbid": "6d7b7cd4-254b-4c25-83f6-dd20f98ceacd",
+    "name": "M83",
+    "comment": "",
+    "type": "Group",
+    "gender": null,
+    "score": 1265,
+    "reference_mbid": "9ddce51c-2b75-4b3e-ac8c-1db09e7c89c6"
+  },
+  {
+    "artist_mbid": "8970d868-0723-483b-a75b-51088913d3d4",
+    "name": "Moby",
+    "comment": "electronic musician Richard Melville Hall",
+    "type": "Person",
+    "gender": "Male",
+    "score": 1229,
+    "reference_mbid": "9ddce51c-2b75-4b3e-ac8c-1db09e7c89c6"
+  },
+  {
+    "artist_mbid": "5d0c202c-e30f-40c4-abf5-c0007af0d1cc",
+    "name": "Clark",
+    "comment": "British electronic musician",
+    "type": "Person",
+    "gender": "Male",
+    "score": 1220,
+    "reference_mbid": "9ddce51c-2b75-4b3e-ac8c-1db09e7c89c6"
+  },
+  {
+    "artist_mbid": "ff95eb47-41c4-4f7f-a104-cdc30f02e872",
+    "name": "Brian Eno",
+    "comment": "",
+    "type": "Person",
+    "gender": "Male",
+    "score": 1203,
+    "reference_mbid": "9ddce51c-2b75-4b3e-ac8c-1db09e7c89c6"
+  },
+  {
+    "artist_mbid": "4d86ad4e-28d8-4e9f-8cf4-735c57060fdc",
+    "name": "Squarepusher",
+    "comment": "",
+    "type": "Person",
+    "gender": "Male",
+    "score": 1202,
+    "reference_mbid": "9ddce51c-2b75-4b3e-ac8c-1db09e7c89c6"
+  },
+  {
+    "artist_mbid": "87c5dedd-371d-4a53-9f7f-80522fb7f3cb",
+    "name": "Björk",
+    "comment": "",
+    "type": "Person",
+    "gender": "Female",
+    "score": 1197,
+    "reference_mbid": "9ddce51c-2b75-4b3e-ac8c-1db09e7c89c6"
+  },
+  {
+    "artist_mbid": "b1570544-93ab-4b2b-8398-131735394202",
+    "name": "Crystal Castles",
+    "comment": "",
+    "type": "Group",
+    "gender": null,
+    "score": 1169,
+    "reference_mbid": "9ddce51c-2b75-4b3e-ac8c-1db09e7c89c6"
+  },
+  {
+    "artist_mbid": "b476bc5e-19ca-4e5a-82c8-1a068d601a7d",
+    "name": "Nosaj Thing",
+    "comment": "",
+    "type": "Person",
+    "gender": "Male",
+    "score": 1151,
+    "reference_mbid": "9ddce51c-2b75-4b3e-ac8c-1db09e7c89c6"
+  },
+  {
+    "artist_mbid": "c7ee3bc9-780c-42c0-91e9-4cd70ad692d3",
+    "name": "Tim Hecker",
+    "comment": "",
+    "type": "Person",
+    "gender": "Male",
+    "score": 1144,
+    "reference_mbid": "9ddce51c-2b75-4b3e-ac8c-1db09e7c89c6"
+  },
+  {
+    "artist_mbid": "7754905b-8bf7-48e2-935a-03d566fec464",
+    "name": "Moderat",
+    "comment": "Modeselektor and Apparat",
+    "type": "Group",
+    "gender": null,
+    "score": 1139,
+    "reference_mbid": "9ddce51c-2b75-4b3e-ac8c-1db09e7c89c6"
+  },
+  {
+    "artist_mbid": "f6f2326f-6b25-4170-b89d-e235b25508e8",
+    "name": "Sigur Rós",
+    "comment": "Icelandic post‐rock band",
+    "type": "Group",
+    "gender": null,
+    "score": 1127,
+    "reference_mbid": "9ddce51c-2b75-4b3e-ac8c-1db09e7c89c6"
+  },
+  {
+    "artist_mbid": "c5c2ea1c-4bde-4f4d-bd0b-47b200bf99d6",
+    "name": "The xx",
+    "comment": "UK indie/dream pop trio",
+    "type": "Group",
+    "gender": null,
+    "score": 1121,
+    "reference_mbid": "9ddce51c-2b75-4b3e-ac8c-1db09e7c89c6"
+  },
+  {
+    "artist_mbid": "bfbccd40-1a06-4ee7-b24d-b2f8cc714fa9",
+    "name": "Gold Panda",
+    "comment": "",
+    "type": "Person",
+    "gender": "Male",
+    "score": 1116,
+    "reference_mbid": "9ddce51c-2b75-4b3e-ac8c-1db09e7c89c6"
+  },
+  {
+    "artist_mbid": "9cea062d-d476-447f-98b4-e67e14bfd1e4",
+    "name": "Oneohtrix Point Never",
+    "comment": "Daniel Lopatin, commonly abbreviated OPN",
+    "type": "Person",
+    "gender": "Male",
+    "score": 1076,
+    "reference_mbid": "9ddce51c-2b75-4b3e-ac8c-1db09e7c89c6"
+  },
+  {
+    "artist_mbid": "b7ffd2af-418f-4be2-bdd1-22f8b48613da",
+    "name": "Nine Inch Nails",
+    "comment": "",
+    "type": "Group",
+    "gender": null,
+    "score": 1060,
+    "reference_mbid": "9ddce51c-2b75-4b3e-ac8c-1db09e7c89c6"
+  },
+  {
+    "artist_mbid": "06e99a1b-4020-4380-ab27-1a3e0c5e557c",
+    "name": "Nicolas Jaar",
+    "comment": "",
+    "type": "Person",
+    "gender": "Male",
+    "score": 1029,
+    "reference_mbid": "9ddce51c-2b75-4b3e-ac8c-1db09e7c89c6"
+  },
+  {
+    "artist_mbid": "21a0e450-ae4d-473a-add4-744542ab9bf5",
+    "name": "Shlohmo",
+    "comment": "",
+    "type": "Person",
+    "gender": "Male",
+    "score": 1027,
+    "reference_mbid": "9ddce51c-2b75-4b3e-ac8c-1db09e7c89c6"
+  },
+  {
+    "artist_mbid": "fb5ee67e-e31a-40cf-8b06-5f1a0f53529a",
+    "name": "Skream",
+    "comment": "UK dubstep & house producer",
+    "type": "Person",
+    "gender": "Male",
+    "score": 1019,
+    "reference_mbid": "9ddce51c-2b75-4b3e-ac8c-1db09e7c89c6"
+  },
+  {
+    "artist_mbid": "e21857d5-3256-4547-afb3-4b6ded592596",
+    "name": "Gorillaz",
+    "comment": "virtual band",
+    "type": "Group",
+    "gender": null,
+    "score": 998,
+    "reference_mbid": "9ddce51c-2b75-4b3e-ac8c-1db09e7c89c6"
+  },
+  {
+    "artist_mbid": "d1515727-4a93-4c0d-88cb-d7a9fce01879",
+    "name": "Jamie xx",
+    "comment": "English DJ, record producer, and remixer",
+    "type": "Person",
+    "gender": "Male",
+    "score": 978,
+    "reference_mbid": "9ddce51c-2b75-4b3e-ac8c-1db09e7c89c6"
+  },
+  {
+    "artist_mbid": "a505bb48-ad65-4af4-ae47-29149715bff9",
+    "name": "Thievery Corporation",
+    "comment": "",
+    "type": "Group",
+    "gender": null,
+    "score": 977,
+    "reference_mbid": "9ddce51c-2b75-4b3e-ac8c-1db09e7c89c6"
+  },
+  {
+    "artist_mbid": "3b9b8093-f991-4101-97bc-5f7c4940919f",
+    "name": "Darkstar",
+    "comment": "UK dubstep duo",
+    "type": "Group",
+    "gender": null,
+    "score": 959,
+    "reference_mbid": "9ddce51c-2b75-4b3e-ac8c-1db09e7c89c6"
+  },
+  {
+    "artist_mbid": "bf710b71-48e5-4e15-9bd6-96debb2e4e98",
+    "name": "The Knife",
+    "comment": "Swedish indie electronic duo",
+    "type": "Group",
+    "gender": null,
+    "score": 958,
+    "reference_mbid": "9ddce51c-2b75-4b3e-ac8c-1db09e7c89c6"
+  },
+  {
+    "artist_mbid": "7e54d133-2525-4bc0-ae94-65584145a386",
+    "name": "Plaid",
+    "comment": "British electronic music duo",
+    "type": "Group",
+    "gender": null,
+    "score": 958,
+    "reference_mbid": "9ddce51c-2b75-4b3e-ac8c-1db09e7c89c6"
+  },
+  {
+    "artist_mbid": "7e5a2a59-6d9f-4a17-b7c2-e1eedb7bd222",
+    "name": "Grimes",
+    "comment": "Canadian singer and producer",
+    "type": "Person",
+    "gender": "Female",
+    "score": 919,
+    "reference_mbid": "9ddce51c-2b75-4b3e-ac8c-1db09e7c89c6"
+  },
+  {
+    "artist_mbid": "973321d1-9565-4214-a6ef-a77f1890c294",
+    "name": "Actress",
+    "comment": "British electronic musician",
+    "type": "Person",
+    "gender": "Male",
+    "score": 916,
+    "reference_mbid": "9ddce51c-2b75-4b3e-ac8c-1db09e7c89c6"
+  },
+  {
+    "artist_mbid": "b10bbbfc-cf9e-42e0-be17-e2c3e1d2600d",
+    "name": "The Beatles",
+    "comment": "UK rock band, “The Fab Four”",
+    "type": "Group",
+    "gender": null,
+    "score": 909,
+    "reference_mbid": "9ddce51c-2b75-4b3e-ac8c-1db09e7c89c6"
+  },
+  {
+    "artist_mbid": "69d9c5ba-7bba-4cb7-ab32-8ccc48ad4f97",
+    "name": "Floating Points",
+    "comment": "",
+    "type": "Person",
+    "gender": "Male",
+    "score": 905,
+    "reference_mbid": "9ddce51c-2b75-4b3e-ac8c-1db09e7c89c6"
+  },
+  {
+    "artist_mbid": "95e9aba6-f85c-48a0-9ec9-395d4f0e3875",
+    "name": "Trentemøller",
+    "comment": "",
+    "type": "Person",
+    "gender": "Male",
+    "score": 904,
+    "reference_mbid": "9ddce51c-2b75-4b3e-ac8c-1db09e7c89c6"
+  },
+  {
+    "artist_mbid": "8bb978c1-a003-4f6f-ac53-0c84ec8b28ee",
+    "name": "Scuba",
+    "comment": "UK techno producer Paul Rose",
+    "type": "Person",
+    "gender": "Male",
+    "score": 891,
+    "reference_mbid": "9ddce51c-2b75-4b3e-ac8c-1db09e7c89c6"
+  },
+  {
+    "artist_mbid": "9f9953f0-68bb-4ce3-aace-2f44c87f0aa3",
+    "name": "Bibio",
+    "comment": "",
+    "type": "Person",
+    "gender": "Male",
+    "score": 885,
+    "reference_mbid": "9ddce51c-2b75-4b3e-ac8c-1db09e7c89c6"
+  },
+  {
+    "artist_mbid": "7f2aa196-cfd4-4a3d-ace3-28b7b6a79af7",
+    "name": "SBTRKT",
+    "comment": "",
+    "type": "Person",
+    "gender": "Male",
+    "score": 857,
+    "reference_mbid": "9ddce51c-2b75-4b3e-ac8c-1db09e7c89c6"
+  },
+  {
+    "artist_mbid": "e95a9d7f-fc26-4e56-8032-90cd954deea0",
+    "name": "Kode9",
+    "comment": "UK DJ/producer",
+    "type": "Person",
+    "gender": "Male",
+    "score": 853,
+    "reference_mbid": "9ddce51c-2b75-4b3e-ac8c-1db09e7c89c6"
+  },
+  {
+    "artist_mbid": "5bf64d94-efd9-4334-96fd-e6197b0b02b8",
+    "name": "Tricky",
+    "comment": "UK trip hop producer Adrian Thaws",
+    "type": "Person",
+    "gender": "Male",
+    "score": 848,
+    "reference_mbid": "9ddce51c-2b75-4b3e-ac8c-1db09e7c89c6"
+  },
+  {
+    "artist_mbid": "a1154343-1ea1-4007-97d3-2382482a90cd",
+    "name": "Stars of the Lid",
+    "comment": "",
+    "type": "Group",
+    "gender": null,
+    "score": 828,
+    "reference_mbid": "9ddce51c-2b75-4b3e-ac8c-1db09e7c89c6"
+  },
+  {
+    "artist_mbid": "c8a9ae11-63bf-409b-8bf3-a96b3712a2ff",
+    "name": "Little Dragon",
+    "comment": "",
+    "type": "Group",
+    "gender": null,
+    "score": 820,
+    "reference_mbid": "9ddce51c-2b75-4b3e-ac8c-1db09e7c89c6"
+  },
+  {
+    "artist_mbid": "6648391e-7890-4f6c-b939-976f215195d3",
+    "name": "UNKLE",
+    "comment": "",
+    "type": "Group",
+    "gender": null,
+    "score": 816,
+    "reference_mbid": "9ddce51c-2b75-4b3e-ac8c-1db09e7c89c6"
+  },
+  {
+    "artist_mbid": "09721ba6-8972-4862-b272-b69465265de5",
+    "name": "Clubroot",
+    "comment": "",
+    "type": "Person",
+    "gender": "Male",
+    "score": 799,
+    "reference_mbid": "9ddce51c-2b75-4b3e-ac8c-1db09e7c89c6"
+  },
+  {
+    "artist_mbid": "d1785218-d8f4-4a83-a33d-8cf737eef918",
+    "name": "Machinedrum",
+    "comment": "",
+    "type": "Person",
+    "gender": "Male",
+    "score": 797,
+    "reference_mbid": "9ddce51c-2b75-4b3e-ac8c-1db09e7c89c6"
+  },
+  {
+    "artist_mbid": "a1d77dd4-8728-4a47-bdfa-9663d791139c",
+    "name": "The Future Sound of London",
+    "comment": "",
+    "type": "Group",
+    "gender": null,
+    "score": 787,
+    "reference_mbid": "9ddce51c-2b75-4b3e-ac8c-1db09e7c89c6"
+  },
+  {
+    "artist_mbid": "ecf5ab37-019f-4cc1-9fdc-218de6a41b65",
+    "name": "Andy Stott",
+    "comment": "",
+    "type": "Person",
+    "gender": "Male",
+    "score": 756,
+    "reference_mbid": "9ddce51c-2b75-4b3e-ac8c-1db09e7c89c6"
+  },
+  {
+    "artist_mbid": "c23b637b-97c6-41eb-8ef6-6c724efc80a8",
+    "name": "Zero 7",
+    "comment": "",
+    "type": "Group",
+    "gender": null,
+    "score": 753,
+    "reference_mbid": "9ddce51c-2b75-4b3e-ac8c-1db09e7c89c6"
+  },
+  {
+    "artist_mbid": "8a7a4e72-a099-425f-8238-80706fc1c746",
+    "name": "Modeselektor",
+    "comment": "",
+    "type": "Group",
+    "gender": null,
+    "score": 751,
+    "reference_mbid": "9ddce51c-2b75-4b3e-ac8c-1db09e7c89c6"
+  },
+  {
+    "artist_mbid": "7c158ea8-c0aa-410e-bdc1-20bba9759577",
+    "name": "The Cinematic Orchestra",
+    "comment": "",
+    "type": "Group",
+    "gender": null,
+    "score": 751,
+    "reference_mbid": "9ddce51c-2b75-4b3e-ac8c-1db09e7c89c6"
+  },
+  {
+    "artist_mbid": "b8c5cc4f-239f-4e02-b46f-b040b77c2030",
+    "name": "Nightmares on Wax",
+    "comment": "",
+    "type": "Group",
+    "gender": null,
+    "score": 746,
+    "reference_mbid": "9ddce51c-2b75-4b3e-ac8c-1db09e7c89c6"
+  },
+  {
+    "artist_mbid": "d700b3f5-45af-4d02-95ed-57d301bda93e",
+    "name": "Mogwai",
+    "comment": "Scottish post‐rock band",
+    "type": "Group",
+    "gender": null,
+    "score": 745,
+    "reference_mbid": "9ddce51c-2b75-4b3e-ac8c-1db09e7c89c6"
+  },
+  {
+    "artist_mbid": "ba2f4f3b-0293-4bc8-bb94-2f73b5207343",
+    "name": "Underworld",
+    "comment": "UK electronic music group",
+    "type": "Group",
+    "gender": null,
+    "score": 738,
+    "reference_mbid": "9ddce51c-2b75-4b3e-ac8c-1db09e7c89c6"
+  },
+  {
+    "artist_mbid": "fd3c3f9f-a471-498e-ab3a-940ac20b6bbd",
+    "name": "Panda Bear",
+    "comment": "Noah Lennox from Animal Collective",
+    "type": "Person",
+    "gender": "Male",
+    "score": 734,
+    "reference_mbid": "9ddce51c-2b75-4b3e-ac8c-1db09e7c89c6"
+  },
+  {
+    "artist_mbid": "860b2707-6153-4e3a-aa57-74d2b42c55b5",
+    "name": "Justice",
+    "comment": "French electro house, Gaspard Augé & Xavier de Rosnay",
+    "type": "Group",
+    "gender": null,
+    "score": 728,
+    "reference_mbid": "9ddce51c-2b75-4b3e-ac8c-1db09e7c89c6"
+  },
+  {
+    "artist_mbid": "3a6d6481-142d-423f-91d4-55bbfff318ed",
+    "name": "Toro y Moi",
+    "comment": "",
+    "type": "Person",
+    "gender": "Male",
+    "score": 713,
+    "reference_mbid": "9ddce51c-2b75-4b3e-ac8c-1db09e7c89c6"
+  },
+  {
+    "artist_mbid": "84a5c934-8318-4080-8606-32b80e1b054a",
+    "name": "Baths",
+    "comment": "US electronic musician",
+    "type": "Person",
+    "gender": "Male",
+    "score": 708,
+    "reference_mbid": "9ddce51c-2b75-4b3e-ac8c-1db09e7c89c6"
+  },
+  {
+    "artist_mbid": "56abaa47-0101-463b-b37e-e961136fec39",
+    "name": "Venetian Snares",
+    "comment": "",
+    "type": "Person",
+    "gender": "Male",
+    "score": 707,
+    "reference_mbid": "9ddce51c-2b75-4b3e-ac8c-1db09e7c89c6"
+  },
+  {
+    "artist_mbid": "1a120ec5-35b3-4f3e-aa49-7201550d9feb",
+    "name": "RJD2",
+    "comment": "American Hip Hop/Electronic producer and DJ",
+    "type": "Person",
+    "gender": "Male",
+    "score": 701,
+    "reference_mbid": "9ddce51c-2b75-4b3e-ac8c-1db09e7c89c6"
+  },
+  {
+    "artist_mbid": "f3e2a7d9-c6bb-4848-95e5-04c0a1e2f511",
+    "name": "Orbital",
+    "comment": "UK techno group",
+    "type": "Group",
+    "gender": null,
+    "score": 700,
+    "reference_mbid": "9ddce51c-2b75-4b3e-ac8c-1db09e7c89c6"
+  },
+  {
+    "artist_mbid": "d3ba1c50-d403-40df-8eac-80d74551a7e3",
+    "name": "Benga",
+    "comment": "",
+    "type": "Person",
+    "gender": "Male",
+    "score": 695,
+    "reference_mbid": "9ddce51c-2b75-4b3e-ac8c-1db09e7c89c6"
+  },
+  {
+    "artist_mbid": "d8915e13-d67a-4aa0-9c0b-1f126af951af",
+    "name": "Hot Chip",
+    "comment": "",
+    "type": "Group",
+    "gender": null,
+    "score": 681,
+    "reference_mbid": "9ddce51c-2b75-4b3e-ac8c-1db09e7c89c6"
+  },
+  {
+    "artist_mbid": "ac18992d-d90c-41d0-b56b-66fe1d51608e",
+    "name": "Pantha du Prince",
+    "comment": "",
+    "type": "Person",
+    "gender": "Male",
+    "score": 676,
+    "reference_mbid": "9ddce51c-2b75-4b3e-ac8c-1db09e7c89c6"
+  },
+  {
+    "artist_mbid": "66f89780-6c07-4c4b-8e4c-be4098090bf3",
+    "name": "Ital Tek",
+    "comment": "",
+    "type": "Person",
+    "gender": "Male",
+    "score": 674,
+    "reference_mbid": "9ddce51c-2b75-4b3e-ac8c-1db09e7c89c6"
+  },
+  {
+    "artist_mbid": "f9133036-ab3d-4e97-bd11-7a2c98ad148a",
+    "name": "Death Grips",
+    "comment": "",
+    "type": "Group",
+    "gender": null,
+    "score": 671,
+    "reference_mbid": "9ddce51c-2b75-4b3e-ac8c-1db09e7c89c6"
+  },
+  {
+    "artist_mbid": "d5cc67b8-1cc4-453b-96e8-44487acdebea",
+    "name": "Beach House",
+    "comment": "",
+    "type": "Group",
+    "gender": null,
+    "score": 669,
+    "reference_mbid": "9ddce51c-2b75-4b3e-ac8c-1db09e7c89c6"
+  },
+  {
+    "artist_mbid": "2ae2838b-3723-418e-b994-9907eb5a8e76",
+    "name": "Boxcutter",
+    "comment": "British IDM artist Barry Lynn",
+    "type": "Person",
+    "gender": "Male",
+    "score": 668,
+    "reference_mbid": "9ddce51c-2b75-4b3e-ac8c-1db09e7c89c6"
+  },
+  {
+    "artist_mbid": "51f1ca49-846a-4ef1-b4fa-187ecc88bbe5",
+    "name": "Com Truise",
+    "comment": "",
+    "type": "Person",
+    "gender": "Male",
+    "score": 665,
+    "reference_mbid": "9ddce51c-2b75-4b3e-ac8c-1db09e7c89c6"
+  },
+  {
+    "artist_mbid": "a5ee1ebe-a645-45d2-8319-d101fe62e581",
+    "name": "Biosphere",
+    "comment": "",
+    "type": "Person",
+    "gender": "Male",
+    "score": 663,
+    "reference_mbid": "9ddce51c-2b75-4b3e-ac8c-1db09e7c89c6"
+  },
+  {
+    "artist_mbid": "453f1594-112e-4d3c-921a-8d14e9c97b2e",
+    "name": "Telefon Tel Aviv",
+    "comment": "",
+    "type": "Group",
+    "gender": null,
+    "score": 653,
+    "reference_mbid": "9ddce51c-2b75-4b3e-ac8c-1db09e7c89c6"
+  },
+  {
+    "artist_mbid": "a6623d39-2d8e-4f70-8242-0a9553b91e50",
+    "name": "The Avalanches",
+    "comment": "Australian electronic music group",
+    "type": "Group",
+    "gender": null,
+    "score": 650,
+    "reference_mbid": "9ddce51c-2b75-4b3e-ac8c-1db09e7c89c6"
+  },
+  {
+    "artist_mbid": "98400193-5390-4720-b29e-65593037256c",
+    "name": "Forest Swords",
+    "comment": "English record producer/composer/DJ",
+    "type": "Person",
+    "gender": "Male",
+    "score": 647,
+    "reference_mbid": "9ddce51c-2b75-4b3e-ac8c-1db09e7c89c6"
+  },
+  {
+    "artist_mbid": "f7df5df4-4dfa-459d-972b-1ba051c15ddc",
+    "name": "Fever Ray",
+    "comment": "",
+    "type": "Person",
+    "gender": "Non-binary",
+    "score": 640,
+    "reference_mbid": "9ddce51c-2b75-4b3e-ac8c-1db09e7c89c6"
+  },
+  {
+    "artist_mbid": "3bd76ebe-c7dc-47bd-a8af-9e46d2a4f782",
+    "name": "Blockhead",
+    "comment": "US hip-hop producer on Ninja Tune",
+    "type": "Person",
+    "gender": "Male",
+    "score": 634,
+    "reference_mbid": "9ddce51c-2b75-4b3e-ac8c-1db09e7c89c6"
+  },
+  {
+    "artist_mbid": "2b64e811-cbcd-45f7-b29d-296444cad4f1",
+    "name": "múm",
+    "comment": "Icelandic experimental group",
+    "type": "Group",
+    "gender": null,
+    "score": 632,
+    "reference_mbid": "9ddce51c-2b75-4b3e-ac8c-1db09e7c89c6"
+  },
+  {
+    "artist_mbid": "37b71e3d-70a2-419c-8248-864b1be7251f",
+    "name": "Holy Other",
+    "comment": "",
+    "type": "Person",
+    "gender": "Male",
+    "score": 630,
+    "reference_mbid": "9ddce51c-2b75-4b3e-ac8c-1db09e7c89c6"
+  },
+  {
+    "artist_mbid": "74a30f2a-dae6-4e99-8a75-cb0f93b31aa6",
+    "name": "Washed Out",
+    "comment": "",
+    "type": "Person",
+    "gender": "Male",
+    "score": 628,
+    "reference_mbid": "9ddce51c-2b75-4b3e-ac8c-1db09e7c89c6"
+  },
+  {
+    "artist_mbid": "62564a24-1b7e-4485-88d1-0c2dc0a749b6",
+    "name": "Jamie Woon",
+    "comment": "",
+    "type": "Person",
+    "gender": "Male",
+    "score": 627,
+    "reference_mbid": "9ddce51c-2b75-4b3e-ac8c-1db09e7c89c6"
+  },
+  {
+    "artist_mbid": "86139012-695b-42f4-98f1-1f353f7230b4",
+    "name": "Eluvium",
+    "comment": "",
+    "type": "Person",
+    "gender": "Male",
+    "score": 627,
+    "reference_mbid": "9ddce51c-2b75-4b3e-ac8c-1db09e7c89c6"
+  },
+  {
+    "artist_mbid": "e5d87018-16a1-4a05-acfd-6a4809ac62f6",
+    "name": "The Field",
+    "comment": "Swedish electronic musician Axel Willner",
+    "type": "Person",
+    "gender": "Male",
+    "score": 623,
+    "reference_mbid": "9ddce51c-2b75-4b3e-ac8c-1db09e7c89c6"
+  },
+  {
+    "artist_mbid": "8ca01f46-53ac-4af2-8516-55a909c0905e",
+    "name": "My Bloody Valentine",
+    "comment": "Irish shoegaze band",
+    "type": "Group",
+    "gender": null,
+    "score": 621,
+    "reference_mbid": "9ddce51c-2b75-4b3e-ac8c-1db09e7c89c6"
+  },
+  {
+    "artist_mbid": "352a5db5-da42-40d5-bc55-ac49409eb44b",
+    "name": "King Midas Sound",
+    "comment": "",
+    "type": "Group",
+    "gender": null,
+    "score": 616,
+    "reference_mbid": "9ddce51c-2b75-4b3e-ac8c-1db09e7c89c6"
+  },
+  {
+    "artist_mbid": "cb8fc40c-bde5-4a84-94e4-ee1d4de385be",
+    "name": "Lone",
+    "comment": "UK electronic artist Matt Cutler",
+    "type": "Person",
+    "gender": "Male",
+    "score": 615,
+    "reference_mbid": "9ddce51c-2b75-4b3e-ac8c-1db09e7c89c6"
+  },
+  {
+    "artist_mbid": "f467181e-d5e0-4285-b47e-e853dcc89ee7",
+    "name": "Ratatat",
+    "comment": "US electronic rock duo",
+    "type": "Group",
+    "gender": null,
+    "score": 615,
+    "reference_mbid": "9ddce51c-2b75-4b3e-ac8c-1db09e7c89c6"
+  }
+]
