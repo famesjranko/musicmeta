@@ -7,6 +7,7 @@ import com.landofoz.musicmeta.EnrichmentResult
 import com.landofoz.musicmeta.EnrichmentType
 import com.landofoz.musicmeta.ErrorKind
 import com.landofoz.musicmeta.http.RateLimiter
+import com.landofoz.musicmeta.provider.wikidata.WikidataApi
 import com.landofoz.musicmeta.testutil.FakeHttpClient
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
@@ -271,6 +272,30 @@ class WikipediaProviderTest {
         val bio = (result as EnrichmentResult.Success).data as EnrichmentData.Biography
         assertEquals(RADIOHEAD_EXTRACT_TEXT, bio.text)
         assertTrue(httpClient.requestedUrls.any { it.contains("wikipedia.org") && it.contains("Radiohead") })
+    }
+
+    @Test
+    fun `the Wikidata request is the one WikidataApi builds, byte for byte`() = runTest {
+        // Given - an artist known only by wikidataId, so the title comes from the sitelink route
+        httpClient.givenJsonResponse("wikidata.org", SITELINKS_JSON)
+        httpClient.givenJsonResponse("wikipedia.org", RADIOHEAD_EXTRACT_JSON)
+        val request = EnrichmentRequest.ForArtist(
+            identifiers = EnrichmentIdentifiers(wikidataId = "Q123"),
+            name = "Radiohead",
+        )
+
+        // When - enriching for artist bio
+        provider.enrich(request, EnrichmentType.ARTIST_BIO)
+
+        // Then - the request is the api client's own URL, and the URL the schema pin therefore
+        // asserts against is the document this provider really receives
+        val requested = httpClient.requestedUrls.single { it.contains("wikidata.org") }
+        assertEquals(WikidataApi.enwikiSitelinkUrl("Q123"), requested)
+        assertEquals(
+            "https://www.wikidata.org/w/api.php?action=wbgetentities&ids=Q123" +
+                "&props=sitelinks&sitefilter=enwiki&format=json",
+            requested,
+        )
     }
 
     @Test

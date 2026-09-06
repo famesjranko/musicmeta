@@ -264,8 +264,17 @@ are now `US` and `GB` and the name entries are codes; a label lookup would be th
 it either way, since a label is a name. A Q-id the map does not hold yields **null** — the country
 entity's own P297 alpha-2 claim sits on that entity, not on the artist's, so deriving the code
 instead of hardcoding it costs the second call the 2026-08-12 argument declined. Never called: the
-REST API at `/w/rest.php/wikibase/v1/`, and SPARQL. Note `provider/wikipedia/` *also* calls
-`wbgetentities` on this host, for sitelinks, on its own rate limiter.
+REST API at `/w/rest.php/wikibase/v1/`, and SPARQL.
+
+A second route on the same client answers `provider/wikipedia/`: `wbgetentities&props=sitelinks`
+with `sitefilter=enwiki`, which resolves an entity to its English Wikipedia article title. It reads
+one field, `entities.<id>.sitelinks.enwiki.title`, and reports the three ways it can fail to find
+one apart, because the response distinguishes them: an entity with no English article carries
+`sitelinks` as `{}`, an id Wikidata does not hold carries a `missing` marker and no `sitelinks` at
+all, and a *present* entity with no `sitelinks` object is neither — it is the route having moved.
+All three leave the caller without a title, so none of them changes an answer; the distinction is
+what stops a shape change reading as an artist Wikipedia has never heard of. `WikipediaProvider`
+holds this client, so both routes on this host queue on one rate limiter.
 
 **Wikipedia.** Two surfaces. The bio comes from the Action API
 (`action=query&prop=extracts|pageimages|pageprops&exintro&explaintext`), one request carrying the

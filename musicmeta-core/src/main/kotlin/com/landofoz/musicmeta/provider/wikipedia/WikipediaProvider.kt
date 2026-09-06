@@ -12,7 +12,8 @@ import com.landofoz.musicmeta.engine.ConfidenceCalculator
 import com.landofoz.musicmeta.engine.ProviderCallScope
 import com.landofoz.musicmeta.http.HttpClient
 import com.landofoz.musicmeta.http.RateLimiter
-import com.landofoz.musicmeta.http.bodyOrThrowTransient
+import com.landofoz.musicmeta.provider.wikidata.EnwikiSitelink
+import com.landofoz.musicmeta.provider.wikidata.WikidataApi
 import kotlinx.coroutines.currentCoroutineContext
 
 /**
@@ -32,14 +33,28 @@ import kotlinx.coroutines.currentCoroutineContext
  * There is no other-language fallback: if neither yields an English title the result is `NotFound`.
  * A non-English article is never used, because its text would not be a usable English bio.
  */
-public class WikipediaProvider(
-    private val httpClient: HttpClient,
-    rateLimiter: RateLimiter,
-    private val wikidataRateLimiter: RateLimiter = RateLimiter(100),
+public class WikipediaProvider internal constructor(
+    private val api: WikipediaApi,
+    private val wikidataApi: WikidataApi,
     private val logger: EnrichmentLogger = EnrichmentLogger.NoOp,
 ) : EnrichmentProvider {
 
-    private val api = WikipediaApi(httpClient, rateLimiter)
+    /**
+     * Constructs the provider from HTTP infrastructure. Both api clients are internal
+     * implementation details, so this is the public entry point consumers use to register the
+     * provider with the engine.
+     *
+     * [wikidataRateLimiter] throttles the *Wikidata* host, not a second Wikipedia one: this
+     * provider reaches two hosts and a limiter is per host. Pass the same instance
+     * `WikidataProvider` was given, as `withDefaultProviders()` does — one host behind two
+     * independent limiters is served at twice the agreed rate.
+     */
+    public constructor(
+        httpClient: HttpClient,
+        rateLimiter: RateLimiter,
+        wikidataRateLimiter: RateLimiter = RateLimiter(100),
+        logger: EnrichmentLogger = EnrichmentLogger.NoOp,
+    ) : this(WikipediaApi(httpClient, rateLimiter), WikidataApi(httpClient, wikidataRateLimiter), logger)
 
     override val id: String = "wikipedia"
     override val displayName: String = "Wikipedia"
@@ -131,22 +146,22 @@ public class WikipediaProvider(
         return memo.get(wikidataId) { fetchWikidataTitle(wikidataId) }
     }
 
-    private suspend fun fetchWikidataTitle(wikidataId: String): String? {
-        val url = "$WIKIDATA_API?action=wbgetentities&ids=$wikidataId" +
-            "&props=sitelinks&sitefilter=enwiki&format=json"
-        val json = wikidataRateLimiter.execute {
-            httpClient.fetchJsonResult(url).bodyOrThrowTransient()
-        } ?: return null
-        return json.optJSONObject("entities")
-            ?.optJSONObject(wikidataId)
-            ?.optJSONObject("sitelinks")
-            ?.optJSONObject("enwiki")
-            ?.optString("title")
-            ?.takeIf { it.isNotBlank() }
-    }
+    /**
+     * All three title-less outcomes mean the same thing to a caller — no English article — so none
+     * of them changes the answer. Only [EnwikiSitelink.UnreadableShape] is logged, because it is
+     * the route having moved rather than anything about this artist.
+     */
+    private suspend fun fetchWikidataTitle(wikidataId: String): String? =
+        when (val sitelink = wikidataApi.getEnwikiSitelink(wikidataId)) {
+            is EnwikiSitelink.Title -> sitelink.value
+            EnwikiSitelink.UnreadableShape -> {
+                logger.debug(TAG, "Wikidata answered $wikidataId with no sitelinks object")
+                null
+            }
+            EnwikiSitelink.NoArticle, EnwikiSitelink.NoEntity -> null
+        }
 
     private companion object {
         const val TAG = "WikipediaProvider"
-        const val WIKIDATA_API = "https://www.wikidata.org/w/api.php"
     }
 }

@@ -2583,7 +2583,6 @@ public final class com/landofoz/musicmeta/provider/wikidata/WikidataProvider$Com
 
 public final class com/landofoz/musicmeta/provider/wikipedia/WikipediaProvider : com/landofoz/musicmeta/EnrichmentProvider {
 	public static final field TAG Ljava/lang/String;
-	public static final field WIKIDATA_API Ljava/lang/String;
 	public fun <init> (Lcom/landofoz/musicmeta/http/HttpClient;Lcom/landofoz/musicmeta/http/RateLimiter;Lcom/landofoz/musicmeta/http/RateLimiter;Lcom/landofoz/musicmeta/EnrichmentLogger;)V
 	public synthetic fun <init> (Lcom/landofoz/musicmeta/http/HttpClient;Lcom/landofoz/musicmeta/http/RateLimiter;Lcom/landofoz/musicmeta/http/RateLimiter;Lcom/landofoz/musicmeta/EnrichmentLogger;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public fun enrich (Lcom/landofoz/musicmeta/EnrichmentRequest;Lcom/landofoz/musicmeta/EnrichmentType;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;

@@ -46,6 +46,32 @@ internal class WikidataApi(
         parseEntityProperties(claims, imageSize)
     }
 
+    /**
+     * Fetch one entity's English Wikipedia article title from its sitelinks.
+     *
+     * `sitefilter=enwiki` is what keeps the answer English-only: no other language can come back,
+     * so a caller cannot resolve a title whose article it has no use for.
+     *
+     * Response shape: an entity with an English article carries
+     * `entities.<id>.sitelinks.enwiki.title`; one without carries `sitelinks` as `{}`; an id
+     * Wikidata does not hold carries `entities.<id>` with a `missing` marker and no `sitelinks` at
+     * all. A `sitelinks` object absent from a present entity is therefore this route moving rather
+     * than an artist without a page, which is the pair [EnwikiSitelink.UnreadableShape] and
+     * [EnwikiSitelink.NoArticle] keep apart.
+     *
+     * A requested id that Wikidata has since redirected answers under the *target* id, so
+     * `entities.<requested id>` is absent and the outcome is [EnwikiSitelink.NoEntity].
+     */
+    suspend fun getEnwikiSitelink(wikidataId: String): EnwikiSitelink = rateLimiter.execute {
+        val json = httpClient.fetchJsonResult(enwikiSitelinkUrl(wikidataId)).bodyOrThrowTransient()
+            ?: return@execute EnwikiSitelink.NoEntity
+        val entity = json.optJSONObject("entities")?.optJSONObject(wikidataId)
+        if (entity == null || entity.has("missing")) return@execute EnwikiSitelink.NoEntity
+        val sitelinks = entity.optJSONObject("sitelinks") ?: return@execute EnwikiSitelink.UnreadableShape
+        val title = sitelinks.optJSONObject("enwiki")?.optString("title")?.takeIf { it.isNotBlank() }
+        if (title == null) EnwikiSitelink.NoArticle else EnwikiSitelink.Title(title)
+    }
+
     private fun parseEntityProperties(
         claims: JSONObject,
         imageSize: Int,
@@ -142,12 +168,23 @@ internal class WikidataApi(
         fun entityPropertiesUrl(wikidataId: String): String =
             "$BASE_URL?action=wbgetentities&ids=${encodeQueryValue(wikidataId)}&props=claims&format=json"
 
+        /** The URL [getEnwikiSitelink] requests. */
+        fun enwikiSitelinkUrl(wikidataId: String): String =
+            "$BASE_URL?action=wbgetentities&ids=${encodeQueryValue(wikidataId)}" +
+                "&props=sitelinks&sitefilter=enwiki&format=json"
+
         /**
-         * Schema-pin target, mirroring [parseEntityProperties].
+         * Schema-pin targets, mirroring [parseEntityProperties] and [getEnwikiSitelink].
          *
-         * The paths are property ids under `claims`, not the `labels` a reader of the entity page
-         * would expect: `props=claims` returns no `labels` key at all, and this mapper reads none.
-         * Q44190 is Radiohead, which carries all three of the pinned external-id claims.
+         * The entity-properties paths are property ids under `claims`, not the `labels` a reader of
+         * the entity page would expect: `props=claims` returns no `labels` key at all, and this
+         * mapper reads none. Q44190 is Radiohead, which carries all three of the pinned external-id
+         * claims and an English article.
+         *
+         * The sitelink route pins `sitelinks` as well as the title inside it, because those are the
+         * two levels [getEnwikiSitelink] tells apart: an empty `sitelinks` is an artist with no
+         * English article and is not drift, so only its *absence* may be reported, and the pin says
+         * which of the two moved rather than leaving a report that reads as either.
          */
         val SCHEMA_PIN_TARGETS: List<SchemaTarget> = listOf(
             SchemaTarget(
@@ -158,6 +195,15 @@ internal class WikidataApi(
                     "entities.Q44190.claims.P434[0].mainsnak.datavalue.value",
                     "entities.Q44190.claims.P18[0].mainsnak.datavalue.value",
                     "entities.Q44190.claims.P1953[0].mainsnak.datavalue.value",
+                ),
+            ),
+            SchemaTarget(
+                provider = "wikidata",
+                route = "enwiki sitelink",
+                url = enwikiSitelinkUrl("Q44190"),
+                requiredPaths = listOf(
+                    "entities.Q44190.sitelinks",
+                    "entities.Q44190.sitelinks.enwiki.title",
                 ),
             ),
         )
