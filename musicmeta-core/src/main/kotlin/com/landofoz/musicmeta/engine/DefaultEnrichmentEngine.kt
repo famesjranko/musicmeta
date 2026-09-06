@@ -403,68 +403,76 @@ internal class DefaultEnrichmentEngine(
         // one request, so nothing it holds can survive to answer the next call.
         // EnrichDeadline carries the budget down to DefaultHttpClient, so a 429 retry can decline to
         // sleep past this deadline — an expiry mid-fan-out loses every provider's in-flight work.
-        withContext(
-            EnrichDeadline(config.enrichTimeoutMs) + TransientIdentifierMarker() +
-                ProviderCallScope() + ResolvedEntityNames() + SuppliedIdentifierContradiction(),
-        ) {
-            var identityResult: EnrichmentResult? = null
-            val identityEnabled = config.enableIdentityResolution
-            val identityNeeded =
-                identityEnabled && needsIdentityResolution(request, cacheLayer.uncachedTypes, registry)
-            val fastPathResults = mutableMapOf<EnrichmentType, EnrichmentResult>()
-            val fastPathRemaining = cacheLayer.uncachedTypes.toMutableSet()
-            val enrichedRequest = if (identityNeeded) {
-                resolveIdentity(request, fastPathResults, fastPathRemaining)
-                    .also { identityResult = it.second }.first
-            } else request
-            session.resolvedRequest = enrichedRequest
+        // detachedScope, not the caller's: the alias lookup one provider opens is awaited by the
+        // rest, so it must not die with whichever reader happened to start it. The finally is what
+        // keeps that from outliving the call.
+        val names = ResolvedEntityNames(detachedScope, config.enrichTimeoutMs)
+        try {
+            withContext(
+                EnrichDeadline(config.enrichTimeoutMs) + TransientIdentifierMarker() +
+                    ProviderCallScope() + names + SuppliedIdentifierContradiction(),
+            ) {
+                var identityResult: EnrichmentResult? = null
+                val identityEnabled = config.enableIdentityResolution
+                val identityNeeded =
+                    identityEnabled && needsIdentityResolution(request, cacheLayer.uncachedTypes, registry)
+                val fastPathResults = mutableMapOf<EnrichmentType, EnrichmentResult>()
+                val fastPathRemaining = cacheLayer.uncachedTypes.toMutableSet()
+                val enrichedRequest = if (identityNeeded) {
+                    resolveIdentity(request, fastPathResults, fastPathRemaining)
+                        .also { identityResult = it.second }.first
+                } else request
+                session.resolvedRequest = enrichedRequest
 
-            // The canonical-name alias could not be invalidated above: the request named no entity
-            // then, and the name it is aliased under is the one resolution just learned.
-            if (forceRefresh && namesNoEntity(request) && !namesNoEntity(enrichedRequest)) {
-                cachePersistence.invalidateResolvedNameAlias(enrichedRequest, cacheLayer.uncachedTypes)
-            }
-            // The same channel the name backfill reads, so the canonical names a consumer is handed
-            // are the ones the fan-out was built from — no second resolution path.
-            val resolution = buildIdentityResolution(
-                identityResult,
-                enrichedRequest,
-                currentCoroutineContext()[ResolvedEntityNames]?.resolved(),
-                notAttemptedStatus = when {
-                    !identityEnabled -> CanonicalStatus.NOT_ATTEMPTED_DISABLED
-                    !identityNeeded -> CanonicalStatus.NOT_ATTEMPTED_IDENTIFIER_TRUSTED
-                    else -> CanonicalStatus.NOT_ATTEMPTED_NO_PROVIDER
-                },
-            )
-            session.identityHolder.current = resolution
-            session.identityResolved = true
-            session.nameEvidence = identityNameEvidence(identityResult, request, enrichedRequest)
-
-            // The verdict is news a collector can act on — suggestions render, a failed identity
-            // shows itself — so a live resolution announces itself before any type settles rather
-            // than riding whichever settlement happens to come first. A trusted or disabled
-            // identity resolved nothing and announces nothing.
-            if (identityNeeded) onIdentitySettled()
-
-            for ((type, raw) in fastPathResults) settle(type, raw, null)
-
-            // Canonical suggestions describe only MusicBrainz's own lookup, not a global admission
-            // decision — every provider still gets its independent eligibility check inside
-            // ProviderChain, including the missing-identifier skips session.chainExecutions below
-            // records for the cache write-back.
-            streamResolveTypes(
-                ResolveContext(
-                    session.board,
-                    enrichedRequest,
+                // The canonical-name alias could not be invalidated above: the request named no entity
+                // then, and the name it is aliased under is the one resolution just learned.
+                if (forceRefresh && namesNoEntity(request) && !namesNoEntity(enrichedRequest)) {
+                    cachePersistence.invalidateResolvedNameAlias(enrichedRequest, cacheLayer.uncachedTypes)
+                }
+                // The same channel the name backfill reads, so the canonical names a consumer is handed
+                // are the ones the fan-out was built from — no second resolution path.
+                val resolution = buildIdentityResolution(
                     identityResult,
-                    resolution.status,
-                    session,
-                    preSettled = cacheLayer.results.keys + fastPathResults.keys,
-                ),
-                fastPathRemaining,
-                settle,
-            )
-            session.chainExecutions = session.board.snapshotExecutions()
+                    enrichedRequest,
+                    currentCoroutineContext()[ResolvedEntityNames]?.resolved(),
+                    notAttemptedStatus = when {
+                        !identityEnabled -> CanonicalStatus.NOT_ATTEMPTED_DISABLED
+                        !identityNeeded -> CanonicalStatus.NOT_ATTEMPTED_IDENTIFIER_TRUSTED
+                        else -> CanonicalStatus.NOT_ATTEMPTED_NO_PROVIDER
+                    },
+                )
+                session.identityHolder.current = resolution
+                session.identityResolved = true
+                session.nameEvidence = identityNameEvidence(identityResult, request, enrichedRequest)
+
+                // The verdict is news a collector can act on — suggestions render, a failed identity
+                // shows itself — so a live resolution announces itself before any type settles rather
+                // than riding whichever settlement happens to come first. A trusted or disabled
+                // identity resolved nothing and announces nothing.
+                if (identityNeeded) onIdentitySettled()
+
+                for ((type, raw) in fastPathResults) settle(type, raw, null)
+
+                // Canonical suggestions describe only MusicBrainz's own lookup, not a global admission
+                // decision — every provider still gets its independent eligibility check inside
+                // ProviderChain, including the missing-identifier skips session.chainExecutions below
+                // records for the cache write-back.
+                streamResolveTypes(
+                    ResolveContext(
+                        session.board,
+                        enrichedRequest,
+                        identityResult,
+                        resolution.status,
+                        session,
+                        preSettled = cacheLayer.results.keys + fastPathResults.keys,
+                    ),
+                    fastPathRemaining,
+                    settle,
+                )
+                session.chainExecutions = session.board.snapshotExecutions()
+            }
+        } finally {
+            names.cancelPendingLookup()
         }
     }
 
@@ -673,7 +681,7 @@ internal class DefaultEnrichmentEngine(
     private suspend fun canonicallyNamed(request: EnrichmentRequest): EnrichmentRequest {
         if (!namesNoEntity(request)) return request
         val provider = registry.identityProvider() ?: return request
-        val names = ResolvedEntityNames()
+        val names = ResolvedEntityNames(detachedScope, config.enrichTimeoutMs)
         return try {
             withContext(ProviderCallScope() + names) { provider.resolveIdentity(request) }
             request.withBackfilledNames(names.resolved())
@@ -681,6 +689,8 @@ internal class DefaultEnrichmentEngine(
             currentCoroutineContext().ensureActive()
             logger.warn(TAG, "Could not name an identifier-only request to invalidate its alias")
             request
+        } finally {
+            names.cancelPendingLookup()
         }
     }
 

@@ -12,8 +12,12 @@ import com.landofoz.musicmeta.provider.deezer.DeezerProvider
 import com.landofoz.musicmeta.provider.discogs.DiscogsProvider
 import com.landofoz.musicmeta.provider.itunes.ITunesProvider
 import com.landofoz.musicmeta.testutil.FakeHttpClient
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.withContext
+import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -24,6 +28,14 @@ import org.junit.Test
  * verified rather than rejected — and what keeps a candidate no known name form matches rejected.
  */
 class NonLatinAliasPoolMatchingTest {
+
+    // No dispatcher: `sharedLookup` runs on the reader's, so this carries only the job that owns
+    // an alias lookup outliving the reader that opened it.
+    private val lookupScope = CoroutineScope(SupervisorJob())
+
+    @After fun stopLookups() {
+        lookupScope.cancel()
+    }
 
     private val httpClient = FakeHttpClient()
 
@@ -183,7 +195,7 @@ class NonLatinAliasPoolMatchingTest {
         val provider = DeezerProvider(httpClient, RateLimiter(0))
         val request = EnrichmentRequest.forTrack("Karma Police", "Radiohead")
         var calls = 0
-        val names = ResolvedEntityNames()
+        val names = ResolvedEntityNames(lookupScope)
         names.offerAliases {
             calls++
             TOKYO_JIHEN_POOL
@@ -286,7 +298,7 @@ class NonLatinAliasPoolMatchingTest {
     fun `the pool is resolved once however many candidates consult it`() = runTest {
         // Given - a pool whose source counts how often it is asked
         var calls = 0
-        val names = ResolvedEntityNames()
+        val names = ResolvedEntityNames(lookupScope)
         names.offerAliases {
             calls++
             TOKYO_JIHEN_POOL
@@ -302,7 +314,7 @@ class NonLatinAliasPoolMatchingTest {
     }
 
     private suspend fun <T> withPool(pool: List<AlternativeName> = TOKYO_JIHEN_POOL, body: suspend () -> T): T {
-        val names = ResolvedEntityNames()
+        val names = ResolvedEntityNames(lookupScope)
         names.offerAliases { pool }
         return withContext(names) { body() }
     }

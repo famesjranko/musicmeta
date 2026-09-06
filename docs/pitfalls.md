@@ -316,9 +316,12 @@ that blocks one or bridges it with `runBlocking` still completes. What it did co
 of the same rule: the lock held the *right to run* the lookup rather than its result, so a reader
 cancelled mid-lookup by a provider's own `withTimeout` unwound `withLock` and left the next waiter to
 start the same network call again, in series. The lock now guards only installing a shared
-`Deferred`; the lookup runs detached from the reader that opened it, bounded by
-`enrichDeadlineRemainingMs()`. Both fixes are the same move — get the suspension point out from
-under the lock — and the starvation shape is only the louder of its two failures.
+`Deferred`, run on the engine's `detachedScope` and abandoned when the call's context comes down.
+Its `withTimeout(enrichDeadlineRemainingMs())` is a coroutine deadline and so cannot reach a thread
+already blocked in socket I/O (§26); what actually bounds the lookup is that the detached context
+still carries the call's `EnrichDeadline`, which `DefaultHttpClient` reads per leg. Both fixes are
+the same move — get the suspension point out from under the lock — and the starvation shape is only
+the louder of its two failures.
 
 ## 26. Cancellation cannot reach a thread blocked in socket I/O — the deadline must ride the socket
 

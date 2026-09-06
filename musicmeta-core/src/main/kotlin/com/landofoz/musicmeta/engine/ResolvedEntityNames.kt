@@ -1,5 +1,6 @@
 package com.landofoz.musicmeta.engine
 
+import com.landofoz.musicmeta.EnrichmentConfig
 import com.landofoz.musicmeta.EnrichmentRequest
 import com.landofoz.musicmeta.http.enrichDeadlineRemainingMs
 import kotlinx.coroutines.CoroutineScope
@@ -31,7 +32,10 @@ internal data class EntityNames(val title: String?, val artist: String?)
  * entity named this call is the one the request was resolved to; the later types' entities are
  * byproducts of it.
  */
-internal class ResolvedEntityNames : AbstractCoroutineContextElement(Key) {
+internal class ResolvedEntityNames(
+    private val lookupScope: CoroutineScope,
+    private val lookupBudgetMs: Long = EnrichmentConfig.DEFAULT_ENRICH_TIMEOUT_MS,
+) : AbstractCoroutineContextElement(Key) {
 
     private val names = AtomicReference<EntityNames?>(null)
 
@@ -84,29 +88,34 @@ internal class ResolvedEntityNames : AbstractCoroutineContextElement(Key) {
     }
 
     /**
-     * The one in-flight resolution of [source], detached from the reader that opened it.
-     *
-     * Detached because the readers are the whole fan-out and they do not share a fate: a provider's
-     * own `withTimeout` cancels one of them, and the lookup the rest are waiting on must survive
-     * that or each cancellation costs the next reader a fresh network call, serialised behind the
-     * lock. [enrichDeadlineRemainingMs] is what keeps that detachment bounded — an endpoint that
-     * never answers cannot outlive the call that asked.
+     * The one in-flight resolution of [source], run on [lookupScope] rather than on the reader that
+     * opened it: the readers are the whole fan-out and do not share a fate, so a provider's own
+     * `withTimeout` must not take the lookup the others are waiting on down with it.
      */
     // SwallowedException: every failure is the empty pool, per [aliases]; nothing else reads it.
     @Suppress("SwallowedException")
     private suspend fun sharedLookup(
         source: suspend () -> List<AlternativeName>,
     ): Deferred<List<AlternativeName>> {
-        val budgetMs = enrichDeadlineRemainingMs()
-        return CoroutineScope(currentCoroutineContext().minusKey(Job)).async {
+        val budgetMs = enrichDeadlineRemainingMs() ?: lookupBudgetMs
+        return lookupScope.async(currentCoroutineContext().minusKey(Job)) {
             val pool = try {
-                if (budgetMs == null) source() else withTimeout(budgetMs) { source() }
+                withTimeout(budgetMs) { source() }
             } catch (e: Exception) {
                 emptyList()
             }
             resolvedAliases.set(pool)
             pool
         }
+    }
+
+    /**
+     * Abandons a lookup still in flight, for the call that installed this to run as it returns.
+     * Without it a source slower than the call outlives it on [lookupScope], holding whatever
+     * rate-limiter permit it took into the next call.
+     */
+    fun cancelPendingLookup() {
+        aliasLookup.get()?.cancel()
     }
 
     private val aliasSource = AtomicReference<(suspend () -> List<AlternativeName>)?>(null)
