@@ -1,0 +1,7370 @@
+{
+ "artists": {
+  "000a6565-8398-4465-a230-060531cbfa37": {
+   "disambiguation": "Julian Cope spin off",
+   "genres": [
+    "folk punk",
+    "psychedelic folk"
+   ],
+   "id": "000a6565-8398-4465-a230-060531cbfa37",
+   "lastfmPages": [],
+   "name": "Black Sheep",
+   "tags": [
+    "alt.folk",
+    "anarcho-folk",
+    "folk punk",
+    "psychedelic folk"
+   ],
+   "type": "Group"
+  },
+  "00505f51-68a8-45fc-b6d6-51be64751378": {
+   "disambiguation": "",
+   "genres": [
+    "bedroom pop",
+    "indie rock"
+   ],
+   "id": "00505f51-68a8-45fc-b6d6-51be64751378",
+   "lastfmPages": [
+    "slow pulp"
+   ],
+   "name": "Slow Pulp",
+   "tags": [
+    "bedroom pop",
+    "female vocals",
+    "indie rock"
+   ],
+   "type": "Group"
+  },
+  "013c8e5b-d72a-4cd3-8dee-6c64d6125823": {
+   "disambiguation": "composer",
+   "genres": [
+    "classical",
+    "concerto",
+    "opera",
+    "orchestral",
+    "romantic classical",
+    "string quartet",
+    "symphony"
+   ],
+   "id": "013c8e5b-d72a-4cd3-8dee-6c64d6125823",
+   "lastfmPages": [
+    "edvard grieg"
+   ],
+   "name": "Edvard Grieg",
+   "tags": [
+    "classical",
+    "composer",
+    "concerto",
+    "european",
+    "folkeromantikk",
+    "norsk",
+    "norwegian",
+    "norwegian composer",
+    "opera",
+    "orchestral",
+    "quartet",
+    "romantic",
+    "romantic classical",
+    "string",
+    "string quartet",
+    "symphony"
+   ],
+   "type": "Person"
+  },
+  "02708fd6-0fe6-4738-a27d-0561ace8b4c6": {
+   "disambiguation": "hip hop collab, Mos Def & Talib Kweli",
+   "genres": [
+    "alternative hip hop",
+    "conscious hip hop",
+    "hip hop"
+   ],
+   "id": "02708fd6-0fe6-4738-a27d-0561ace8b4c6",
+   "lastfmPages": [
+    "black star"
+   ],
+   "name": "Black Star",
+   "tags": [
+    "alternative hip hop",
+    "conscious hip hop",
+    "hip hop"
+   ],
+   "type": "Group"
+  },
+  "06942e9b-567b-45c4-97a6-9d98265ba479": {
+   "disambiguation": "UK neo\u2010progressive band",
+   "genres": [
+    "neo-progressive rock",
+    "progressive rock"
+   ],
+   "id": "06942e9b-567b-45c4-97a6-9d98265ba479",
+   "lastfmPages": [
+    "solstice"
+   ],
+   "name": "Solstice",
+   "tags": [
+    "neo-progressive rock",
+    "progressive rock"
+   ],
+   "type": "Group"
+  },
+  "0783b768-6719-450b-a7e1-7e891da17af3": {
+   "disambiguation": "",
+   "genres": [
+    "alternative rock",
+    "pop rock"
+   ],
+   "id": "0783b768-6719-450b-a7e1-7e891da17af3",
+   "lastfmPages": [
+    "\u0441\u043f\u043b\u0438\u043d"
+   ],
+   "name": "\u0421\u043f\u043b\u0438\u043d",
+   "tags": [
+    "alternative rock",
+    "pop rock",
+    "russian rock"
+   ],
+   "type": "Group"
+  },
+  "07deede6-db1d-4ede-b19e-5d46df592841": {
+   "disambiguation": "English rock band",
+   "genres": [
+    "british rhythm & blues",
+    "garage rock",
+    "pop rock",
+    "psychedelic pop",
+    "psychedelic rock",
+    "rock",
+    "rock opera"
+   ],
+   "id": "07deede6-db1d-4ede-b19e-5d46df592841",
+   "lastfmPages": [
+    "the pretty things"
+   ],
+   "name": "The Pretty Things",
+   "tags": [
+    "british",
+    "british rhythm & blues",
+    "classic pop and rock",
+    "english",
+    "garage rock",
+    "pop rock",
+    "psychedelic pop",
+    "psychedelic rock",
+    "rock",
+    "rock opera",
+    "uk"
+   ],
+   "type": "Group"
+  },
+  "0816797c-ee38-4ef0-96e7-99140be340aa": {
+   "disambiguation": "Alexey Budylev",
+   "genres": [],
+   "id": "0816797c-ee38-4ef0-96e7-99140be340aa",
+   "lastfmPages": [],
+   "name": "Omen",
+   "tags": [],
+   "type": null
+  },
+  "093936cb-70dd-487e-b572-23a73efb8a42": {
+   "disambiguation": "a cappella",
+   "genres": [],
+   "id": "093936cb-70dd-487e-b572-23a73efb8a42",
+   "lastfmPages": [],
+   "name": "Solstice",
+   "tags": [],
+   "type": null
+  },
+  "09c85751-d9fa-4dc3-bc7d-6ab15ac809de": {
+   "disambiguation": "",
+   "genres": [
+    "latin",
+    "latin ballad",
+    "latin pop",
+    "pop",
+    "pop rock"
+   ],
+   "id": "09c85751-d9fa-4dc3-bc7d-6ab15ac809de",
+   "lastfmPages": [],
+   "name": "La Quinta Estaci\u00f3n",
+   "tags": [
+    "latin",
+    "latin ballad",
+    "latin pop",
+    "pop",
+    "pop rock"
+   ],
+   "type": "Group"
+  },
+  "0b0c25f4-f31c-46a5-a4fb-ccbf53d663bd": {
+   "disambiguation": "",
+   "genres": [
+    "ambient",
+    "contemporary classical",
+    "electronic",
+    "electronica",
+    "idm",
+    "tech house",
+    "techno"
+   ],
+   "id": "0b0c25f4-f31c-46a5-a4fb-ccbf53d663bd",
+   "lastfmPages": [
+    "jon hopkins"
+   ],
+   "name": "Jon Hopkins",
+   "tags": [
+    "ambient",
+    "contemporary classical",
+    "electronic",
+    "electronic dance music",
+    "electronica",
+    "idm",
+    "tech house",
+    "techno"
+   ],
+   "type": "Person"
+  },
+  "0b4ea14f-9f54-4384-9a1d-2ab1b2a922b1": {
+   "disambiguation": "Rock/stoner from Montreal, QC",
+   "genres": [],
+   "id": "0b4ea14f-9f54-4384-9a1d-2ab1b2a922b1",
+   "lastfmPages": [],
+   "name": "Black Sheep",
+   "tags": [],
+   "type": "Group"
+  },
+  "0e85eb79-1c05-44ba-827c-7b259a3d941a": {
+   "disambiguation": "composer",
+   "genres": [
+    "classical",
+    "romantic classical"
+   ],
+   "id": "0e85eb79-1c05-44ba-827c-7b259a3d941a",
+   "lastfmPages": [
+    "felix mendelssohn"
+   ],
+   "name": "Felix Mendelssohn",
+   "tags": [
+    "classical",
+    "composer",
+    "european",
+    "german",
+    "german composer",
+    "naxos piano trios",
+    "romantic",
+    "romantic classical"
+   ],
+   "type": "Person"
+  },
+  "12fb47e3-526d-470f-b439-b80bfee3dbeb": {
+   "disambiguation": "US drummer, composer & bandleader",
+   "genres": [
+    "contemporary jazz",
+    "jazz",
+    "nu jazz",
+    "post-bop"
+   ],
+   "id": "12fb47e3-526d-470f-b439-b80bfee3dbeb",
+   "lastfmPages": [
+    "mark guiliana"
+   ],
+   "name": "Mark Guiliana",
+   "tags": [
+    "contemporary jazz",
+    "jazz",
+    "nu jazz",
+    "post-bop"
+   ],
+   "type": "Person"
+  },
+  "1422e91a-7f2c-48f6-bcac-543201b95df5": {
+   "disambiguation": "US rapper, member of Flatlinerz",
+   "genres": [],
+   "id": "1422e91a-7f2c-48f6-bcac-543201b95df5",
+   "lastfmPages": [
+    "omn999"
+   ],
+   "name": "Omen",
+   "tags": [],
+   "type": "Person"
+  },
+  "14c5a3a3-f5ed-4978-99af-486010e3a007": {
+   "disambiguation": "",
+   "genres": [
+    "acid house",
+    "electronic",
+    "experimental",
+    "industrial",
+    "neo-psychedelia",
+    "post-industrial",
+    "post-punk",
+    "psychedelic",
+    "psychedelic rock",
+    "techno"
+   ],
+   "id": "14c5a3a3-f5ed-4978-99af-486010e3a007",
+   "lastfmPages": [],
+   "name": "Psychic TV",
+   "tags": [
+    "acid house",
+    "british",
+    "electronic",
+    "experimental",
+    "industrial",
+    "neo-psychedelia",
+    "performance art",
+    "post-industrial",
+    "post-punk",
+    "psychedelic",
+    "psychedelic rock",
+    "techno"
+   ],
+   "type": "Group"
+  },
+  "14d78134-bb77-4c1e-8c9b-b74284abf1cc": {
+   "disambiguation": "Mexican singer and actress",
+   "genres": [
+    "dance-pop",
+    "electropop",
+    "pop",
+    "teen pop"
+   ],
+   "id": "14d78134-bb77-4c1e-8c9b-b74284abf1cc",
+   "lastfmPages": [
+    "belinda"
+   ],
+   "name": "Belinda",
+   "tags": [
+    "dance-pop",
+    "electropop",
+    "pop",
+    "teen pop"
+   ],
+   "type": "Person"
+  },
+  "1602e08c-ce1b-46f8-8f77-6551fa0a4038": {
+   "disambiguation": "Killah Priest collaborator",
+   "genres": [],
+   "id": "1602e08c-ce1b-46f8-8f77-6551fa0a4038",
+   "lastfmPages": [],
+   "name": "Solstice",
+   "tags": [],
+   "type": "Person"
+  },
+  "16c5bb7a-35b7-418d-880e-7ed3399f1b40": {
+   "disambiguation": "",
+   "genres": [
+    "contemporary country",
+    "country",
+    "country pop"
+   ],
+   "id": "16c5bb7a-35b7-418d-880e-7ed3399f1b40",
+   "lastfmPages": [
+    "lee ann womack"
+   ],
+   "name": "Lee Ann Womack",
+   "tags": [
+    "2008 universal fire victim",
+    "adult contemporary",
+    "contemporary country",
+    "country",
+    "country pop"
+   ],
+   "type": "Person"
+  },
+  "17b53d9f-5c63-4a09-a593-dde4608e0db9": {
+   "disambiguation": "",
+   "genres": [
+    "beat music",
+    "classic rock",
+    "garage rock",
+    "mod",
+    "pop",
+    "pop rock",
+    "proto-punk",
+    "rock",
+    "rock and roll"
+   ],
+   "id": "17b53d9f-5c63-4a09-a593-dde4608e0db9",
+   "lastfmPages": [
+    "the kinks"
+   ],
+   "name": "The Kinks",
+   "tags": [
+    "60's",
+    "beat music",
+    "british",
+    "british invasion",
+    "classic rock",
+    "english",
+    "garage rock",
+    "mod",
+    "pop",
+    "pop rock",
+    "proto-punk",
+    "rock",
+    "rock & roll",
+    "rock and roll"
+   ],
+   "type": "Group"
+  },
+  "17d78170-7194-4603-8dbb-ca1108430882": {
+   "disambiguation": "Israeli jazz bassist",
+   "genres": [
+    "jazz",
+    "post-bop"
+   ],
+   "id": "17d78170-7194-4603-8dbb-ca1108430882",
+   "lastfmPages": [],
+   "name": "Avishai Cohen",
+   "tags": [
+    "jazz",
+    "jazz and blues",
+    "post-bop"
+   ],
+   "type": "Person"
+  },
+  "17ecfa07-185f-49c1-a3c1-324fa5a07b1b": {
+   "disambiguation": "Canadian alt-pop duo",
+   "genres": [],
+   "id": "17ecfa07-185f-49c1-a3c1-324fa5a07b1b",
+   "lastfmPages": [],
+   "name": "Everglow",
+   "tags": [],
+   "type": "Group"
+  },
+  "1a0fa8d8-fb02-4172-8a5c-5b0498bf7769": {
+   "disambiguation": "French alternative rock band",
+   "genres": [],
+   "id": "1a0fa8d8-fb02-4172-8a5c-5b0498bf7769",
+   "lastfmPages": [],
+   "name": "Solstice",
+   "tags": [],
+   "type": "Group"
+  },
+  "1ee37742-1e3d-4e61-84d2-bc85f4c1459a": {
+   "disambiguation": "",
+   "genres": [
+    "k-pop"
+   ],
+   "id": "1ee37742-1e3d-4e61-84d2-bc85f4c1459a",
+   "lastfmPages": [
+    "le sserafim"
+   ],
+   "name": "LE SSERAFIM",
+   "tags": [
+    "4th gen k-pop",
+    "girl group",
+    "k-pop"
+   ],
+   "type": "Group"
+  },
+  "1f9df192-a621-4f54-8850-2c5373b7eac9": {
+   "disambiguation": "German composer",
+   "genres": [
+    "classical",
+    "classical period",
+    "concerto",
+    "mass",
+    "opera",
+    "orchestral",
+    "romantic classical",
+    "sonata",
+    "symphony"
+   ],
+   "id": "1f9df192-a621-4f54-8850-2c5373b7eac9",
+   "lastfmPages": [
+    "ludwig van beethoven"
+   ],
+   "name": "Ludwig van Beethoven",
+   "tags": [
+    "32 sonatas",
+    "amadeus",
+    "beethoven gardiner",
+    "classical",
+    "classical period",
+    "complete",
+    "composer",
+    "concerto",
+    "european",
+    "german",
+    "german composer",
+    "klavierwerke",
+    "mass",
+    "masterworks",
+    "opera",
+    "orchestral",
+    "organ",
+    "pianist",
+    "piano",
+    "romantic",
+    "romantic classical",
+    "sonata",
+    "stephen kovacevich* - beethovestephen kovacevich plays beethoven",
+    "symphony"
+   ],
+   "type": "Person"
+  },
+  "207f47ac-9368-4c6b-b05a-e8ad4dcabeca": {
+   "disambiguation": "",
+   "genres": [
+    "coldwave",
+    "indie rock",
+    "post-punk"
+   ],
+   "id": "207f47ac-9368-4c6b-b05a-e8ad4dcabeca",
+   "lastfmPages": [
+    "chernikovskaya hata",
+    "\u0447\u0435\u0440\u043d\u0438\u043a\u043e\u0432\u0441\u043a\u0430\u044f \u0445\u0430\u0442\u0430"
+   ],
+   "name": "Chernikovskaya Hata",
+   "tags": [
+    "coldwave",
+    "covers",
+    "indie rock",
+    "post-punk"
+   ],
+   "type": "Group"
+  },
+  "20dac54f-07a0-4418-b545-49d09813951c": {
+   "disambiguation": "Ex-singer of \"Lu\" group",
+   "genres": [
+    "latin",
+    "latin pop"
+   ],
+   "id": "20dac54f-07a0-4418-b545-49d09813951c",
+   "lastfmPages": [],
+   "name": "Paty Cant\u00fa",
+   "tags": [
+    "latin",
+    "latin pop"
+   ],
+   "type": "Person"
+  },
+  "2231125d-8979-4911-8ca8-bda5426ddbbc": {
+   "disambiguation": "",
+   "genres": [
+    "doom metal",
+    "heavy metal"
+   ],
+   "id": "2231125d-8979-4911-8ca8-bda5426ddbbc",
+   "lastfmPages": [
+    "the gates of slumber"
+   ],
+   "name": "The Gates of Slumber",
+   "tags": [
+    "doom metal",
+    "heavy metal"
+   ],
+   "type": "Group"
+  },
+  "224b821f-b143-4d59-9f4f-4c07e954fc9c": {
+   "disambiguation": "appears on a dub compilation",
+   "genres": [],
+   "id": "224b821f-b143-4d59-9f4f-4c07e954fc9c",
+   "lastfmPages": [],
+   "name": "Solstice",
+   "tags": [],
+   "type": null
+  },
+  "22dc19af-d085-4c9b-adfb-22ec256251f1": {
+   "disambiguation": "",
+   "genres": [
+    "baroque pop",
+    "country rock",
+    "folk pop",
+    "folk rock",
+    "hard rock",
+    "pop rock",
+    "psychedelic folk",
+    "psychedelic rock",
+    "rock"
+   ],
+   "id": "22dc19af-d085-4c9b-adfb-22ec256251f1",
+   "lastfmPages": [
+    "buffalo springfield"
+   ],
+   "name": "Buffalo Springfield",
+   "tags": [
+    "american",
+    "baroque pop",
+    "classic pop and rock",
+    "country rock",
+    "folk pop",
+    "folk rock",
+    "hard rock",
+    "pop rock",
+    "psychedelic folk",
+    "psychedelic rock",
+    "rock"
+   ],
+   "type": "Group"
+  },
+  "23dcff56-daa3-4389-8950-276fe4680294": {
+   "disambiguation": "hard techno music",
+   "genres": [
+    "acid techno",
+    "hard house",
+    "hard techno",
+    "techno"
+   ],
+   "id": "23dcff56-daa3-4389-8950-276fe4680294",
+   "lastfmPages": [],
+   "name": "The Obsessed",
+   "tags": [
+    "acid techno",
+    "hard house",
+    "hard techno",
+    "techno"
+   ],
+   "type": "Person"
+  },
+  "247efe0f-80f1-477c-a4a0-b5cb1b8c832e": {
+   "disambiguation": "",
+   "genres": [
+    "rock"
+   ],
+   "id": "247efe0f-80f1-477c-a4a0-b5cb1b8c832e",
+   "lastfmPages": [
+    "nautilus pompilius"
+   ],
+   "name": "Nautilus Pompilius",
+   "tags": [
+    "rock",
+    "russian",
+    "russian rock"
+   ],
+   "type": "Group"
+  },
+  "24ee4021-50ac-4285-b76e-860082d0d731": {
+   "disambiguation": "",
+   "genres": [
+    "ambient",
+    "downtempo",
+    "electronic",
+    "glitch",
+    "glitch pop",
+    "idm",
+    "indietronica",
+    "microhouse"
+   ],
+   "id": "24ee4021-50ac-4285-b76e-860082d0d731",
+   "lastfmPages": [
+    "lusine"
+   ],
+   "name": "Lusine",
+   "tags": [
+    "ambient",
+    "downtempo",
+    "electronic",
+    "glitch",
+    "glitch pop",
+    "idm",
+    "indietronica",
+    "microhouse"
+   ],
+   "type": "Person"
+  },
+  "24f1766e-9635-4d58-a4d4-9413f9f98a4c": {
+   "disambiguation": "German Baroque period composer & musician",
+   "genres": [
+    "baroque",
+    "cantata",
+    "classical",
+    "mass",
+    "motet",
+    "orchestral"
+   ],
+   "id": "24f1766e-9635-4d58-a4d4-9413f9f98a4c",
+   "lastfmPages": [
+    "johann sebastian bach"
+   ],
+   "name": "Johann Sebastian Bach",
+   "tags": [
+    "bach",
+    "baroque",
+    "bertalan hock",
+    "cantata",
+    "cantata 147",
+    "classical",
+    "composer",
+    "european",
+    "german",
+    "german composer",
+    "gramophone selection",
+    "helmut walcha",
+    "mass",
+    "math\u00e4uspassion",
+    "messe h-moll",
+    "motet",
+    "orchestral",
+    "organist",
+    "six",
+    "vox",
+    "wagner"
+   ],
+   "type": "Person"
+  },
+  "25ab7547-a4d2-480b-b028-c7f3497bc858": {
+   "disambiguation": "band from Montreal",
+   "genres": [
+    "bedroom pop",
+    "downtempo",
+    "dream pop",
+    "indie pop",
+    "neo-psychedelia",
+    "pop",
+    "shoegaze",
+    "sophisti-pop"
+   ],
+   "id": "25ab7547-a4d2-480b-b028-c7f3497bc858",
+   "lastfmPages": [
+    "men i trust"
+   ],
+   "name": "Men I Trust",
+   "tags": [
+    "alternative",
+    "bedroom pop",
+    "downtempo",
+    "dream pop",
+    "indie",
+    "indie dance",
+    "indie pop",
+    "neo-psychedelia",
+    "pop",
+    "shoegaze",
+    "sophisti-pop"
+   ],
+   "type": "Group"
+  },
+  "26ecbba4-a425-4d98-8a96-16eed147ff09": {
+   "disambiguation": "US synthpop",
+   "genres": [],
+   "id": "26ecbba4-a425-4d98-8a96-16eed147ff09",
+   "lastfmPages": [],
+   "name": "Baby Monster",
+   "tags": [],
+   "type": "Group"
+  },
+  "2819834e-4e08-47b0-a2c4-b7672318e8f0": {
+   "disambiguation": "American rock band",
+   "genres": [
+    "classic rock",
+    "country",
+    "country rock",
+    "folk",
+    "folk rock",
+    "jangle pop",
+    "pop",
+    "pop rock",
+    "psychedelic",
+    "psychedelic pop",
+    "psychedelic rock",
+    "raga rock",
+    "rock",
+    "soft rock"
+   ],
+   "id": "2819834e-4e08-47b0-a2c4-b7672318e8f0",
+   "lastfmPages": [
+    "the byrds"
+   ],
+   "name": "The Byrds",
+   "tags": [
+    "album rock",
+    "beatlesque",
+    "classic rock",
+    "cosmic american",
+    "country",
+    "country rock",
+    "folk",
+    "folk rock",
+    "jangle pop",
+    "mellow gold",
+    "pop",
+    "pop rock",
+    "psychedelia",
+    "psychedelic",
+    "psychedelic pop",
+    "psychedelic rock",
+    "raga rock",
+    "rock",
+    "soft rock"
+   ],
+   "type": "Group"
+  },
+  "2a10c19b-cae3-4651-bf44-82cb6c464bf4": {
+   "disambiguation": "released Yelrih One",
+   "genres": [],
+   "id": "2a10c19b-cae3-4651-bf44-82cb6c464bf4",
+   "lastfmPages": [],
+   "name": "Solstice",
+   "tags": [],
+   "type": null
+  },
+  "2ba70e66-ec59-4083-89bb-60ec67e624b8": {
+   "disambiguation": "",
+   "genres": [
+    "psychedelic",
+    "psychedelic rock",
+    "sunshine pop"
+   ],
+   "id": "2ba70e66-ec59-4083-89bb-60ec67e624b8",
+   "lastfmPages": [
+    "the millennium"
+   ],
+   "name": "The Millennium",
+   "tags": [
+    "psychedelic",
+    "psychedelic rock",
+    "sunshine pop"
+   ],
+   "type": "Group"
+  },
+  "2c43503a-fb94-433a-98a9-8898367ea71f": {
+   "disambiguation": "",
+   "genres": [
+    "jazz"
+   ],
+   "id": "2c43503a-fb94-433a-98a9-8898367ea71f",
+   "lastfmPages": [
+    "brad mehldau trio"
+   ],
+   "name": "Brad Mehldau Trio",
+   "tags": [
+    "jazz"
+   ],
+   "type": "Group"
+  },
+  "2cd475bb-1abd-40c4-9904-6d4b691c752c": {
+   "disambiguation": "Hungarian composer, pianist and conductor",
+   "genres": [
+    "classical",
+    "orchestral",
+    "romantic classical"
+   ],
+   "id": "2cd475bb-1abd-40c4-9904-6d4b691c752c",
+   "lastfmPages": [],
+   "name": "Franz Liszt",
+   "tags": [
+    "classic",
+    "classical",
+    "composer",
+    "european",
+    "hungarian",
+    "hungarian composer",
+    "hungary",
+    "magyar",
+    "orchestral",
+    "piano",
+    "romantic",
+    "romantic classical"
+   ],
+   "type": "Person"
+  },
+  "2cf7ba64-5f16-4382-be45-7f3ae2473e01": {
+   "disambiguation": "",
+   "genres": [
+    "doom metal",
+    "metal",
+    "traditional doom metal"
+   ],
+   "id": "2cf7ba64-5f16-4382-be45-7f3ae2473e01",
+   "lastfmPages": [
+    "solitude aeturnus"
+   ],
+   "name": "Solitude Aeturnus",
+   "tags": [
+    "american",
+    "doom metal",
+    "metal",
+    "traditional doom metal"
+   ],
+   "type": "Group"
+  },
+  "2d9745dd-5dc6-4145-9453-fec582cfa9b8": {
+   "disambiguation": "Kieran Hebden",
+   "genres": [],
+   "id": "2d9745dd-5dc6-4145-9453-fec582cfa9b8",
+   "lastfmPages": [
+    "\u28ce\u2847\ua27a\u10da\u0f3d\u0b87\u2022\u031b)\u0f80\u25de \u0f0e\u0eb6 \u0f3d\u09e3\u09e2\u061e\u09e2\u061e\u0616 \ua27a\u10da"
+   ],
+   "name": "\u28ce\u2847\ua27a\u10da\u0f3d\u0b87\u2022\u031b)\u0f80\u25de \u0f0e\u0eb6 \u0f3d\u09e3\u09e2\u061e\u09e2\u061e\u0616 \ua27a\u10da",
+   "tags": [
+    "sillyname",
+    "wingdings four tet alias"
+   ],
+   "type": "Person"
+  },
+  "2e0c74c7-d1a8-49bf-b179-ea2355e8224b": {
+   "disambiguation": "Germany; released Obliquity",
+   "genres": [],
+   "id": "2e0c74c7-d1a8-49bf-b179-ea2355e8224b",
+   "lastfmPages": [],
+   "name": "Solstice",
+   "tags": [],
+   "type": null
+  },
+  "2f140aa6-b99b-4f79-ae33-96018af87fa3": {
+   "disambiguation": "",
+   "genres": [
+    "folk",
+    "folk pop",
+    "pop",
+    "pop rock"
+   ],
+   "id": "2f140aa6-b99b-4f79-ae33-96018af87fa3",
+   "lastfmPages": [],
+   "name": "Jennifer Warnes",
+   "tags": [
+    "adult contemporary",
+    "film soundtrack",
+    "folk",
+    "folk pop",
+    "pop",
+    "pop rock",
+    "singer/songwriter"
+   ],
+   "type": "Person"
+  },
+  "2f97f8ef-1bd6-439e-b725-c65081d12d86": {
+   "disambiguation": "American jazz pianist and composer",
+   "genres": [
+    "jazz",
+    "post-bop"
+   ],
+   "id": "2f97f8ef-1bd6-439e-b725-c65081d12d86",
+   "lastfmPages": [],
+   "name": "Jason Moran",
+   "tags": [
+    "jazz",
+    "post-bop"
+   ],
+   "type": "Person"
+  },
+  "31425c7a-c418-4b01-b080-d305ae54751f": {
+   "disambiguation": "French ambient artist",
+   "genres": [],
+   "id": "31425c7a-c418-4b01-b080-d305ae54751f",
+   "lastfmPages": [],
+   "name": "Solstice",
+   "tags": [],
+   "type": "Person"
+  },
+  "31aa8446-3dbf-4d22-9504-0f1bd58bf785": {
+   "disambiguation": "",
+   "genres": [
+    "contemporary folk",
+    "folk",
+    "folk pop",
+    "freak folk",
+    "singer-songwriter"
+   ],
+   "id": "31aa8446-3dbf-4d22-9504-0f1bd58bf785",
+   "lastfmPages": [
+    "vashti bunyan"
+   ],
+   "name": "Vashti Bunyan",
+   "tags": [
+    "british",
+    "contemporary folk",
+    "english",
+    "english folk",
+    "folk",
+    "folk pop",
+    "freak folk",
+    "singer-songwriter",
+    "uk"
+   ],
+   "type": "Person"
+  },
+  "335b6182-0da8-4dc6-a5ec-fe13f0f87e4b": {
+   "disambiguation": "late 60s US rock band",
+   "genres": [
+    "folk rock",
+    "pop rock",
+    "psychedelic pop",
+    "rock",
+    "sunshine pop"
+   ],
+   "id": "335b6182-0da8-4dc6-a5ec-fe13f0f87e4b",
+   "lastfmPages": [],
+   "name": "The Turtles",
+   "tags": [
+    "folk rock",
+    "musical parody",
+    "pop rock",
+    "psychedelic pop",
+    "rock",
+    "sunshine pop"
+   ],
+   "type": "Group"
+  },
+  "34ec9a8d-c65b-48fd-bcdd-aad2f72fdb47": {
+   "disambiguation": "folk-rock/psychedelic band",
+   "genres": [
+    "folk rock",
+    "garage rock",
+    "proto-punk",
+    "psychedelic folk",
+    "psychedelic pop",
+    "psychedelic rock",
+    "rock"
+   ],
+   "id": "34ec9a8d-c65b-48fd-bcdd-aad2f72fdb47",
+   "lastfmPages": [
+    "love"
+   ],
+   "name": "Love",
+   "tags": [
+    "folk rock",
+    "garage rock",
+    "proto-punk",
+    "psychedelic folk",
+    "psychedelic pop",
+    "psychedelic rock",
+    "rock"
+   ],
+   "type": "Group"
+  },
+  "35a842f8-a4ba-4079-a049-95dab42ea960": {
+   "disambiguation": "New Zealand",
+   "genres": [],
+   "id": "35a842f8-a4ba-4079-a049-95dab42ea960",
+   "lastfmPages": [],
+   "name": "Omen",
+   "tags": [],
+   "type": null
+  },
+  "35ef61ca-43db-4772-ba27-0489e9ebcb69": {
+   "disambiguation": "",
+   "genres": [
+    "americana",
+    "country",
+    "country folk",
+    "country pop",
+    "country rock",
+    "folk",
+    "outlaw country",
+    "progressive country"
+   ],
+   "id": "35ef61ca-43db-4772-ba27-0489e9ebcb69",
+   "lastfmPages": [],
+   "name": "Emmylou Harris",
+   "tags": [
+    "alt-country",
+    "americana",
+    "country",
+    "country folk",
+    "country music",
+    "country musicians",
+    "country pop",
+    "country rock",
+    "folk",
+    "folk music",
+    "folk musicians",
+    "outlaw country",
+    "progressive country",
+    "singers"
+   ],
+   "type": "Person"
+  },
+  "365144f7-85af-4c83-b24b-b1d0b26160bb": {
+   "disambiguation": "bluegrass",
+   "genres": [
+    "country",
+    "folk"
+   ],
+   "id": "365144f7-85af-4c83-b24b-b1d0b26160bb",
+   "lastfmPages": [],
+   "name": "Nickel Creek",
+   "tags": [
+    "country",
+    "folk"
+   ],
+   "type": "Group"
+  },
+  "36733227-864b-4ed1-82a0-abc3ba801754": {
+   "disambiguation": "design studio",
+   "genres": [],
+   "id": "36733227-864b-4ed1-82a0-abc3ba801754",
+   "lastfmPages": [],
+   "name": "Pentagram",
+   "tags": [],
+   "type": "Group"
+  },
+  "38eb4af8-2282-4b8f-8819-1c7f92640dde": {
+   "disambiguation": "",
+   "genres": [],
+   "id": "38eb4af8-2282-4b8f-8819-1c7f92640dde",
+   "lastfmPages": [],
+   "name": "Robert Plant & Alison Krauss",
+   "tags": [],
+   "type": "Group"
+  },
+  "39a973f2-0785-4ef6-90d9-551378864f89": {
+   "disambiguation": "US hip hop producer",
+   "genres": [
+    "alternative hip hop",
+    "boom bap",
+    "conscious hip hop",
+    "east coast hip hop",
+    "experimental hip hop",
+    "hip hop",
+    "instrumental hip hop",
+    "jazz rap",
+    "soul",
+    "turntablism"
+   ],
+   "id": "39a973f2-0785-4ef6-90d9-551378864f89",
+   "lastfmPages": [
+    "pete rock"
+   ],
+   "name": "Pete Rock",
+   "tags": [
+    "alternative hip hop",
+    "boom bap",
+    "conscious hip hop",
+    "east coast hip hop",
+    "experimental hip hop",
+    "hip hop",
+    "hip-hop",
+    "instrumental hip hop",
+    "instrumental hip-hop",
+    "jazz rap",
+    "soul",
+    "turntablism"
+   ],
+   "type": "Person"
+  },
+  "3ad91c4e-ef5a-4d7c-99e7-21a8b0c9379d": {
+   "disambiguation": "Mexican actress, singer",
+   "genres": [
+    "latin",
+    "latin pop",
+    "pop"
+   ],
+   "id": "3ad91c4e-ef5a-4d7c-99e7-21a8b0c9379d",
+   "lastfmPages": [],
+   "name": "Danna Paola",
+   "tags": [
+    "latin",
+    "latin pop",
+    "pop"
+   ],
+   "type": "Person"
+  },
+  "3b910f7b-018f-408f-950b-47e02d2ce305": {
+   "disambiguation": "",
+   "genres": [
+    "dream pop",
+    "indie rock"
+   ],
+   "id": "3b910f7b-018f-408f-950b-47e02d2ce305",
+   "lastfmPages": [
+    "jay som"
+   ],
+   "name": "Jay Som",
+   "tags": [
+    "dream pop",
+    "indie rock"
+   ],
+   "type": "Person"
+  },
+  "3bc794b4-7300-4d5e-9e53-bc55bd327ff0": {
+   "disambiguation": "released Latin Fusion",
+   "genres": [],
+   "id": "3bc794b4-7300-4d5e-9e53-bc55bd327ff0",
+   "lastfmPages": [],
+   "name": "Solstice",
+   "tags": [],
+   "type": null
+  },
+  "3cd3882c-00f8-4362-a0c2-ad89ed248533": {
+   "disambiguation": "German classical composer",
+   "genres": [
+    "classical",
+    "romantic classical"
+   ],
+   "id": "3cd3882c-00f8-4362-a0c2-ad89ed248533",
+   "lastfmPages": [
+    "robert schumann"
+   ],
+   "name": "Robert Schumann",
+   "tags": [
+    "classical",
+    "composer",
+    "german",
+    "romantic",
+    "romantic classical",
+    "to clean up"
+   ],
+   "type": "Person"
+  },
+  "3e18f915-205b-4014-ac21-6f4536854bee": {
+   "disambiguation": "",
+   "genres": [
+    "doom metal",
+    "metal",
+    "traditional doom metal"
+   ],
+   "id": "3e18f915-205b-4014-ac21-6f4536854bee",
+   "lastfmPages": [
+    "count raven"
+   ],
+   "name": "Count Raven",
+   "tags": [
+    "doom",
+    "doom metal",
+    "metal",
+    "traditional doom",
+    "traditional doom metal"
+   ],
+   "type": "Group"
+  },
+  "3f03ad4f-99e1-4e52-8eb8-eb79f2a0c55e": {
+   "disambiguation": "epic doom metal band from United Kingdom",
+   "genres": [
+    "doom metal",
+    "epic doom metal",
+    "heavy metal",
+    "metal"
+   ],
+   "id": "3f03ad4f-99e1-4e52-8eb8-eb79f2a0c55e",
+   "lastfmPages": [],
+   "name": "Solstice",
+   "tags": [
+    "british",
+    "british doom metal",
+    "doom metal",
+    "epic doom metal",
+    "epic heavy metal",
+    "epic metal",
+    "heavy metal",
+    "metal",
+    "uk"
+   ],
+   "type": "Group"
+  },
+  "3f542031-b054-454d-b57b-812fa2a81b11": {
+   "disambiguation": "",
+   "genres": [
+    "dream pop",
+    "indie rock",
+    "noise pop"
+   ],
+   "id": "3f542031-b054-454d-b57b-812fa2a81b11",
+   "lastfmPages": [
+    "yo la tengo"
+   ],
+   "name": "Yo La Tengo",
+   "tags": [
+    "dream pop",
+    "indie rock",
+    "noise pop",
+    "the lost generation"
+   ],
+   "type": "Group"
+  },
+  "410c9baf-5469-44f6-9852-826524b80c61": {
+   "disambiguation": "electronic music duo",
+   "genres": [
+    "ambient techno",
+    "avant-garde",
+    "drill and bass",
+    "electronic",
+    "electronica",
+    "experimental",
+    "experimental electronic",
+    "glitch",
+    "idm",
+    "instrumental"
+   ],
+   "id": "410c9baf-5469-44f6-9852-826524b80c61",
+   "lastfmPages": [
+    "autechre"
+   ],
+   "name": "Autechre",
+   "tags": [
+    "abstract",
+    "ambient techno",
+    "avant-garde",
+    "drill and bass",
+    "electronic",
+    "electronica",
+    "experimental",
+    "experimental electronic",
+    "generative music",
+    "glitch",
+    "idm",
+    "instrumental",
+    "warp"
+   ],
+   "type": "Group"
+  },
+  "418fab5a-ce59-48a5-a54c-93e38cc00c81": {
+   "disambiguation": "Italian group",
+   "genres": [],
+   "id": "418fab5a-ce59-48a5-a54c-93e38cc00c81",
+   "lastfmPages": [],
+   "name": "Black Sheep",
+   "tags": [],
+   "type": "Group"
+  },
+  "46eec14d-6cee-41fa-9778-b278b86455cb": {
+   "disambiguation": "mastering",
+   "genres": [],
+   "id": "46eec14d-6cee-41fa-9778-b278b86455cb",
+   "lastfmPages": [],
+   "name": "Chris Potter",
+   "tags": [],
+   "type": "Person"
+  },
+  "46f4e349-ddec-4131-9367-91b630a821d0": {
+   "disambiguation": "US indie pop band",
+   "genres": [
+    "c86",
+    "indie pop"
+   ],
+   "id": "46f4e349-ddec-4131-9367-91b630a821d0",
+   "lastfmPages": [
+    "the pains of being pure at heart"
+   ],
+   "name": "The Pains of Being Pure at Heart",
+   "tags": [
+    "alternative",
+    "c86",
+    "indie",
+    "indie pop",
+    "noisepop"
+   ],
+   "type": "Group"
+  },
+  "472b9953-1f10-4aed-b1ec-d0c23ffb2cf1": {
+   "disambiguation": "",
+   "genres": [
+    "ballad",
+    "europop",
+    "latin",
+    "latin pop",
+    "pop"
+   ],
+   "id": "472b9953-1f10-4aed-b1ec-d0c23ffb2cf1",
+   "lastfmPages": [
+    "laura pausini"
+   ],
+   "name": "Laura Pausini",
+   "tags": [
+    "ballad",
+    "chanson",
+    "europop",
+    "italian pop",
+    "latin",
+    "latin pop",
+    "pop",
+    "simon and"
+   ],
+   "type": "Person"
+  },
+  "4792522c-9eec-4491-9640-8922d5fbf2c5": {
+   "disambiguation": "Mexican actress and singer",
+   "genres": [
+    "latin pop",
+    "pop"
+   ],
+   "id": "4792522c-9eec-4491-9640-8922d5fbf2c5",
+   "lastfmPages": [
+    "anah\u00ed"
+   ],
+   "name": "Anah\u00ed",
+   "tags": [
+    "latin pop",
+    "pop"
+   ],
+   "type": "Person"
+  },
+  "49204a7a-ed85-407a-828f-6fd46f1d8126": {
+   "disambiguation": "",
+   "genres": [
+    "k-pop"
+   ],
+   "id": "49204a7a-ed85-407a-828f-6fd46f1d8126",
+   "lastfmPages": [
+    "newjeans",
+    "njz"
+   ],
+   "name": "NewJeans",
+   "tags": [
+    "4th gen k-pop",
+    "girl group",
+    "k-pop",
+    "kpop",
+    "throwback sound"
+   ],
+   "type": "Group"
+  },
+  "4a3a5fc0-af4b-4990-957b-8d94f7bfe706": {
+   "disambiguation": "English dubstep",
+   "genres": [
+    "deep house",
+    "dubstep",
+    "electronic",
+    "minimal techno",
+    "post-dubstep"
+   ],
+   "id": "4a3a5fc0-af4b-4990-957b-8d94f7bfe706",
+   "lastfmPages": [
+    "mount kimbie"
+   ],
+   "name": "Mount Kimbie",
+   "tags": [
+    "=",
+    "deep house",
+    "dubstep",
+    "electronic",
+    "electronic music",
+    "minimal techno",
+    "post-dubstep"
+   ],
+   "type": "Group"
+  },
+  "4b585938-f271-45e2-b19a-91c634b5e396": {
+   "disambiguation": "",
+   "genres": [
+    "alternative pop",
+    "ambient pop",
+    "art pop",
+    "art rock",
+    "baroque pop",
+    "new wave",
+    "pop",
+    "pop rock",
+    "progressive pop",
+    "rock"
+   ],
+   "id": "4b585938-f271-45e2-b19a-91c634b5e396",
+   "lastfmPages": [
+    "kate bush"
+   ],
+   "name": "Kate Bush",
+   "tags": [
+    "alternative pop",
+    "alternative rock music",
+    "ambient pop",
+    "art pop",
+    "art rock",
+    "baroque pop",
+    "british",
+    "new wave",
+    "pop",
+    "pop rock",
+    "progressive pop",
+    "progressive rock music",
+    "rock",
+    "sound recording executives and producers",
+    "women composers",
+    "women rock musicians",
+    "women singers"
+   ],
+   "type": "Person"
+  },
+  "4bff7038-424f-4065-9c5b-c1117c4a68c9": {
+   "disambiguation": "Belgian rock band",
+   "genres": [],
+   "id": "4bff7038-424f-4065-9c5b-c1117c4a68c9",
+   "lastfmPages": [],
+   "name": "Solstice",
+   "tags": [],
+   "type": "Group"
+  },
+  "4c1a7fe5-e619-40c4-bbee-371e6e027f07": {
+   "disambiguation": "Kieran Hebden",
+   "genres": [
+    "folktronica"
+   ],
+   "id": "4c1a7fe5-e619-40c4-bbee-371e6e027f07",
+   "lastfmPages": [],
+   "name": "00110100 01010100",
+   "tags": [
+    "binary four tet alias",
+    "folktronica"
+   ],
+   "type": "Person"
+  },
+  "4d86ad4e-28d8-4e9f-8cf4-735c57060fdc": {
+   "disambiguation": "",
+   "genres": [
+    "drill and bass",
+    "drum and bass",
+    "electronic",
+    "glitch",
+    "idm",
+    "jazz fusion"
+   ],
+   "id": "4d86ad4e-28d8-4e9f-8cf4-735c57060fdc",
+   "lastfmPages": [
+    "squarepusher"
+   ],
+   "name": "Squarepusher",
+   "tags": [
+    "drill and bass",
+    "drum and bass",
+    "electronic",
+    "glitch",
+    "idm",
+    "jazz fusion"
+   ],
+   "type": "Person"
+  },
+  "4dd62d49-9868-465b-882f-733afb40eb0d": {
+   "disambiguation": "jazz pianist",
+   "genres": [
+    "contemporary jazz",
+    "jazz",
+    "jazz fusion",
+    "post-bop"
+   ],
+   "id": "4dd62d49-9868-465b-882f-733afb40eb0d",
+   "lastfmPages": [],
+   "name": "Aaron Parks",
+   "tags": [
+    "contemporary jazz",
+    "jazz",
+    "jazz fusion",
+    "post-bop"
+   ],
+   "type": "Person"
+  },
+  "4fceb4c9-5b56-4136-b966-b7b35a0aa528": {
+   "disambiguation": "",
+   "genres": [],
+   "id": "4fceb4c9-5b56-4136-b966-b7b35a0aa528",
+   "lastfmPages": [
+    "\u0434\u0443\u0440\u043d\u043e\u0439 \u0432\u043a\u0443\u0441"
+   ],
+   "name": "\u0414\u0443\u0440\u043d\u043e\u0439 \u0412\u043a\u0443\u0441",
+   "tags": [],
+   "type": "Group"
+  },
+  "51b553fa-1604-4110-ba48-f54e38f50678": {
+   "disambiguation": "",
+   "genres": [
+    "jazz"
+   ],
+   "id": "51b553fa-1604-4110-ba48-f54e38f50678",
+   "lastfmPages": [],
+   "name": "Tingvall Trio",
+   "tags": [
+    "jazz"
+   ],
+   "type": "Group"
+  },
+  "550cb78b-4995-4873-baea-76ef265531f5": {
+   "disambiguation": "Wu\u2010Tang Clan",
+   "genres": [
+    "conscious hip hop",
+    "east coast hip hop",
+    "hardcore hip hop",
+    "hip hop"
+   ],
+   "id": "550cb78b-4995-4873-baea-76ef265531f5",
+   "lastfmPages": [
+    "gza/genius"
+   ],
+   "name": "GZA/Genius",
+   "tags": [
+    "conscious hip hop",
+    "east coast hip hop",
+    "hardcore hip hop",
+    "hip hop"
+   ],
+   "type": "Person"
+  },
+  "5938c629-1d06-480b-9780-859b153af11e": {
+   "disambiguation": "",
+   "genres": [
+    "arena rock",
+    "cumbia",
+    "dance",
+    "dance-pop",
+    "edm",
+    "electropop",
+    "folk",
+    "latin pop",
+    "pop",
+    "pop rock",
+    "r&b",
+    "ranchera",
+    "reggaeton",
+    "synth-pop",
+    "techno",
+    "trap",
+    "vallenato"
+   ],
+   "id": "5938c629-1d06-480b-9780-859b153af11e",
+   "lastfmPages": [
+    "paulina rubio"
+   ],
+   "name": "Paulina Rubio",
+   "tags": [
+    "arena rock",
+    "cumbia",
+    "dance",
+    "dance-pop",
+    "edm",
+    "electropop",
+    "folk",
+    "latin pop",
+    "pop",
+    "pop rock",
+    "r&b",
+    "ranchera",
+    "reggaeton",
+    "rock en espanol",
+    "synth-pop",
+    "techno",
+    "trap",
+    "vallenato"
+   ],
+   "type": "Person"
+  },
+  "596cc676-32c7-480c-9bf4-dcc9d8ff62d3": {
+   "disambiguation": "80\u2019s American metal group",
+   "genres": [
+    "heavy metal",
+    "metal",
+    "power metal",
+    "us power metal"
+   ],
+   "id": "596cc676-32c7-480c-9bf4-dcc9d8ff62d3",
+   "lastfmPages": [],
+   "name": "Omen",
+   "tags": [
+    "heavy metal",
+    "metal",
+    "power metal",
+    "us power metal"
+   ],
+   "type": "Group"
+  },
+  "5a74c3ce-9478-484f-99af-a63b4388a454": {
+   "disambiguation": "80s disco/synthpop/hi-nrg recording artist",
+   "genres": [
+    "hi-nrg"
+   ],
+   "id": "5a74c3ce-9478-484f-99af-a63b4388a454",
+   "lastfmPages": [],
+   "name": "Lisa",
+   "tags": [
+    "hi-nrg"
+   ],
+   "type": "Person"
+  },
+  "5ca35ace-4006-4d4a-af04-5cd91dafab14": {
+   "disambiguation": "Russian alt-rock band",
+   "genres": [
+    "alternative rock",
+    "pop rock",
+    "rock"
+   ],
+   "id": "5ca35ace-4006-4d4a-af04-5cd91dafab14",
+   "lastfmPages": [
+    "\u0431\u0438-2"
+   ],
+   "name": "\u0411\u0438-2",
+   "tags": [
+    "alternative rock",
+    "pop rock",
+    "rock",
+    "russian"
+   ],
+   "type": "Group"
+  },
+  "5d0c202c-e30f-40c4-abf5-c0007af0d1cc": {
+   "disambiguation": "British electronic musician",
+   "genres": [
+    "electronic",
+    "experimental",
+    "idm",
+    "techno"
+   ],
+   "id": "5d0c202c-e30f-40c4-abf5-c0007af0d1cc",
+   "lastfmPages": [
+    "clark"
+   ],
+   "name": "Clark",
+   "tags": [
+    "british",
+    "electronic",
+    "english",
+    "experimental",
+    "idm",
+    "techno",
+    "uk",
+    "warp"
+   ],
+   "type": "Person"
+  },
+  "5d1ed9b1-1bb2-4461-a89b-761eb695558a": {
+   "disambiguation": "US metal band",
+   "genres": [
+    "death metal",
+    "thrash metal"
+   ],
+   "id": "5d1ed9b1-1bb2-4461-a89b-761eb695558a",
+   "lastfmPages": [
+    "solstice"
+   ],
+   "name": "Solstice",
+   "tags": [
+    "death metal",
+    "thrash metal"
+   ],
+   "type": "Group"
+  },
+  "5fd9d175-1fed-45e5-a2b4-e4e727f34d8b": {
+   "disambiguation": "",
+   "genres": [
+    "contemporary jazz",
+    "instrumental",
+    "jazz"
+   ],
+   "id": "5fd9d175-1fed-45e5-a2b4-e4e727f34d8b",
+   "lastfmPages": [
+    "mammal hands"
+   ],
+   "name": "Mammal Hands",
+   "tags": [
+    "contemporary jazz",
+    "instrumental",
+    "jazz"
+   ],
+   "type": "Group"
+  },
+  "5ff6f6eb-31ad-4903-a3c3-4c9283fcde8b": {
+   "disambiguation": "",
+   "genres": [
+    "country",
+    "folk"
+   ],
+   "id": "5ff6f6eb-31ad-4903-a3c3-4c9283fcde8b",
+   "lastfmPages": [
+    "rosanne cash"
+   ],
+   "name": "Rosanne Cash",
+   "tags": [
+    "2008 universal fire victim",
+    "country",
+    "folk"
+   ],
+   "type": "Person"
+  },
+  "601f8530-9009-4f73-94fb-a355b4497b70": {
+   "disambiguation": "Mexican Singer/Songwriter",
+   "genres": [
+    "folk rock",
+    "indie pop",
+    "latin",
+    "pop",
+    "pop rock",
+    "rock"
+   ],
+   "id": "601f8530-9009-4f73-94fb-a355b4497b70",
+   "lastfmPages": [],
+   "name": "Julieta Venegas",
+   "tags": [
+    "alternative",
+    "folk rock",
+    "indie pop",
+    "latin",
+    "pop",
+    "pop rock",
+    "rock"
+   ],
+   "type": "Person"
+  },
+  "60e5f747-8d52-4ac5-afbd-9c452d227d72": {
+   "disambiguation": "",
+   "genres": [
+    "doom metal",
+    "psychedelic rock"
+   ],
+   "id": "60e5f747-8d52-4ac5-afbd-9c452d227d72",
+   "lastfmPages": [],
+   "name": "Paul Chain",
+   "tags": [
+    "doom metal",
+    "psychedelic rock"
+   ],
+   "type": "Person"
+  },
+  "61112049-cba4-409b-a4dc-a5f5a4d7c62e": {
+   "disambiguation": "",
+   "genres": [
+    "jazz"
+   ],
+   "id": "61112049-cba4-409b-a4dc-a5f5a4d7c62e",
+   "lastfmPages": [],
+   "name": "Immanuel Wilkins",
+   "tags": [
+    "jazz"
+   ],
+   "type": "Person"
+  },
+  "6131498e-8b1b-420b-93f8-4a027f43b9c5": {
+   "disambiguation": "Malaysian Black Metal band",
+   "genres": [],
+   "id": "6131498e-8b1b-420b-93f8-4a027f43b9c5",
+   "lastfmPages": [],
+   "name": "Omen",
+   "tags": [],
+   "type": "Group"
+  },
+  "618bf47d-48ff-4aec-8d82-435b93dcca76": {
+   "disambiguation": "",
+   "genres": [
+    "latin",
+    "latin pop",
+    "pop",
+    "pop rock",
+    "rock"
+   ],
+   "id": "618bf47d-48ff-4aec-8d82-435b93dcca76",
+   "lastfmPages": [
+    "alejandra guzm\u00e1n"
+   ],
+   "name": "Alejandra Guzm\u00e1n",
+   "tags": [
+    "latin",
+    "latin pop",
+    "pop",
+    "pop rock",
+    "rock"
+   ],
+   "type": "Person"
+  },
+  "63034f55-692a-4f3b-a19a-ac2072eac3bb": {
+   "disambiguation": "US hip-hop group",
+   "genres": [
+    "hip hop"
+   ],
+   "id": "63034f55-692a-4f3b-a19a-ac2072eac3bb",
+   "lastfmPages": [],
+   "name": "Black Sheep",
+   "tags": [
+    "hip hop"
+   ],
+   "type": "Group"
+  },
+  "64b85e52-08db-4995-a6e3-d2a6acc5a058": {
+   "disambiguation": "",
+   "genres": [
+    "ballad",
+    "latin",
+    "latin pop",
+    "pop"
+   ],
+   "id": "64b85e52-08db-4995-a6e3-d2a6acc5a058",
+   "lastfmPages": [
+    "jesse & joy"
+   ],
+   "name": "Jesse & Joy",
+   "tags": [
+    "ballad",
+    "latin",
+    "latin pop",
+    "pop"
+   ],
+   "type": "Group"
+  },
+  "669026ba-8a93-46e1-a353-7481ddca99c1": {
+   "disambiguation": "unknown feat. artist",
+   "genres": [],
+   "id": "669026ba-8a93-46e1-a353-7481ddca99c1",
+   "lastfmPages": [],
+   "name": "Omen",
+   "tags": [],
+   "type": null
+  },
+  "66d7175f-949f-4566-a0c5-27e2a74c81bf": {
+   "disambiguation": "UK remix duo Allister Whitehead & John Crossley",
+   "genres": [],
+   "id": "66d7175f-949f-4566-a0c5-27e2a74c81bf",
+   "lastfmPages": [],
+   "name": "The Association",
+   "tags": [],
+   "type": "Group"
+  },
+  "69158f97-4c07-4c4e-baf8-4e4ab1ed666e": {
+   "disambiguation": "Scottish electronic duo",
+   "genres": [
+    "ambient",
+    "ambient techno",
+    "downtempo",
+    "electronic",
+    "folktronica",
+    "hauntology",
+    "idm",
+    "trip hop"
+   ],
+   "id": "69158f97-4c07-4c4e-baf8-4e4ab1ed666e",
+   "lastfmPages": [
+    "boards of canada"
+   ],
+   "name": "Boards of Canada",
+   "tags": [
+    "ambient",
+    "ambient techno",
+    "british",
+    "downtempo",
+    "electronic",
+    "folktronica",
+    "hauntology",
+    "idm",
+    "trip hop",
+    "warp"
+   ],
+   "type": "Group"
+  },
+  "691b0e9d-9e57-41cf-932d-a3d21b068e75": {
+   "disambiguation": "Finnish composer",
+   "genres": [
+    "classical",
+    "romantic classical"
+   ],
+   "id": "691b0e9d-9e57-41cf-932d-a3d21b068e75",
+   "lastfmPages": [
+    "jean sibelius"
+   ],
+   "name": "Jean Sibelius",
+   "tags": [
+    "classical",
+    "composer",
+    "european",
+    "finnish",
+    "romantic classical"
+   ],
+   "type": "Person"
+  },
+  "69d9c5ba-7bba-4cb7-ab32-8ccc48ad4f97": {
+   "disambiguation": "",
+   "genres": [
+    "dubstep",
+    "electronic",
+    "house",
+    "microhouse",
+    "post-dubstep",
+    "progressive house",
+    "tech house"
+   ],
+   "id": "69d9c5ba-7bba-4cb7-ab32-8ccc48ad4f97",
+   "lastfmPages": [
+    "floating points"
+   ],
+   "name": "Floating Points",
+   "tags": [
+    "dubstep",
+    "electronic",
+    "house",
+    "microhouse",
+    "post-dubstep",
+    "progressive house",
+    "tech house"
+   ],
+   "type": "Person"
+  },
+  "6bd920ac-3b7c-47e0-8f0f-c390f63f5112": {
+   "disambiguation": "Swedish singer\u2010songwriter",
+   "genres": [
+    "ambient",
+    "art pop",
+    "art rock",
+    "drone",
+    "electronic",
+    "experimental rock",
+    "gothic rock",
+    "indie rock",
+    "neoclassical dark wave",
+    "pop"
+   ],
+   "id": "6bd920ac-3b7c-47e0-8f0f-c390f63f5112",
+   "lastfmPages": [
+    "anna von hausswolff"
+   ],
+   "name": "Anna von Hausswolff",
+   "tags": [
+    "alternative",
+    "ambient",
+    "art pop",
+    "art rock",
+    "drone",
+    "electronic",
+    "experimental rock",
+    "gothic rock",
+    "indie rock",
+    "neoclassical dark wave",
+    "organ",
+    "organist",
+    "pipe organ",
+    "pop",
+    "vyrzukhisuc-artiest"
+   ],
+   "type": "Person"
+  },
+  "6c44e99b-3450-45b7-b240-6e7026d0bcff": {
+   "disambiguation": "",
+   "genres": [
+    "alternative country",
+    "americana",
+    "bluegrass",
+    "contemporary country",
+    "country",
+    "folk",
+    "pop",
+    "progressive bluegrass",
+    "singer-songwriter"
+   ],
+   "id": "6c44e99b-3450-45b7-b240-6e7026d0bcff",
+   "lastfmPages": [
+    "sarah jarosz"
+   ],
+   "name": "Sarah Jarosz",
+   "tags": [
+    "alternative country",
+    "alternative/indie rock",
+    "americana",
+    "bluegrass",
+    "contemporary bluegrass",
+    "contemporary country",
+    "country",
+    "country-folk",
+    "folk",
+    "folk music",
+    "pop",
+    "progressive bluegrass",
+    "singer-songwriter",
+    "singer/songwriter"
+   ],
+   "type": "Person"
+  },
+  "6c762441-5fd2-4302-8462-2ffde7856e3e": {
+   "disambiguation": "American 1970s rock band",
+   "genres": [],
+   "id": "6c762441-5fd2-4302-8462-2ffde7856e3e",
+   "lastfmPages": [],
+   "name": "Black Sheep",
+   "tags": [],
+   "type": "Group"
+  },
+  "6e71a7f7-f991-4787-a51f-2f14b86c6017": {
+   "disambiguation": "Italian house",
+   "genres": [],
+   "id": "6e71a7f7-f991-4787-a51f-2f14b86c6017",
+   "lastfmPages": [],
+   "name": "Omen",
+   "tags": [],
+   "type": null
+  },
+  "6f2dfabb-f0bb-4801-a392-592489a148e7": {
+   "disambiguation": "",
+   "genres": [
+    "blues",
+    "contemporary folk",
+    "easy listening",
+    "folk",
+    "gospel",
+    "jazz",
+    "soul",
+    "vocal jazz"
+   ],
+   "id": "6f2dfabb-f0bb-4801-a392-592489a148e7",
+   "lastfmPages": [
+    "eva cassidy"
+   ],
+   "name": "Eva Cassidy",
+   "tags": [
+    "blues",
+    "classic pop and rock",
+    "contemporary folk",
+    "easy listening",
+    "folk",
+    "gospel",
+    "jazz",
+    "soul",
+    "vocal jazz"
+   ],
+   "type": "Person"
+  },
+  "6fdd3b3e-1ea6-4da9-8d6f-8f8de01c133a": {
+   "disambiguation": "French composer",
+   "genres": [
+    "classical",
+    "modern classical",
+    "opera",
+    "western classical"
+   ],
+   "id": "6fdd3b3e-1ea6-4da9-8d6f-8f8de01c133a",
+   "lastfmPages": [
+    "maurice ravel"
+   ],
+   "name": "Maurice Ravel",
+   "tags": [
+    "classical",
+    "composer",
+    "compositeur",
+    "european",
+    "france",
+    "francophone",
+    "fran\u00e7ais",
+    "french",
+    "french composer",
+    "impressionist",
+    "modern classical",
+    "opera",
+    "western classical"
+   ],
+   "type": "Person"
+  },
+  "70198b37-f6c7-4cc7-a728-4224e860a15f": {
+   "disambiguation": "wai wai music resort",
+   "genres": [],
+   "id": "70198b37-f6c7-4cc7-a728-4224e860a15f",
+   "lastfmPages": [],
+   "name": "Lisa",
+   "tags": [],
+   "type": "Person"
+  },
+  "707d26d5-51ee-42b2-9bc4-19884689d51c": {
+   "disambiguation": "",
+   "genres": [
+    "doom metal"
+   ],
+   "id": "707d26d5-51ee-42b2-9bc4-19884689d51c",
+   "lastfmPages": [
+    "saint vitus"
+   ],
+   "name": "Saint Vitus",
+   "tags": [
+    "doom metal"
+   ],
+   "type": "Group"
+  },
+  "70ea63ea-70dc-4b63-951a-2c249d2b3b0a": {
+   "disambiguation": "Puerto Rican singer, actor, author & king of Latin pop",
+   "genres": [
+    "ballad",
+    "dance-pop",
+    "electro latino",
+    "electropop",
+    "latin",
+    "latin pop",
+    "pop"
+   ],
+   "id": "70ea63ea-70dc-4b63-951a-2c249d2b3b0a",
+   "lastfmPages": [
+    "ricky martin"
+   ],
+   "name": "Ricky Martin",
+   "tags": [
+    "ballad",
+    "dance-pop",
+    "electro latino",
+    "electropop",
+    "latin",
+    "latin pop",
+    "lgbtqi",
+    "pop",
+    "queer"
+   ],
+   "type": "Person"
+  },
+  "71d0c8a2-bdc1-4d29-a476-8bde3c35027a": {
+   "disambiguation": "drummer/composer",
+   "genres": [],
+   "id": "71d0c8a2-bdc1-4d29-a476-8bde3c35027a",
+   "lastfmPages": [],
+   "name": "Aaron Parks",
+   "tags": [],
+   "type": "Person"
+  },
+  "7241e3ed-5ad4-4849-94df-6858ea833472": {
+   "disambiguation": "",
+   "genres": [
+    "alternative country",
+    "americana",
+    "blues",
+    "country",
+    "jazz",
+    "rockabilly",
+    "swing"
+   ],
+   "id": "7241e3ed-5ad4-4849-94df-6858ea833472",
+   "lastfmPages": [],
+   "name": "Lyle Lovett",
+   "tags": [
+    "alternative country",
+    "americana",
+    "blues",
+    "composers",
+    "country",
+    "guitarists",
+    "jazz",
+    "narrator of audiobooks",
+    "rockabilly",
+    "singers",
+    "swing"
+   ],
+   "type": "Person"
+  },
+  "72baf7ed-2c17-4ee8-921e-8b650c6cc914": {
+   "disambiguation": "rock band from Mumbai, India",
+   "genres": [
+    "electronic rock"
+   ],
+   "id": "72baf7ed-2c17-4ee8-921e-8b650c6cc914",
+   "lastfmPages": [],
+   "name": "Pentagram",
+   "tags": [
+    "electro-rock",
+    "electronic rock"
+   ],
+   "type": "Group"
+  },
+  "72c090b6-a68e-4cb9-b330-85278681a714": {
+   "disambiguation": "The Velvet Underground founder",
+   "genres": [
+    "art pop",
+    "art rock",
+    "avant-garde pop",
+    "baroque pop",
+    "drone",
+    "experimental rock",
+    "minimalism",
+    "modern classical",
+    "proto-punk",
+    "rock",
+    "singer-songwriter"
+   ],
+   "id": "72c090b6-a68e-4cb9-b330-85278681a714",
+   "lastfmPages": [
+    "john cale"
+   ],
+   "name": "John Cale",
+   "tags": [
+    "art pop",
+    "art rock",
+    "avant-garde pop",
+    "baroque pop",
+    "british",
+    "classic pop and rock",
+    "drone",
+    "experimental rock",
+    "minimalism",
+    "modern classical",
+    "proto-punk",
+    "rock",
+    "singer-songwriter",
+    "uk",
+    "welsh"
+   ],
+   "type": "Person"
+  },
+  "72d7d717-0837-4f2a-9641-d0f9fdd3acf7": {
+   "disambiguation": "Scottish singer, songwriter and guitarist",
+   "genres": [
+    "contemporary folk",
+    "folk",
+    "folk pop",
+    "folk rock",
+    "pop",
+    "psychedelic folk",
+    "psychedelic pop",
+    "rock",
+    "singer-songwriter"
+   ],
+   "id": "72d7d717-0837-4f2a-9641-d0f9fdd3acf7",
+   "lastfmPages": [
+    "donovan"
+   ],
+   "name": "Donovan",
+   "tags": [
+    "classic pop and rock",
+    "contemporary folk",
+    "folk",
+    "folk pop",
+    "folk rock",
+    "folk-rock",
+    "pop",
+    "psychedelic folk",
+    "psychedelic pop",
+    "rock",
+    "scottish",
+    "singer-songwriter"
+   ],
+   "type": "Person"
+  },
+  "731f8ff8-8206-47cd-9f5d-9b95a2e5eca3": {
+   "disambiguation": "Spanish electronic artist",
+   "genres": [],
+   "id": "731f8ff8-8206-47cd-9f5d-9b95a2e5eca3",
+   "lastfmPages": [],
+   "name": "Omen",
+   "tags": [],
+   "type": "Person"
+  },
+  "735e3514-a8ae-401f-af3b-6300df1b8d2c": {
+   "disambiguation": "electronic act from Dan Snaith",
+   "genres": [
+    "dream pop",
+    "electronic",
+    "folktronica",
+    "house",
+    "indietronica",
+    "neo-psychedelia"
+   ],
+   "id": "735e3514-a8ae-401f-af3b-6300df1b8d2c",
+   "lastfmPages": [
+    "caribou"
+   ],
+   "name": "Caribou",
+   "tags": [
+    "dream pop",
+    "electronic",
+    "folktronica",
+    "house",
+    "indietronica",
+    "neo-psychedelia"
+   ],
+   "type": "Person"
+  },
+  "73b8e2c9-967b-45a5-8894-fa2298a191ec": {
+   "disambiguation": "",
+   "genres": [
+    "hip hop"
+   ],
+   "id": "73b8e2c9-967b-45a5-8894-fa2298a191ec",
+   "lastfmPages": [
+    "bankroll fresh"
+   ],
+   "name": "Bankroll Fresh",
+   "tags": [
+    "hip hop"
+   ],
+   "type": "Person"
+  },
+  "73fdb566-a9b1-494c-9f32-51768ec9fd27": {
+   "disambiguation": "",
+   "genres": [
+    "conscious hip hop",
+    "contemporary r&b",
+    "dirty south",
+    "funk",
+    "hip hop",
+    "pop",
+    "pop rap",
+    "southern hip hop"
+   ],
+   "id": "73fdb566-a9b1-494c-9f32-51768ec9fd27",
+   "lastfmPages": [
+    "outkast"
+   ],
+   "name": "OutKast",
+   "tags": [
+    "atlanta hip hop",
+    "conscious hip hop",
+    "contemporary r&b",
+    "dirty south",
+    "funk",
+    "hip hop",
+    "neo-soul",
+    "pop",
+    "pop rap",
+    "southern hip hop"
+   ],
+   "type": "Group"
+  },
+  "7771a68c-ef6a-400f-978d-64050d45a54c": {
+   "disambiguation": "",
+   "genres": [
+    "blues rock",
+    "british rhythm & blues",
+    "mod",
+    "pop rock",
+    "psychedelic pop",
+    "psychedelic rock",
+    "rock"
+   ],
+   "id": "7771a68c-ef6a-400f-978d-64050d45a54c",
+   "lastfmPages": [],
+   "name": "Small Faces",
+   "tags": [
+    "blues rock",
+    "british rhythm & blues",
+    "mod",
+    "pop rock",
+    "psychedelic pop",
+    "psychedelic rock",
+    "rhythm & blues",
+    "rock"
+   ],
+   "type": "Group"
+  },
+  "779351de-0da5-4943-928b-495a3c40e8c0": {
+   "disambiguation": "BLACKPINK",
+   "genres": [
+    "dance",
+    "dance-pop",
+    "hip hop",
+    "k-pop",
+    "pop",
+    "rock"
+   ],
+   "id": "779351de-0da5-4943-928b-495a3c40e8c0",
+   "lastfmPages": [
+    "jennie",
+    "\uc81c\ub2c8"
+   ],
+   "name": "JENNIE",
+   "tags": [
+    "2020s",
+    "3rd gen k-pop",
+    "asian pop",
+    "dance",
+    "dance-pop",
+    "hip hop",
+    "k-pop",
+    "pop",
+    "rock"
+   ],
+   "type": "Person"
+  },
+  "779a6b10-0eec-4bcc-8fb7-eb54e9888d23": {
+   "disambiguation": "",
+   "genres": [
+    "doom metal",
+    "epic doom metal",
+    "heavy metal",
+    "metal"
+   ],
+   "id": "779a6b10-0eec-4bcc-8fb7-eb54e9888d23",
+   "lastfmPages": [],
+   "name": "DoomSword",
+   "tags": [
+    "doom",
+    "doom metal",
+    "epic doom",
+    "epic doom metal",
+    "epic heavy metal",
+    "heavy metal",
+    "metal"
+   ],
+   "type": "Group"
+  },
+  "79239441-bfd5-4981-a70c-55c3f15c1287": {
+   "disambiguation": "\u201cQueen of Pop\u201d",
+   "genres": [
+    "art pop",
+    "bubblegum pop",
+    "club",
+    "contemporary r&b",
+    "country pop",
+    "dance-pop",
+    "easy listening",
+    "edm",
+    "electronic",
+    "electronica",
+    "electropop",
+    "jazz",
+    "new wave",
+    "pop",
+    "pop rock",
+    "synth-pop",
+    "trip hop"
+   ],
+   "id": "79239441-bfd5-4981-a70c-55c3f15c1287",
+   "lastfmPages": [
+    "madonna"
+   ],
+   "name": "Madonna",
+   "tags": [
+    "adult contemporary",
+    "adult contemporary music",
+    "art pop",
+    "bubblegum pop",
+    "club",
+    "contemporary pop/rock",
+    "contemporary r&b",
+    "country pop",
+    "dance music",
+    "dance-pop",
+    "easy listening",
+    "edm",
+    "electronic",
+    "electronica",
+    "electropop",
+    "female vocals",
+    "folk music",
+    "jazz",
+    "new wave",
+    "pop",
+    "pop rock",
+    "synth-pop",
+    "trip hop"
+   ],
+   "type": "Person"
+  },
+  "795071f0-f110-41c8-aaee-f5ea7f460a4d": {
+   "disambiguation": "Netherlands-born jazz pianist",
+   "genres": [
+    "contemporary jazz",
+    "jazz",
+    "jazz fusion",
+    "post-bop"
+   ],
+   "id": "795071f0-f110-41c8-aaee-f5ea7f460a4d",
+   "lastfmPages": [],
+   "name": "Gerald Clayton",
+   "tags": [
+    "contemporary jazz",
+    "jazz",
+    "jazz fusion",
+    "post-bop"
+   ],
+   "type": "Person"
+  },
+  "7b61cf8f-c042-4bd4-b64a-25cb40f3dd50": {
+   "disambiguation": "",
+   "genres": [
+    "hip hop",
+    "west coast hip hop"
+   ],
+   "id": "7b61cf8f-c042-4bd4-b64a-25cb40f3dd50",
+   "lastfmPages": [
+    "souls of mischief"
+   ],
+   "name": "Souls of Mischief",
+   "tags": [
+    "hip hop",
+    "west coast hip hop"
+   ],
+   "type": "Group"
+  },
+  "7b8c7275-4359-449e-ae21-e4fa657ccad3": {
+   "disambiguation": "",
+   "genres": [],
+   "id": "7b8c7275-4359-449e-ae21-e4fa657ccad3",
+   "lastfmPages": [],
+   "name": "The Cox Family",
+   "tags": [],
+   "type": "Group"
+  },
+  "7c07c61b-585f-437e-931a-d810f1471b70": {
+   "disambiguation": "Hungarian metal",
+   "genres": [
+    "speed metal"
+   ],
+   "id": "7c07c61b-585f-437e-931a-d810f1471b70",
+   "lastfmPages": [],
+   "name": "Omen",
+   "tags": [
+    "omen hungary metal",
+    "power",
+    "speed metal",
+    "thrash"
+   ],
+   "type": "Group"
+  },
+  "7da030e4-3b08-4e29-b497-344d809589fd": {
+   "disambiguation": "",
+   "genres": [
+    "rock"
+   ],
+   "id": "7da030e4-3b08-4e29-b497-344d809589fd",
+   "lastfmPages": [],
+   "name": "\u0412\u0438\u043a\u0442\u043e\u0440 \u0426\u043e\u0439",
+   "tags": [
+    "rock",
+    "russian"
+   ],
+   "type": "Person"
+  },
+  "7dba6614-d0bd-4950-8b7b-841b31c413c2": {
+   "disambiguation": "Swedish doom metal",
+   "genres": [
+    "doom metal",
+    "epic doom metal",
+    "heavy metal",
+    "metal",
+    "traditional doom metal"
+   ],
+   "id": "7dba6614-d0bd-4950-8b7b-841b31c413c2",
+   "lastfmPages": [
+    "candlemass"
+   ],
+   "name": "Candlemass",
+   "tags": [
+    "doom metal",
+    "epic doom metal",
+    "epic/doom-metal",
+    "heavy metal",
+    "metal",
+    "traditional doom metal"
+   ],
+   "type": "Group"
+  },
+  "7e54d133-2525-4bc0-ae94-65584145a386": {
+   "disambiguation": "British electronic music duo",
+   "genres": [
+    "breakbeat",
+    "electronic",
+    "idm",
+    "techno"
+   ],
+   "id": "7e54d133-2525-4bc0-ae94-65584145a386",
+   "lastfmPages": [
+    "plaid"
+   ],
+   "name": "Plaid",
+   "tags": [
+    "abstract",
+    "breakbeat",
+    "electronic",
+    "idm",
+    "techno"
+   ],
+   "type": "Group"
+  },
+  "803f2853-7e3e-4dff-96a7-9f77b5f56de5": {
+   "disambiguation": "",
+   "genres": [
+    "electronic",
+    "idm",
+    "microhouse"
+   ],
+   "id": "803f2853-7e3e-4dff-96a7-9f77b5f56de5",
+   "lastfmPages": [
+    "rival consoles"
+   ],
+   "name": "Rival Consoles",
+   "tags": [
+    "electronic",
+    "idm",
+    "microhouse"
+   ],
+   "type": "Person"
+  },
+  "80b3cf5e-18fe-4c59-98c7-e5bb87210710": {
+   "disambiguation": "US hip hop group",
+   "genres": [
+    "alternative hip hop",
+    "hip hop",
+    "jazz",
+    "progressive soul",
+    "rock",
+    "soul"
+   ],
+   "id": "80b3cf5e-18fe-4c59-98c7-e5bb87210710",
+   "lastfmPages": [
+    "the roots"
+   ],
+   "name": "The Roots",
+   "tags": [
+    "alternative hip hop",
+    "alternative rap",
+    "conscious rap",
+    "hip hop",
+    "jazz",
+    "progressive rap",
+    "progressive soul",
+    "rap",
+    "rock",
+    "soul",
+    "soul music"
+   ],
+   "type": "Group"
+  },
+  "80fd1c1c-7153-4a5b-b0e9-2242d8a6cbf5": {
+   "disambiguation": "jazz saxophonist",
+   "genres": [
+    "jazz",
+    "post-bop"
+   ],
+   "id": "80fd1c1c-7153-4a5b-b0e9-2242d8a6cbf5",
+   "lastfmPages": [],
+   "name": "Chris Potter",
+   "tags": [
+    "jazz",
+    "jazz and blues",
+    "post-bop"
+   ],
+   "type": "Person"
+  },
+  "8162d8d3-ae45-4550-87f1-fa1262166e8a": {
+   "disambiguation": "",
+   "genres": [
+    "doom metal",
+    "heavy metal",
+    "nwobhm"
+   ],
+   "id": "8162d8d3-ae45-4550-87f1-fa1262166e8a",
+   "lastfmPages": [],
+   "name": "Pagan Altar",
+   "tags": [
+    "doom metal",
+    "heavy metal",
+    "nwobhm"
+   ],
+   "type": "Group"
+  },
+  "819eaeb2-8dd8-48a5-ad07-0bcd137985ef": {
+   "disambiguation": "composer",
+   "genres": [
+    "classical",
+    "concerto",
+    "opera",
+    "orchestral",
+    "romantic classical",
+    "symphony"
+   ],
+   "id": "819eaeb2-8dd8-48a5-ad07-0bcd137985ef",
+   "lastfmPages": [
+    "anton\u00edn dvo\u0159\u00e1k"
+   ],
+   "name": "Anton\u00edn Dvo\u0159\u00e1k",
+   "tags": [
+    "classical",
+    "composer",
+    "concerto",
+    "czech",
+    "european",
+    "opera",
+    "orchestral",
+    "romantic",
+    "romantic classical",
+    "symphony",
+    "tjekkisk"
+   ],
+   "type": "Person"
+  },
+  "81b38118-c135-4ac4-8334-c57a2455b798": {
+   "disambiguation": "",
+   "genres": [
+    "bluegrass"
+   ],
+   "id": "81b38118-c135-4ac4-8334-c57a2455b798",
+   "lastfmPages": [],
+   "name": "Sierra Hull",
+   "tags": [
+    "bluegrass"
+   ],
+   "type": "Person"
+  },
+  "84803b1d-dcb3-490d-9af5-debbba64a011": {
+   "disambiguation": "",
+   "genres": [
+    "bedroom pop",
+    "dream pop",
+    "indie pop",
+    "indie rock",
+    "lo-fi",
+    "singer-songwriter"
+   ],
+   "id": "84803b1d-dcb3-490d-9af5-debbba64a011",
+   "lastfmPages": [
+    "soccer mommy"
+   ],
+   "name": "Soccer Mommy",
+   "tags": [
+    "bedroom pop",
+    "dream pop",
+    "indie",
+    "indie pop",
+    "indie rock",
+    "lo-fi",
+    "singer-songwriter"
+   ],
+   "type": "Person"
+  },
+  "8546949d-f46c-45ab-8391-85b26dda6b65": {
+   "disambiguation": "1960s\u20131970s US vocalist, songwriter, guitarist & producer",
+   "genres": [
+    "avant-folk",
+    "folk",
+    "psychedelic folk"
+   ],
+   "id": "8546949d-f46c-45ab-8391-85b26dda6b65",
+   "lastfmPages": [
+    "tim buckley"
+   ],
+   "name": "Tim Buckley",
+   "tags": [
+    "avant-folk",
+    "folk",
+    "psychedelic folk",
+    "singer/songwriter"
+   ],
+   "type": "Person"
+  },
+  "859216c4-5d01-479b-b6c3-e20cc591a86a": {
+   "disambiguation": "electronic act from Dan Snaith",
+   "genres": [
+    "electronic",
+    "house"
+   ],
+   "id": "859216c4-5d01-479b-b6c3-e20cc591a86a",
+   "lastfmPages": [
+    "daphni"
+   ],
+   "name": "Daphni",
+   "tags": [
+    "electronic",
+    "house"
+   ],
+   "type": "Person"
+  },
+  "85b5d142-7784-4c0d-8016-d4d7d1d06585": {
+   "disambiguation": "released Alimentation",
+   "genres": [],
+   "id": "85b5d142-7784-4c0d-8016-d4d7d1d06585",
+   "lastfmPages": [],
+   "name": "Solstice",
+   "tags": [],
+   "type": null
+  },
+  "85d76093-9865-4605-97fa-8c910929d366": {
+   "disambiguation": "Japanese pop/rock singer",
+   "genres": [
+    "j-pop",
+    "j-rock",
+    "pop rock"
+   ],
+   "id": "85d76093-9865-4605-97fa-8c910929d366",
+   "lastfmPages": [
+    "lisa"
+   ],
+   "name": "LiSA",
+   "tags": [
+    "anime",
+    "j-pop",
+    "j-rock",
+    "pop rock"
+   ],
+   "type": "Person"
+  },
+  "8622a9a2-b49e-4299-8997-bc94f008d7bc": {
+   "disambiguation": "released Sorrow of Keeper",
+   "genres": [],
+   "id": "8622a9a2-b49e-4299-8997-bc94f008d7bc",
+   "lastfmPages": [],
+   "name": "Solstice",
+   "tags": [],
+   "type": null
+  },
+  "86cd4d38-857c-42bd-a5da-9acedcab1e01": {
+   "disambiguation": "US indie rock solo project by Lindsey Erin Jordan",
+   "genres": [
+    "folk",
+    "indie pop",
+    "indie rock",
+    "lo-fi",
+    "pop",
+    "rock"
+   ],
+   "id": "86cd4d38-857c-42bd-a5da-9acedcab1e01",
+   "lastfmPages": [
+    "snail mail"
+   ],
+   "name": "Snail Mail",
+   "tags": [
+    "folk",
+    "indie",
+    "indie pop",
+    "indie rock",
+    "lo-fi",
+    "pop",
+    "queer",
+    "rock"
+   ],
+   "type": "Person"
+  },
+  "875d49d4-0968-47f8-a4d0-be419ca02691": {
+   "disambiguation": "harsh noise",
+   "genres": [
+    "noise"
+   ],
+   "id": "875d49d4-0968-47f8-a4d0-be419ca02691",
+   "lastfmPages": [],
+   "name": "Black Sheep",
+   "tags": [
+    "noise"
+   ],
+   "type": null
+  },
+  "889b717c-e180-4dae-b6a0-0fcfb026a618": {
+   "disambiguation": "Polish Metal Band",
+   "genres": [],
+   "id": "889b717c-e180-4dae-b6a0-0fcfb026a618",
+   "lastfmPages": [],
+   "name": "Omen",
+   "tags": [],
+   "type": "Group"
+  },
+  "89618a45-ff4a-4e5f-942e-3ef93c8c555c": {
+   "disambiguation": "",
+   "genres": [
+    "doom metal",
+    "heavy metal",
+    "nwobhm"
+   ],
+   "id": "89618a45-ff4a-4e5f-942e-3ef93c8c555c",
+   "lastfmPages": [
+    "witchfinder general"
+   ],
+   "name": "Witchfinder General",
+   "tags": [
+    "doom metal",
+    "heavy metal",
+    "nwobhm"
+   ],
+   "type": "Group"
+  },
+  "89967ce2-3f9a-4dad-b8c8-491bb87b73fe": {
+   "disambiguation": "",
+   "genres": [
+    "contemporary folk",
+    "folk",
+    "psychedelic folk",
+    "singer-songwriter"
+   ],
+   "id": "89967ce2-3f9a-4dad-b8c8-491bb87b73fe",
+   "lastfmPages": [],
+   "name": "Linda Perhacs",
+   "tags": [
+    "contemporary folk",
+    "folk",
+    "psychedelic folk",
+    "singer-songwriter",
+    "vyrzukhisuc-artiest"
+   ],
+   "type": "Person"
+  },
+  "8ba17cf6-bec2-4ae4-9820-b1cda47adc08": {
+   "disambiguation": "Lil Boosie",
+   "genres": [
+    "christian hip hop",
+    "dirty south",
+    "gangsta rap",
+    "hip hop",
+    "southern hip hop",
+    "trap"
+   ],
+   "id": "8ba17cf6-bec2-4ae4-9820-b1cda47adc08",
+   "lastfmPages": [],
+   "name": "Boosie Badazz",
+   "tags": [
+    "baton rouge rap",
+    "christian hip hop",
+    "christian rap",
+    "christmas",
+    "dirty south",
+    "dirty south rap",
+    "gangsta rap",
+    "gospel rap",
+    "hip hop",
+    "hip-hop",
+    "homophobe",
+    "jigg",
+    "memphis hip hop",
+    "southern hip hop",
+    "southern rap",
+    "trap"
+   ],
+   "type": "Person"
+  },
+  "8c2e4f17-540c-42d9-abba-bc1e6c9d9e6d": {
+   "disambiguation": "Turkish heavy metal band, a.k.a. Mezarkabul",
+   "genres": [
+    "folk metal",
+    "heavy metal",
+    "thrash metal"
+   ],
+   "id": "8c2e4f17-540c-42d9-abba-bc1e6c9d9e6d",
+   "lastfmPages": [
+    "mezarkabul",
+    "pentagram"
+   ],
+   "name": "Pentagram",
+   "tags": [
+    "folk metal",
+    "heavy metal",
+    "thrash metal",
+    "turkish"
+   ],
+   "type": "Group"
+  },
+  "8c529495-91f5-4e2f-b71b-adcb66878d04": {
+   "disambiguation": "Michelle Zauner's solo project and band",
+   "genres": [
+    "indie pop",
+    "indie rock"
+   ],
+   "id": "8c529495-91f5-4e2f-b71b-adcb66878d04",
+   "lastfmPages": [
+    "japanese breakfast"
+   ],
+   "name": "Japanese Breakfast",
+   "tags": [
+    "indie pop",
+    "indie rock"
+   ],
+   "type": "Group"
+  },
+  "8d4e6a86-fa1c-4a1b-b8c4-3b58a46dde9f": {
+   "disambiguation": "Korean\u2010Canadian singer",
+   "genres": [
+    "k-pop"
+   ],
+   "id": "8d4e6a86-fa1c-4a1b-b8c4-3b58a46dde9f",
+   "lastfmPages": [
+    "jeon somi",
+    "somi"
+   ],
+   "name": "JEON SOMI",
+   "tags": [
+    "k-pop",
+    "kpop"
+   ],
+   "type": "Person"
+  },
+  "8d741103-d319-4cc8-9f4f-9926b5bf112a": {
+   "disambiguation": "",
+   "genres": [
+    "rock"
+   ],
+   "id": "8d741103-d319-4cc8-9f4f-9926b5bf112a",
+   "lastfmPages": [
+    "\u0430\u043a\u0432\u0430\u0440\u0438\u0443\u043c"
+   ],
+   "name": "\u0410\u043a\u0432\u0430\u0440\u0438\u0443\u043c",
+   "tags": [
+    "fusion",
+    "rock",
+    "russian",
+    "russian rock"
+   ],
+   "type": "Group"
+  },
+  "924e20e6-fe82-45dd-8ff4-55642aad4018": {
+   "disambiguation": "Chicago rapper",
+   "genres": [],
+   "id": "924e20e6-fe82-45dd-8ff4-55642aad4018",
+   "lastfmPages": [],
+   "name": "Omen",
+   "tags": [],
+   "type": "Person"
+  },
+  "925228de-bbe5-4c7b-b76f-78e382ec9148": {
+   "disambiguation": "",
+   "genres": [
+    "boom bap",
+    "hardcore hip hop",
+    "hip hop"
+   ],
+   "id": "925228de-bbe5-4c7b-b76f-78e382ec9148",
+   "lastfmPages": [],
+   "name": "Eric B. & Rakim",
+   "tags": [
+    "boom bap",
+    "hardcore hip hop",
+    "hip hop"
+   ],
+   "type": "Group"
+  },
+  "94219793-a46b-4c39-9397-e05ad633f32d": {
+   "disambiguation": "UK indie rock band from Glasgow",
+   "genres": [
+    "indie pop",
+    "pop",
+    "rock",
+    "twee pop"
+   ],
+   "id": "94219793-a46b-4c39-9397-e05ad633f32d",
+   "lastfmPages": [
+    "camera obscura"
+   ],
+   "name": "Camera Obscura",
+   "tags": [
+    "indie pop",
+    "pop",
+    "rock",
+    "rock and indie",
+    "twee pop"
+   ],
+   "type": "Group"
+  },
+  "94b0fb9d-a066-4823-b2ec-af1d324bcfcf": {
+   "disambiguation": "Lou Reed\u2019s seminal rock band",
+   "genres": [
+    "art rock",
+    "experimental rock",
+    "garage rock",
+    "noise rock",
+    "pop rock",
+    "proto-punk",
+    "psychedelic rock",
+    "rock"
+   ],
+   "id": "94b0fb9d-a066-4823-b2ec-af1d324bcfcf",
+   "lastfmPages": [
+    "the velvet underground"
+   ],
+   "name": "The Velvet Underground",
+   "tags": [
+    "art rock",
+    "experimental rock",
+    "garage rock",
+    "noise rock",
+    "pop rock",
+    "proto-punk",
+    "psychedelic rock",
+    "rock",
+    "rock music"
+   ],
+   "type": "Group"
+  },
+  "968fb129-2c95-4fd5-b195-86552ba45c94": {
+   "disambiguation": "",
+   "genres": [
+    "americana",
+    "bluegrass",
+    "country",
+    "progressive bluegrass",
+    "singer-songwriter"
+   ],
+   "id": "968fb129-2c95-4fd5-b195-86552ba45c94",
+   "lastfmPages": [],
+   "name": "Molly Tuttle",
+   "tags": [
+    "americana",
+    "bluegrass",
+    "country",
+    "progressive bluegrass",
+    "singer-songwriter"
+   ],
+   "type": "Person"
+  },
+  "9706f794-eb6b-4dfa-a0b6-115c7533ae2f": {
+   "disambiguation": "Canadian engineer, worked with Sarah McLachlan",
+   "genres": [],
+   "id": "9706f794-eb6b-4dfa-a0b6-115c7533ae2f",
+   "lastfmPages": [],
+   "name": "Chris Potter",
+   "tags": [],
+   "type": "Person"
+  },
+  "97992045-1d3f-469d-91ce-27afd0bd216b": {
+   "disambiguation": "Finnish doom metal band",
+   "genres": [
+    "doom metal",
+    "heavy metal",
+    "traditional doom metal"
+   ],
+   "id": "97992045-1d3f-469d-91ce-27afd0bd216b",
+   "lastfmPages": [],
+   "name": "Reverend Bizarre",
+   "tags": [
+    "doom metal",
+    "heavy metal",
+    "traditional doom metal"
+   ],
+   "type": "Group"
+  },
+  "99524243-dc2e-4bf3-82c0-72395391d21f": {
+   "disambiguation": "singer\u2010songwriter, musician and producer",
+   "genres": [
+    "alternative rock",
+    "art pop",
+    "ballad",
+    "baroque pop",
+    "experimental",
+    "experimental rock",
+    "indie rock",
+    "pop",
+    "pop rock",
+    "rock",
+    "singer-songwriter"
+   ],
+   "id": "99524243-dc2e-4bf3-82c0-72395391d21f",
+   "lastfmPages": [
+    "scott walker"
+   ],
+   "name": "Scott Walker",
+   "tags": [
+    "4ad",
+    "alternative rock",
+    "art pop",
+    "ballad",
+    "baroque pop",
+    "classic pop and rock",
+    "composer",
+    "experimental",
+    "experimental rock",
+    "indie rock",
+    "lyricist",
+    "pop",
+    "pop rock",
+    "rock",
+    "singer-songwriter",
+    "singer/songwriter"
+   ],
+   "type": "Person"
+  },
+  "9a6f4336-0e80-44ff-a931-a5036855b762": {
+   "disambiguation": "released Solstice in 1977",
+   "genres": [],
+   "id": "9a6f4336-0e80-44ff-a931-a5036855b762",
+   "lastfmPages": [],
+   "name": "Solstice",
+   "tags": [],
+   "type": null
+  },
+  "9a709693-b4f8-4da9-8cc1-038c911a61be": {
+   "disambiguation": "UK electronic artist Simon Green",
+   "genres": [
+    "acid jazz",
+    "downtempo",
+    "electronic",
+    "electronica",
+    "nu jazz",
+    "trip hop"
+   ],
+   "id": "9a709693-b4f8-4da9-8cc1-038c911a61be",
+   "lastfmPages": [
+    "bonobo"
+   ],
+   "name": "Bonobo",
+   "tags": [
+    "acid jazz",
+    "downtempo",
+    "electronic",
+    "electronica",
+    "nu jazz",
+    "trip hop",
+    "world music"
+   ],
+   "type": "Person"
+  },
+  "9b135e33-2fbc-4155-b351-cc2a39997975": {
+   "disambiguation": "",
+   "genres": [
+    "rock"
+   ],
+   "id": "9b135e33-2fbc-4155-b351-cc2a39997975",
+   "lastfmPages": [],
+   "name": "\u041a\u0440\u0435\u043c\u0430\u0442\u043e\u0440\u0438\u0439",
+   "tags": [
+    "rock"
+   ],
+   "type": "Group"
+  },
+  "9b20562f-b1ac-479d-84a3-6efdf2671065": {
+   "disambiguation": "dubstep artist T. Jones",
+   "genres": [],
+   "id": "9b20562f-b1ac-479d-84a3-6efdf2671065",
+   "lastfmPages": [],
+   "name": "Omen",
+   "tags": [],
+   "type": "Person"
+  },
+  "9b746c5f-d243-4baf-ba96-1a7573e6a06f": {
+   "disambiguation": "Japanese progressive rock band",
+   "genres": [],
+   "id": "9b746c5f-d243-4baf-ba96-1a7573e6a06f",
+   "lastfmPages": [],
+   "name": "Pentagram",
+   "tags": [],
+   "type": "Group"
+  },
+  "9bacf78f-9132-43da-8873-8a9eb49da0e9": {
+   "disambiguation": "",
+   "genres": [
+    "flamenco pop",
+    "latin",
+    "latin pop",
+    "pop",
+    "rock",
+    "singer-songwriter",
+    "soft rock"
+   ],
+   "id": "9bacf78f-9132-43da-8873-8a9eb49da0e9",
+   "lastfmPages": [
+    "alejandro sanz"
+   ],
+   "name": "Alejandro Sanz",
+   "tags": [
+    "balada rom\u00e1ntica",
+    "flamenco pop",
+    "latin",
+    "latin pop",
+    "pop",
+    "rock",
+    "singer-songwriter",
+    "soft rock"
+   ],
+   "type": "Person"
+  },
+  "9dd28f79-06b1-4ddc-8fab-cd739dcf8a78": {
+   "disambiguation": "",
+   "genres": [
+    "doom metal",
+    "heavy metal"
+   ],
+   "id": "9dd28f79-06b1-4ddc-8fab-cd739dcf8a78",
+   "lastfmPages": [],
+   "name": "Spiritus Mortis",
+   "tags": [
+    "doom metal",
+    "heavy metal"
+   ],
+   "type": "Group"
+  },
+  "9ddce51c-2b75-4b3e-ac8c-1db09e7c89c6": {
+   "disambiguation": "UK dubstep",
+   "genres": [
+    "2-step",
+    "ambient",
+    "dub",
+    "dubstep",
+    "electronic",
+    "future garage",
+    "uk garage"
+   ],
+   "id": "9ddce51c-2b75-4b3e-ac8c-1db09e7c89c6",
+   "lastfmPages": [
+    "burial"
+   ],
+   "name": "Burial",
+   "tags": [
+    "2-step",
+    "ambient",
+    "britannique",
+    "british",
+    "dance and electronica",
+    "dub",
+    "dubstep",
+    "electronic",
+    "english",
+    "future garage",
+    "london",
+    "moody",
+    "summer vibes",
+    "uk",
+    "uk garage"
+   ],
+   "type": "Person"
+  },
+  "9e623a05-1f8e-4e92-9bc6-b8a44fec1fe0": {
+   "disambiguation": "released split with Statement",
+   "genres": [],
+   "id": "9e623a05-1f8e-4e92-9bc6-b8a44fec1fe0",
+   "lastfmPages": [],
+   "name": "Solstice",
+   "tags": [],
+   "type": null
+  },
+  "9ef8042a-2528-4f5c-b7c1-5e72b1efe170": {
+   "disambiguation": "US hip hop duo, Guru & DJ Premier",
+   "genres": [
+    "boom bap",
+    "east coast hip hop",
+    "hip hop"
+   ],
+   "id": "9ef8042a-2528-4f5c-b7c1-5e72b1efe170",
+   "lastfmPages": [
+    "gang starr"
+   ],
+   "name": "Gang Starr",
+   "tags": [
+    "boom bap",
+    "east coast hip hop",
+    "hip hop"
+   ],
+   "type": "Group"
+  },
+  "9fdaa16b-a6c4-4831-b87c-bc9ca8ce7eaa": {
+   "disambiguation": "",
+   "genres": [
+    "art rock",
+    "british rhythm & blues",
+    "classic rock",
+    "freakbeat",
+    "hard rock",
+    "mod",
+    "pop rock",
+    "rock",
+    "rock opera"
+   ],
+   "id": "9fdaa16b-a6c4-4831-b87c-bc9ca8ce7eaa",
+   "lastfmPages": [
+    "the who"
+   ],
+   "name": "The Who",
+   "tags": [
+    "art rock",
+    "british",
+    "british invasion",
+    "british rhythm & blues",
+    "classic rock",
+    "freakbeat",
+    "hard rock",
+    "mod",
+    "pop rock",
+    "rock",
+    "rock groups",
+    "rock opera"
+   ],
+   "type": "Group"
+  },
+  "a181595e-5b84-4439-a5f4-f548ddfb64df": {
+   "disambiguation": "",
+   "genres": [
+    "dream pop",
+    "indie pop",
+    "indie rock",
+    "shoegaze"
+   ],
+   "id": "a181595e-5b84-4439-a5f4-f548ddfb64df",
+   "lastfmPages": [
+    "wild nothing"
+   ],
+   "name": "Wild Nothing",
+   "tags": [
+    "dream pop",
+    "indie pop",
+    "indie rock",
+    "shoegaze"
+   ],
+   "type": "Person"
+  },
+  "a1f0bd3b-6977-4ab2-8d5c-2464bada895d": {
+   "disambiguation": "Russian hard rock band lead by K. Kinchev",
+   "genres": [
+    "hard rock"
+   ],
+   "id": "a1f0bd3b-6977-4ab2-8d5c-2464bada895d",
+   "lastfmPages": [
+    "\u0430\u043b\u0438\u0441\u0430"
+   ],
+   "name": "\u0410\u043b\u0438\u0441\u0430",
+   "tags": [
+    "hard rock",
+    "russian",
+    "russian rock"
+   ],
+   "type": "Group"
+  },
+  "a3b12378-ed7b-434b-9074-f195becf1080": {
+   "disambiguation": "rapper",
+   "genres": [],
+   "id": "a3b12378-ed7b-434b-9074-f195becf1080",
+   "lastfmPages": [],
+   "name": "Omen",
+   "tags": [],
+   "type": "Person"
+  },
+  "a6de8ef9-b1a1-4756-97aa-481bbb8a4069": {
+   "disambiguation": "",
+   "genres": [
+    "contemporary folk",
+    "folk",
+    "folk pop",
+    "folk rock",
+    "jazz",
+    "jazz pop",
+    "pop",
+    "rock",
+    "singer-songwriter",
+    "vocal jazz"
+   ],
+   "id": "a6de8ef9-b1a1-4756-97aa-481bbb8a4069",
+   "lastfmPages": [
+    "joni mitchell"
+   ],
+   "name": "Joni Mitchell",
+   "tags": [
+    "2008 universal fire victim",
+    "composer",
+    "contemporary folk",
+    "famous",
+    "female vocals",
+    "folk",
+    "folk pop",
+    "folk rock",
+    "jazz",
+    "jazz pop",
+    "painter",
+    "pop",
+    "rock",
+    "singer-songwriter",
+    "singer/songwriter",
+    "unique",
+    "vocal jazz",
+    "vocalist",
+    "writer"
+   ],
+   "type": "Person"
+  },
+  "a7c38944-b3fa-4a3d-a4bd-d3b3b06f0cbf": {
+   "disambiguation": "",
+   "genres": [
+    "donosti sound",
+    "electropop",
+    "latin",
+    "pop",
+    "pop rock",
+    "power pop"
+   ],
+   "id": "a7c38944-b3fa-4a3d-a4bd-d3b3b06f0cbf",
+   "lastfmPages": [],
+   "name": "La Oreja de Van Gogh",
+   "tags": [
+    "balada",
+    "donosti sound",
+    "electropop",
+    "latin",
+    "pop",
+    "pop rock",
+    "power pop"
+   ],
+   "type": "Group"
+  },
+  "a8982cb0-7886-4e60-9f6a-3b71baa370e6": {
+   "disambiguation": "US indie band",
+   "genres": [
+    "dream pop",
+    "indie pop",
+    "lo-fi",
+    "synth-pop"
+   ],
+   "id": "a8982cb0-7886-4e60-9f6a-3b71baa370e6",
+   "lastfmPages": [
+    "tennis"
+   ],
+   "name": "Tennis",
+   "tags": [
+    "dream pop",
+    "indie pop",
+    "lo-fi",
+    "synth-pop"
+   ],
+   "type": "Group"
+  },
+  "a8ebde98-7e91-46c7-992c-90039ba42017": {
+   "disambiguation": "",
+   "genres": [
+    "alternative hip hop",
+    "boom bap",
+    "conscious hip hop",
+    "east coast hip hop",
+    "hip hop",
+    "jazz rap",
+    "pop rap"
+   ],
+   "id": "a8ebde98-7e91-46c7-992c-90039ba42017",
+   "lastfmPages": [
+    "de la soul"
+   ],
+   "name": "De La Soul",
+   "tags": [
+    "alternative hip hop",
+    "boom bap",
+    "conscious hip hop",
+    "east coast hip hop",
+    "golden age hip hop",
+    "hip hop",
+    "jazz rap",
+    "pop rap",
+    "progressive rap"
+   ],
+   "type": "Group"
+  },
+  "a9adebe6-3436-4746-bc76-3623e66f6e76": {
+   "disambiguation": "trumpeter, member of Third World Love",
+   "genres": [
+    "bebop",
+    "jazz",
+    "post-bop"
+   ],
+   "id": "a9adebe6-3436-4746-bc76-3623e66f6e76",
+   "lastfmPages": [],
+   "name": "Avishai Cohen",
+   "tags": [
+    "bebop",
+    "jazz",
+    "post-bop"
+   ],
+   "type": "Person"
+  },
+  "aa043c18-c0a0-4cbe-bda0-8541f1fe59bd": {
+   "disambiguation": "doom metal music",
+   "genres": [
+    "doom metal",
+    "hard rock",
+    "heavy metal",
+    "metal",
+    "stoner metal"
+   ],
+   "id": "aa043c18-c0a0-4cbe-bda0-8541f1fe59bd",
+   "lastfmPages": [],
+   "name": "The Obsessed",
+   "tags": [
+    "doom",
+    "doom metal",
+    "hard rock",
+    "heavy metal",
+    "metal",
+    "stoner metal"
+   ],
+   "type": "Group"
+  },
+  "abbf7d85-9a7f-4a6c-80bd-bf71f2c7d520": {
+   "disambiguation": "",
+   "genres": [
+    "dance-pop",
+    "electronic",
+    "hip hop",
+    "hip hop soul",
+    "k-pop",
+    "new jack swing",
+    "pop"
+   ],
+   "id": "abbf7d85-9a7f-4a6c-80bd-bf71f2c7d520",
+   "lastfmPages": [
+    "katseye"
+   ],
+   "name": "KATSEYE",
+   "tags": [
+    "2020s",
+    "dance-pop",
+    "electronic",
+    "female vocals",
+    "girl group",
+    "hip hop",
+    "hip hop soul",
+    "k-pop",
+    "new jack swing",
+    "pop"
+   ],
+   "type": "Group"
+  },
+  "abf74786-2f3e-47e0-ae68-69a55c13909a": {
+   "disambiguation": "",
+   "genres": [
+    "alternative country",
+    "dream pop",
+    "indie rock",
+    "shoegaze",
+    "slowcore"
+   ],
+   "id": "abf74786-2f3e-47e0-ae68-69a55c13909a",
+   "lastfmPages": [
+    "mojave 3"
+   ],
+   "name": "Mojave 3",
+   "tags": [
+    "alternative country",
+    "dream pop",
+    "indie rock",
+    "shoegaze",
+    "slowcore"
+   ],
+   "type": "Group"
+  },
+  "ac01bd6c-0ea6-4c9f-97f7-baf73261b464": {
+   "disambiguation": "Australian group",
+   "genres": [],
+   "id": "ac01bd6c-0ea6-4c9f-97f7-baf73261b464",
+   "lastfmPages": [],
+   "name": "Black Sheep",
+   "tags": [],
+   "type": "Group"
+  },
+  "ae33ce8d-f41a-4f6b-b9c6-7859acbd04ef": {
+   "disambiguation": "Mexican singer and actress",
+   "genres": [
+    "latin",
+    "latin pop"
+   ],
+   "id": "ae33ce8d-f41a-4f6b-b9c6-7859acbd04ef",
+   "lastfmPages": [
+    "thal\u00eda"
+   ],
+   "name": "Thal\u00eda",
+   "tags": [
+    "latin",
+    "latin pop"
+   ],
+   "type": "Person"
+  },
+  "af37c51c-0790-4a29-b995-456f98a6b8c9": {
+   "disambiguation": "",
+   "genres": [
+    "afrobeat",
+    "alternative rock",
+    "chamber pop",
+    "indie pop",
+    "indie rock",
+    "indietronica",
+    "leftfield",
+    "rock"
+   ],
+   "id": "af37c51c-0790-4a29-b995-456f98a6b8c9",
+   "lastfmPages": [
+    "vampire weekend"
+   ],
+   "name": "Vampire Weekend",
+   "tags": [
+    "afrobeat",
+    "alternative rock",
+    "american",
+    "chamber pop",
+    "indie",
+    "indie pop",
+    "indie rock",
+    "indietronica",
+    "leftfield",
+    "rock"
+   ],
+   "type": "Group"
+  },
+  "b00a17c3-72b2-4e39-96f9-770ba6cf4573": {
+   "disambiguation": "tenor saxophonist",
+   "genres": [
+    "contemporary jazz",
+    "jazz",
+    "post-bop",
+    "soul jazz"
+   ],
+   "id": "b00a17c3-72b2-4e39-96f9-770ba6cf4573",
+   "lastfmPages": [],
+   "name": "Joshua Redman",
+   "tags": [
+    "contemporary jazz",
+    "jazz",
+    "jazz and blues",
+    "post-bop",
+    "soul jazz"
+   ],
+   "type": "Person"
+  },
+  "b0b33754-a664-43b7-ba00-be0dc4ec2396": {
+   "disambiguation": "Japanese\u2010American musician and artist",
+   "genres": [
+    "art pop",
+    "avant-garde"
+   ],
+   "id": "b0b33754-a664-43b7-ba00-be0dc4ec2396",
+   "lastfmPages": [],
+   "name": "Yoko Ono",
+   "tags": [
+    "art pop",
+    "avant-garde"
+   ],
+   "type": "Person"
+  },
+  "b10bbbfc-cf9e-42e0-be17-e2c3e1d2600d": {
+   "disambiguation": "UK rock band, \u201cThe Fab Four\u201d",
+   "genres": [
+    "britpop",
+    "classic rock",
+    "experimental rock",
+    "folk rock",
+    "mainstream rock",
+    "merseybeat",
+    "pop",
+    "pop rock",
+    "psychedelic pop",
+    "psychedelic rock",
+    "rock",
+    "rock and roll"
+   ],
+   "id": "b10bbbfc-cf9e-42e0-be17-e2c3e1d2600d",
+   "lastfmPages": [
+    "the beatles"
+   ],
+   "name": "The Beatles",
+   "tags": [
+    "1960s",
+    "60s",
+    "abbey road",
+    "am pop",
+    "beat",
+    "boys band",
+    "british",
+    "british invasion",
+    "british psychedelia",
+    "britpop",
+    "classic rock",
+    "contemporary pop/rock",
+    "early pop/rock",
+    "english",
+    "europe",
+    "experimental rock",
+    "film soundtrack",
+    "folk rock",
+    "liverpool",
+    "mainstream rock",
+    "male vocalists",
+    "merseybeat",
+    "n.",
+    "pop",
+    "pop rock",
+    "popular music",
+    "psychedelia",
+    "psychedelic pop",
+    "psychedelic rock",
+    "reino unido",
+    "rock",
+    "rock and roll",
+    "rock groups",
+    "rock music",
+    "traditional folk music",
+    "uk",
+    "vyrzukhisuc-artiest"
+   ],
+   "type": "Group"
+  },
+  "b202beb7-99bd-47e7-8b72-195c8d72ebdd": {
+   "disambiguation": "",
+   "genres": [
+    "contemporary r&b",
+    "dance-pop",
+    "electropop",
+    "pop",
+    "rock",
+    "soul",
+    "teen pop"
+   ],
+   "id": "b202beb7-99bd-47e7-8b72-195c8d72ebdd",
+   "lastfmPages": [
+    "christina aguilera"
+   ],
+   "name": "Christina Aguilera",
+   "tags": [
+    "adult contemporary",
+    "contemporary r&b",
+    "dance-pop",
+    "electropop",
+    "female vocals",
+    "pop",
+    "pop and chart",
+    "rock",
+    "soul",
+    "teen pop"
+   ],
+   "type": "Person"
+  },
+  "b2f2216a-d7a9-4ce0-8b8f-f494d9a8c196": {
+   "disambiguation": "South Korean girl group",
+   "genres": [
+    "k-pop"
+   ],
+   "id": "b2f2216a-d7a9-4ce0-8b8f-f494d9a8c196",
+   "lastfmPages": [
+    "ive",
+    "\uc544\uc774\ube0c"
+   ],
+   "name": "IVE",
+   "tags": [
+    "4th gen k-pop",
+    "girl group",
+    "k-pop"
+   ],
+   "type": "Group"
+  },
+  "b328de0e-ee48-4d74-9d36-7c7ee16ffc69": {
+   "disambiguation": "UK jazz trio",
+   "genres": [
+    "electronica",
+    "jazz",
+    "jazz fusion",
+    "nu jazz",
+    "post-rock"
+   ],
+   "id": "b328de0e-ee48-4d74-9d36-7c7ee16ffc69",
+   "lastfmPages": [
+    "gogo penguin"
+   ],
+   "name": "GoGo Penguin",
+   "tags": [
+    "electronica",
+    "fusion",
+    "jazz",
+    "jazz fusion",
+    "nu jazz",
+    "post-rock",
+    "progressive jazz"
+   ],
+   "type": "Group"
+  },
+  "b3bc168f-24f6-4c46-b901-2c491c0a7abf": {
+   "disambiguation": "Mexican singer",
+   "genres": [
+    "dance-pop",
+    "pop"
+   ],
+   "id": "b3bc168f-24f6-4c46-b901-2c491c0a7abf",
+   "lastfmPages": [
+    "fey"
+   ],
+   "name": "Fey",
+   "tags": [
+    "dance-pop",
+    "pop"
+   ],
+   "type": "Person"
+  },
+  "b4cadc83-7307-4196-9f2f-29ebf1650045": {
+   "disambiguation": "",
+   "genres": [
+    "rock"
+   ],
+   "id": "b4cadc83-7307-4196-9f2f-29ebf1650045",
+   "lastfmPages": [
+    "lisa germano"
+   ],
+   "name": "Lisa Germano",
+   "tags": [
+    "4ad",
+    "rock"
+   ],
+   "type": "Person"
+  },
+  "b51c672b-85e0-48fe-8648-470a2422229f": {
+   "disambiguation": "",
+   "genres": [
+    "contemporary r&b",
+    "dance-pop",
+    "electropop",
+    "experimental",
+    "k-pop",
+    "noise",
+    "pop"
+   ],
+   "id": "b51c672b-85e0-48fe-8648-470a2422229f",
+   "lastfmPages": [
+    "aespa"
+   ],
+   "name": "aespa",
+   "tags": [
+    "2020s",
+    "4th gen k-pop",
+    "contemporary r&b",
+    "dance-pop",
+    "electropop",
+    "experimental",
+    "girl group",
+    "k-pop",
+    "noise",
+    "pop"
+   ],
+   "type": "Group"
+  },
+  "b51f07c9-a42c-4ea7-b5ed-ce4b7f47101a": {
+   "disambiguation": "",
+   "genres": [
+    "shoegaze"
+   ],
+   "id": "b51f07c9-a42c-4ea7-b5ed-ce4b7f47101a",
+   "lastfmPages": [
+    "hatchie"
+   ],
+   "name": "Hatchie",
+   "tags": [
+    "indie",
+    "shoegaze"
+   ],
+   "type": "Person"
+  },
+  "b5c4dbf3-95da-4d3a-8a37-94bc50b8e7a7": {
+   "disambiguation": "",
+   "genres": [
+    "baroque pop",
+    "pop",
+    "pop rock",
+    "psychedelic pop"
+   ],
+   "id": "b5c4dbf3-95da-4d3a-8a37-94bc50b8e7a7",
+   "lastfmPages": [],
+   "name": "The Left Banke",
+   "tags": [
+    "baroque pop",
+    "pop",
+    "pop rock",
+    "psychedelic pop"
+   ],
+   "type": "Group"
+  },
+  "b63d39fd-618d-46ff-8d36-f3a246660b8e": {
+   "disambiguation": "UK producer/mixer, Z Management, worked with The Verve and Richard Ashcroft",
+   "genres": [],
+   "id": "b63d39fd-618d-46ff-8d36-f3a246660b8e",
+   "lastfmPages": [],
+   "name": "Chris Potter",
+   "tags": [],
+   "type": "Person"
+  },
+  "b7452e13-952d-4faf-a113-a49499a39a0b": {
+   "disambiguation": "Russian rock band",
+   "genres": [],
+   "id": "b7452e13-952d-4faf-a113-a49499a39a0b",
+   "lastfmPages": [
+    "\u044e-\u043f\u0438\u0442\u0435\u0440"
+   ],
+   "name": "\u042e-\u041f\u0438\u0442\u0435\u0440",
+   "tags": [],
+   "type": "Group"
+  },
+  "b7723b3f-9a35-438d-bc42-8ad8b5e027ae": {
+   "disambiguation": "American jazz pianist, composer, and arranger",
+   "genres": [
+    "jazz",
+    "post-bop",
+    "third stream"
+   ],
+   "id": "b7723b3f-9a35-438d-bc42-8ad8b5e027ae",
+   "lastfmPages": [
+    "brad mehldau"
+   ],
+   "name": "Brad Mehldau",
+   "tags": [
+    "american",
+    "jazz",
+    "jazz and blues",
+    "pianist",
+    "post-bop",
+    "third stream"
+   ],
+   "type": "Person"
+  },
+  "b8549efe-f4fd-4dc0-8ef1-226e9c400233": {
+   "disambiguation": "",
+   "genres": [
+    "country pop",
+    "pop",
+    "pop rock",
+    "psychedelic pop",
+    "rock",
+    "sunshine pop"
+   ],
+   "id": "b8549efe-f4fd-4dc0-8ef1-226e9c400233",
+   "lastfmPages": [
+    "the monkees"
+   ],
+   "name": "The Monkees",
+   "tags": [
+    "bubblegum",
+    "country pop",
+    "film soundtrack",
+    "pop",
+    "pop rock",
+    "popular music",
+    "psychedelia",
+    "psychedelic pop",
+    "rock",
+    "silly love songs",
+    "sunshine pop"
+   ],
+   "type": "Group"
+  },
+  "b91c664b-5eee-4536-8b70-b1f2be519ac0": {
+   "disambiguation": "",
+   "genres": [
+    "americana",
+    "bluegrass",
+    "contemporary country",
+    "country",
+    "country rock",
+    "folk",
+    "progressive bluegrass"
+   ],
+   "id": "b91c664b-5eee-4536-8b70-b1f2be519ac0",
+   "lastfmPages": [
+    "alison krauss & union station"
+   ],
+   "name": "Alison Krauss & Union Station",
+   "tags": [
+    "americana",
+    "bluegrass",
+    "contemporary country",
+    "country",
+    "country rock",
+    "folk",
+    "progressive bluegrass"
+   ],
+   "type": "Group"
+  },
+  "b972f589-fb0e-474e-b64a-803b0364fa75": {
+   "disambiguation": "classical composer",
+   "genres": [
+    "classical",
+    "classical period",
+    "concerto",
+    "opera",
+    "sonata",
+    "symphony"
+   ],
+   "id": "b972f589-fb0e-474e-b64a-803b0364fa75",
+   "lastfmPages": [
+    "wolfgang amadeus mozart"
+   ],
+   "name": "Wolfgang Amadeus Mozart",
+   "tags": [
+    "1991",
+    "ascanio in alba",
+    "austrian",
+    "austrian composer",
+    "classical",
+    "classical period",
+    "complete",
+    "complete mozart edition",
+    "complete violin wind",
+    "composer",
+    "composers",
+    "composition",
+    "concerto",
+    "european",
+    "german",
+    "gould",
+    "karl ristenpart",
+    "opera",
+    "rothenberger",
+    "series-mozart-complete works-philips",
+    "sonata",
+    "symphony",
+    "volume 15"
+   ],
+   "type": "Person"
+  },
+  "b9ffd0e7-7f95-46db-bc1c-8094d459f084": {
+   "disambiguation": "",
+   "genres": [
+    "americana",
+    "contemporary folk",
+    "country",
+    "country folk",
+    "folk",
+    "singer-songwriter"
+   ],
+   "id": "b9ffd0e7-7f95-46db-bc1c-8094d459f084",
+   "lastfmPages": [
+    "nanci griffith"
+   ],
+   "name": "Nanci Griffith",
+   "tags": [
+    "2008 universal fire victim",
+    "americana",
+    "contemporary folk",
+    "country",
+    "country folk",
+    "folk",
+    "singer-songwriter"
+   ],
+   "type": "Person"
+  },
+  "ba1bf556-2af2-4772-835f-ed2e15070758": {
+   "disambiguation": "",
+   "genres": [
+    "americana",
+    "contemporary country",
+    "contemporary folk",
+    "country",
+    "country pop",
+    "folk",
+    "singer-songwriter"
+   ],
+   "id": "ba1bf556-2af2-4772-835f-ed2e15070758",
+   "lastfmPages": [
+    "mary chapin carpenter"
+   ],
+   "name": "Mary Chapin Carpenter",
+   "tags": [
+    "americana",
+    "contemporary country",
+    "contemporary folk",
+    "country",
+    "country pop",
+    "elektrogitarre",
+    "folk",
+    "gitarre",
+    "komponistin",
+    "singer-songwriter",
+    "singstimme",
+    "s\u00e4ngerin"
+   ],
+   "type": "Person"
+  },
+  "ba2ff5ad-b5a4-499b-aac1-b31fd093112b": {
+   "disambiguation": "",
+   "genres": [
+    "avant-garde jazz",
+    "free improvisation",
+    "free jazz",
+    "jazz",
+    "jazz fusion",
+    "post-bop",
+    "third stream"
+   ],
+   "id": "ba2ff5ad-b5a4-499b-aac1-b31fd093112b",
+   "lastfmPages": [],
+   "name": "Vijay Iyer",
+   "tags": [
+    "avant-garde jazz",
+    "free improvisation",
+    "free jazz",
+    "jazz",
+    "jazz fusion",
+    "post-bop",
+    "third stream"
+   ],
+   "type": "Person"
+  },
+  "bb0a1e95-9444-4a05-a1bb-22b8d7ed7844": {
+   "disambiguation": "",
+   "genres": [
+    "blue-eyed soul",
+    "jazz pop",
+    "progressive pop",
+    "singer-songwriter",
+    "soul"
+   ],
+   "id": "bb0a1e95-9444-4a05-a1bb-22b8d7ed7844",
+   "lastfmPages": [
+    "laura nyro"
+   ],
+   "name": "Laura Nyro",
+   "tags": [
+    "blue-eyed soul",
+    "jazz pop",
+    "progressive pop",
+    "singer-songwriter",
+    "soul"
+   ],
+   "type": "Person"
+  },
+  "bbb8df41-678f-4bba-8814-8702c6fa78ee": {
+   "disambiguation": "Celtic band from Montreal",
+   "genres": [],
+   "id": "bbb8df41-678f-4bba-8814-8702c6fa78ee",
+   "lastfmPages": [],
+   "name": "Solstice",
+   "tags": [],
+   "type": "Group"
+  },
+  "bce172fc-51bb-43f7-9a25-b406a0a581d5": {
+   "disambiguation": "South Korean girl group",
+   "genres": [
+    "k-pop"
+   ],
+   "id": "bce172fc-51bb-43f7-9a25-b406a0a581d5",
+   "lastfmPages": [
+    "itzy"
+   ],
+   "name": "ITZY",
+   "tags": [
+    "4th gen k-pop",
+    "girl group",
+    "k-pop",
+    "korean"
+   ],
+   "type": "Group"
+  },
+  "bd04c7b4-530c-4802-ae16-962d004a5093": {
+   "disambiguation": "South Korean girl group",
+   "genres": [
+    "k-pop"
+   ],
+   "id": "bd04c7b4-530c-4802-ae16-962d004a5093",
+   "lastfmPages": [
+    "everglow"
+   ],
+   "name": "EVERGLOW",
+   "tags": [
+    "girl group",
+    "k-pop"
+   ],
+   "type": "Group"
+  },
+  "bec3b214-0f07-4026-a859-07b7bbaa6ce0": {
+   "disambiguation": "",
+   "genres": [
+    "blues rock",
+    "rock"
+   ],
+   "id": "bec3b214-0f07-4026-a859-07b7bbaa6ce0",
+   "lastfmPages": [
+    "\u0447\u0438\u0436 & co"
+   ],
+   "name": "\u0427\u0438\u0436 & Co",
+   "tags": [
+    "blues rock",
+    "rock",
+    "russian"
+   ],
+   "type": "Group"
+  },
+  "bfbccd40-1a06-4ee7-b24d-b2f8cc714fa9": {
+   "disambiguation": "",
+   "genres": [
+    "electronic"
+   ],
+   "id": "bfbccd40-1a06-4ee7-b24d-b2f8cc714fa9",
+   "lastfmPages": [
+    "gold panda"
+   ],
+   "name": "Gold Panda",
+   "tags": [
+    "electronic",
+    "merge-recordings"
+   ],
+   "type": "Person"
+  },
+  "c0a1179b-b14a-4d68-a3c1-1fdab16ed602": {
+   "disambiguation": "US rapper",
+   "genres": [
+    "alternative hip hop",
+    "boom bap",
+    "chipmunk soul",
+    "conscious hip hop",
+    "hardcore hip hop",
+    "hip hop",
+    "jazz rap",
+    "neo soul",
+    "political hip hop",
+    "pop rap"
+   ],
+   "id": "c0a1179b-b14a-4d68-a3c1-1fdab16ed602",
+   "lastfmPages": [
+    "common"
+   ],
+   "name": "Common",
+   "tags": [
+    "alternative hip hop",
+    "boom bap",
+    "chipmunk soul",
+    "conscious hip hop",
+    "hardcore hip hop",
+    "hip hop",
+    "jazz rap",
+    "neo soul",
+    "political hip hop",
+    "pop rap"
+   ],
+   "type": "Person"
+  },
+  "c0c1183e-6940-48ca-8f96-98250fcb3ef1": {
+   "disambiguation": "",
+   "genres": [
+    "hip hop"
+   ],
+   "id": "c0c1183e-6940-48ca-8f96-98250fcb3ef1",
+   "lastfmPages": [
+    "slum village"
+   ],
+   "name": "Slum Village",
+   "tags": [
+    "hip hop"
+   ],
+   "type": "Group"
+  },
+  "c116b504-ce24-4264-96dc-d10a7458236f": {
+   "disambiguation": "",
+   "genres": [
+    "contemporary jazz",
+    "jazz",
+    "jazz fusion"
+   ],
+   "id": "c116b504-ce24-4264-96dc-d10a7458236f",
+   "lastfmPages": [
+    "julian lage"
+   ],
+   "name": "Julian Lage",
+   "tags": [
+    "contemporary jazz",
+    "jazz",
+    "jazz fusion"
+   ],
+   "type": "Person"
+  },
+  "c1341251-e2c7-4eae-989c-645f0c22487c": {
+   "disambiguation": "",
+   "genres": [
+    "doom metal",
+    "epic doom metal",
+    "heavy metal",
+    "metal",
+    "power metal",
+    "traditional doom metal",
+    "us power metal"
+   ],
+   "id": "c1341251-e2c7-4eae-989c-645f0c22487c",
+   "lastfmPages": [
+    "cirith ungol"
+   ],
+   "name": "Cirith Ungol",
+   "tags": [
+    "doom metal",
+    "epic doom metal",
+    "epic heavy metal",
+    "estados unidos",
+    "heavy metal",
+    "metal",
+    "power metal",
+    "traditional doom metal",
+    "us power metal"
+   ],
+   "type": "Group"
+  },
+  "c6b67d9d-2365-47b8-bce2-6011971dd19c": {
+   "disambiguation": "Australian jazz trio",
+   "genres": [
+    "jazz"
+   ],
+   "id": "c6b67d9d-2365-47b8-bce2-6011971dd19c",
+   "lastfmPages": [],
+   "name": "Solstice",
+   "tags": [
+    "jazz"
+   ],
+   "type": "Group"
+  },
+  "c70d12a2-24fe-4f83-a6e6-57d84f8efb51": {
+   "disambiguation": "German composer",
+   "genres": [
+    "art song",
+    "classical",
+    "concerto",
+    "romantic classical",
+    "symphony"
+   ],
+   "id": "c70d12a2-24fe-4f83-a6e6-57d84f8efb51",
+   "lastfmPages": [
+    "johannes brahms"
+   ],
+   "name": "Johannes Brahms",
+   "tags": [
+    "art song",
+    "classical",
+    "composer",
+    "concerto",
+    "european",
+    "german",
+    "german composer",
+    "piano sonata",
+    "romantic",
+    "romantic classical",
+    "symphony"
+   ],
+   "type": "Person"
+  },
+  "c7abb29e-6e5c-4e07-a45d-ff5028a81099": {
+   "disambiguation": "",
+   "genres": [
+    "folk"
+   ],
+   "id": "c7abb29e-6e5c-4e07-a45d-ff5028a81099",
+   "lastfmPages": [
+    "sibylle baier"
+   ],
+   "name": "Sibylle Baier",
+   "tags": [
+    "folk"
+   ],
+   "type": "Person"
+  },
+  "c9c01f52-3927-43ff-a670-8027f4fb7626": {
+   "disambiguation": "punk/hardcore from Boston",
+   "genres": [],
+   "id": "c9c01f52-3927-43ff-a670-8027f4fb7626",
+   "lastfmPages": [],
+   "name": "Black Sheep",
+   "tags": [],
+   "type": "Group"
+  },
+  "cb69e1f1-bc76-4df5-93c9-cf97dd8a3b5c": {
+   "disambiguation": "",
+   "genres": [
+    "chamber folk",
+    "contemporary folk",
+    "folk",
+    "freak folk",
+    "free folk",
+    "indie folk",
+    "progressive folk",
+    "rock",
+    "singer-songwriter"
+   ],
+   "id": "cb69e1f1-bc76-4df5-93c9-cf97dd8a3b5c",
+   "lastfmPages": [
+    "joanna newsom"
+   ],
+   "name": "Joanna Newsom",
+   "tags": [
+    "chamber folk",
+    "contemporary folk",
+    "folk",
+    "freak folk",
+    "free folk",
+    "indie folk",
+    "new weird america",
+    "progressive folk",
+    "rock",
+    "singer-songwriter",
+    "singer/songwriter",
+    "spotify boycott"
+   ],
+   "type": "Person"
+  },
+  "cc3054c1-803c-4b55-9c59-200acd60b5e4": {
+   "disambiguation": "",
+   "genres": [
+    "k-pop"
+   ],
+   "id": "cc3054c1-803c-4b55-9c59-200acd60b5e4",
+   "lastfmPages": [
+    "got the beat"
+   ],
+   "name": "GOT the beat",
+   "tags": [
+    "girl group",
+    "k-pop",
+    "kpop",
+    "supergroup"
+   ],
+   "type": "Group"
+  },
+  "cc9e91cd-c8dc-4302-bb5d-cff7afb019e1": {
+   "disambiguation": "Japanese visual kei",
+   "genres": [
+    "visual kei"
+   ],
+   "id": "cc9e91cd-c8dc-4302-bb5d-cff7afb019e1",
+   "lastfmPages": [],
+   "name": "JENNIE",
+   "tags": [
+    "visual kei"
+   ],
+   "type": "Group"
+  },
+  "cdcc016c-2813-4fc7-8376-391acb19ba0b": {
+   "disambiguation": "Petroglyph release artist",
+   "genres": [],
+   "id": "cdcc016c-2813-4fc7-8376-391acb19ba0b",
+   "lastfmPages": [],
+   "name": "The Association",
+   "tags": [],
+   "type": null
+  },
+  "cf5bbb04-a6c8-4c07-8549-fe9c4323e64a": {
+   "disambiguation": "UK graphic design studio",
+   "genres": [],
+   "id": "cf5bbb04-a6c8-4c07-8549-fe9c4323e64a",
+   "lastfmPages": [],
+   "name": "Black Sheep",
+   "tags": [],
+   "type": "Other"
+  },
+  "cfa7c6b1-bbb3-4f9a-a636-cbfafb9b4bcf": {
+   "disambiguation": "",
+   "genres": [
+    "contemporary jazz",
+    "jazz",
+    "jazz fusion",
+    "nu jazz"
+   ],
+   "id": "cfa7c6b1-bbb3-4f9a-a636-cbfafb9b4bcf",
+   "lastfmPages": [],
+   "name": "Esbj\u00f6rn Svensson Trio",
+   "tags": [
+    "contemporary jazz",
+    "jazz",
+    "jazz fusion",
+    "nu jazz"
+   ],
+   "type": "Group"
+  },
+  "cfbc0924-0035-4d6c-8197-f024653af823": {
+   "disambiguation": "US rapper",
+   "genres": [
+    "boom bap",
+    "deep soul",
+    "east coast hip hop",
+    "hip hop",
+    "hip hop soul",
+    "jazz rap",
+    "pop",
+    "pop soul",
+    "r&b",
+    "smooth soul",
+    "trap soul"
+   ],
+   "id": "cfbc0924-0035-4d6c-8197-f024653af823",
+   "lastfmPages": [
+    "nas"
+   ],
+   "name": "Nas",
+   "tags": [
+    "boom bap",
+    "conscious rap",
+    "deep soul",
+    "east coast hip hop",
+    "east coast hip-hop",
+    "god",
+    "hip hop",
+    "hip hop soul",
+    "jazz rap",
+    "pop",
+    "pop soul",
+    "r&b",
+    "rap",
+    "rap musicians",
+    "rnb",
+    "smooth soul",
+    "top 10",
+    "top 100",
+    "top 5",
+    "top 50",
+    "trap soul"
+   ],
+   "type": "Person"
+  },
+  "cff77480-7ba4-4206-b1a8-e1b98b38f07c": {
+   "disambiguation": "",
+   "genres": [
+    "boom bap",
+    "conscious hip hop",
+    "east coast hip hop",
+    "hip hop",
+    "jazz rap"
+   ],
+   "id": "cff77480-7ba4-4206-b1a8-e1b98b38f07c",
+   "lastfmPages": [],
+   "name": "Pete Rock & C.L. Smooth",
+   "tags": [
+    "boom bap",
+    "conscious hip hop",
+    "east coast hip hop",
+    "hip hop",
+    "jazz rap"
+   ],
+   "type": "Group"
+  },
+  "d0b9a780-439a-4c4e-a658-4b0d81fa6796": {
+   "disambiguation": "",
+   "genres": [],
+   "id": "d0b9a780-439a-4c4e-a658-4b0d81fa6796",
+   "lastfmPages": [],
+   "name": "Neil Cowley Trio",
+   "tags": [],
+   "type": "Group"
+  },
+  "d135874d-9cae-4fef-97e3-36acbd9f5a26": {
+   "disambiguation": "",
+   "genres": [
+    "art punk",
+    "art rock",
+    "blues",
+    "folk rock",
+    "garage rock",
+    "glam rock",
+    "hard rock",
+    "pop rock",
+    "proto-punk",
+    "punk",
+    "punk rock",
+    "rock",
+    "singer-songwriter"
+   ],
+   "id": "d135874d-9cae-4fef-97e3-36acbd9f5a26",
+   "lastfmPages": [
+    "patti smith"
+   ],
+   "name": "Patti Smith",
+   "tags": [
+    "album rock",
+    "alternative singer/songwriter",
+    "art punk",
+    "art rock",
+    "blues",
+    "folk rock",
+    "garage rock",
+    "glam rock",
+    "hard rock",
+    "new york punk",
+    "permanent wave",
+    "pop rock",
+    "proto-punk",
+    "protopunk",
+    "punk",
+    "punk rock",
+    "punk/new wave",
+    "rock",
+    "singer-songwriter"
+   ],
+   "type": "Person"
+  },
+  "d2d87167-e0a5-4ba6-bea3-2fc2ee341c19": {
+   "disambiguation": "Lukas Rohner, Tassilo Dellers, Likas Nissen, Robi Schweizer & Felix Handschin",
+   "genres": [],
+   "id": "d2d87167-e0a5-4ba6-bea3-2fc2ee341c19",
+   "lastfmPages": [],
+   "name": "Omen",
+   "tags": [],
+   "type": "Group"
+  },
+  "d32de3a1-01f0-430e-859a-72307724041c": {
+   "disambiguation": "Finnish artist",
+   "genres": [],
+   "id": "d32de3a1-01f0-430e-859a-72307724041c",
+   "lastfmPages": [],
+   "name": "Jennie",
+   "tags": [],
+   "type": "Person"
+  },
+  "d4305549-6b4e-4a57-b24d-8af0743fe191": {
+   "disambiguation": "",
+   "genres": [
+    "baroque pop",
+    "beat music",
+    "pop",
+    "pop rock",
+    "psychedelic pop",
+    "rock",
+    "soft rock",
+    "sunshine pop"
+   ],
+   "id": "d4305549-6b4e-4a57-b24d-8af0743fe191",
+   "lastfmPages": [
+    "the hollies"
+   ],
+   "name": "The Hollies",
+   "tags": [
+    "baroque pop",
+    "beat music",
+    "british",
+    "pop",
+    "pop rock",
+    "psychedelic pop",
+    "rock",
+    "soft rock",
+    "sunshine pop"
+   ],
+   "type": "Group"
+  },
+  "d51ce0e4-027e-4ecf-a87e-c02a08149f42": {
+   "disambiguation": "",
+   "genres": [
+    "bedroom pop",
+    "dream pop",
+    "indie pop"
+   ],
+   "id": "d51ce0e4-027e-4ecf-a87e-c02a08149f42",
+   "lastfmPages": [
+    "fazerdaze"
+   ],
+   "name": "Fazerdaze",
+   "tags": [
+    "bedroom pop",
+    "dream pop",
+    "female vocals",
+    "indie pop",
+    "new zealand"
+   ],
+   "type": "Person"
+  },
+  "d5cc67b8-1cc4-453b-96e8-44487acdebea": {
+   "disambiguation": "",
+   "genres": [
+    "dream pop",
+    "indie pop",
+    "pop",
+    "shoegaze",
+    "slowcore"
+   ],
+   "id": "d5cc67b8-1cc4-453b-96e8-44487acdebea",
+   "lastfmPages": [
+    "beach house"
+   ],
+   "name": "Beach House",
+   "tags": [
+    "dream pop",
+    "indie",
+    "indie pop",
+    "poggers",
+    "pop",
+    "rock and indie",
+    "shoegaze",
+    "slowcore"
+   ],
+   "type": "Group"
+  },
+  "d6ecf01d-4876-47fd-aec9-adf418788219": {
+   "disambiguation": "released This Moment Will Never Happen Again",
+   "genres": [],
+   "id": "d6ecf01d-4876-47fd-aec9-adf418788219",
+   "lastfmPages": [],
+   "name": "Solstice",
+   "tags": [],
+   "type": null
+  },
+  "d7134426-a937-43bf-bc54-f10ad8102ed9": {
+   "disambiguation": "",
+   "genres": [
+    "alternative hip hop",
+    "hip hop",
+    "west coast hip hop"
+   ],
+   "id": "d7134426-a937-43bf-bc54-f10ad8102ed9",
+   "lastfmPages": [
+    "the pharcyde"
+   ],
+   "name": "The Pharcyde",
+   "tags": [
+    "alternative hip hop",
+    "hip hop",
+    "west coast hip hop"
+   ],
+   "type": "Group"
+  },
+  "d75d1f08-bbb8-4eae-9877-399ca9121197": {
+   "disambiguation": "QB hip hop duo Prodigy & Havoc",
+   "genres": [
+    "boom bap",
+    "east coast hip hop",
+    "gangsta rap",
+    "hardcore hip hop",
+    "hip hop"
+   ],
+   "id": "d75d1f08-bbb8-4eae-9877-399ca9121197",
+   "lastfmPages": [
+    "mobb deep"
+   ],
+   "name": "Mobb Deep",
+   "tags": [
+    "boom bap",
+    "east coast hip hop",
+    "gangsta rap",
+    "hardcore hip hop",
+    "hip hop"
+   ],
+   "type": "Group"
+  },
+  "d7e9b9e7-8ac3-4be4-85c8-64601d68261c": {
+   "disambiguation": "American doom metal band",
+   "genres": [
+    "doom metal",
+    "heavy metal",
+    "metal",
+    "psychedelic rock",
+    "rock",
+    "traditional doom metal"
+   ],
+   "id": "d7e9b9e7-8ac3-4be4-85c8-64601d68261c",
+   "lastfmPages": [],
+   "name": "Pentagram",
+   "tags": [
+    "doom metal",
+    "heavy metal",
+    "metal",
+    "psychedelic rock",
+    "rock",
+    "traditional doom metal"
+   ],
+   "type": "Group"
+  },
+  "d7f07620-a4b9-4afd-9991-472478a65848": {
+   "disambiguation": "Belgian punk band",
+   "genres": [],
+   "id": "d7f07620-a4b9-4afd-9991-472478a65848",
+   "lastfmPages": [],
+   "name": "Black Sheep",
+   "tags": [],
+   "type": "Group"
+  },
+  "d922fda2-1d1c-4c26-b3f8-4eaff1eda85d": {
+   "disambiguation": "",
+   "genres": [
+    "jazz"
+   ],
+   "id": "d922fda2-1d1c-4c26-b3f8-4eaff1eda85d",
+   "lastfmPages": [],
+   "name": "Vijay Iyer Trio",
+   "tags": [
+    "jazz"
+   ],
+   "type": "Group"
+  },
+  "da43f62d-a67d-43af-ba85-d3aa3520e6c7": {
+   "disambiguation": "cover band from Mornac-sur-Seudre",
+   "genres": [],
+   "id": "da43f62d-a67d-43af-ba85-d3aa3520e6c7",
+   "lastfmPages": [],
+   "name": "Black Sheep",
+   "tags": [],
+   "type": "Group"
+  },
+  "da5eaa3b-397e-4af8-9a12-5c4ec93e8b48": {
+   "disambiguation": "",
+   "genres": [],
+   "id": "da5eaa3b-397e-4af8-9a12-5c4ec93e8b48",
+   "lastfmPages": [
+    "candy claws"
+   ],
+   "name": "Candy Claws",
+   "tags": [],
+   "type": "Group"
+  },
+  "dce2721e-989c-4a4d-b4ff-08af02de4b79": {
+   "disambiguation": "released Pretend",
+   "genres": [],
+   "id": "dce2721e-989c-4a4d-b4ff-08af02de4b79",
+   "lastfmPages": [],
+   "name": "Solstice",
+   "tags": [],
+   "type": null
+  },
+  "de22adae-f8ac-414f-b653-b0162611bd60": {
+   "disambiguation": "Colombian singer",
+   "genres": [
+    "latin",
+    "r&b",
+    "reggaeton"
+   ],
+   "id": "de22adae-f8ac-414f-b653-b0162611bd60",
+   "lastfmPages": [
+    "karol g"
+   ],
+   "name": "KAROL G",
+   "tags": [
+    "latin",
+    "latin urban",
+    "r&b",
+    "reggaeton",
+    "spanish"
+   ],
+   "type": "Person"
+  },
+  "de2f6b7a-9d08-4a16-88c1-68c141e0b0c6": {
+   "disambiguation": "",
+   "genres": [
+    "rock"
+   ],
+   "id": "de2f6b7a-9d08-4a16-88c1-68c141e0b0c6",
+   "lastfmPages": [],
+   "name": "\u0412\u044f\u0447\u0435\u0441\u043b\u0430\u0432 \u0411\u0443\u0442\u0443\u0441\u043e\u0432",
+   "tags": [
+    "rock"
+   ],
+   "type": "Person"
+  },
+  "e0343f45-4293-4e60-8653-8ba3c1061722": {
+   "disambiguation": "hardstyle by Juan Vilchez",
+   "genres": [
+    "euphoric hardstyle"
+   ],
+   "id": "e0343f45-4293-4e60-8653-8ba3c1061722",
+   "lastfmPages": [],
+   "name": "Solstice",
+   "tags": [
+    "euphoric hardstyle"
+   ],
+   "type": "Person"
+  },
+  "e1325488-3808-4331-9e7a-38a89fac6597": {
+   "disambiguation": "",
+   "genres": [
+    "folk rock",
+    "new wave",
+    "post-punk"
+   ],
+   "id": "e1325488-3808-4331-9e7a-38a89fac6597",
+   "lastfmPages": [
+    "\u0430\u043b\u044c\u044f\u043d\u0441"
+   ],
+   "name": "\u0410\u043b\u044c\u044f\u043d\u0441",
+   "tags": [
+    "folk rock",
+    "new wave",
+    "post-punk",
+    "synthpop"
+   ],
+   "type": "Group"
+  },
+  "e1d521ea-5b97-4981-987c-ba988b2a87d7": {
+   "disambiguation": "French composer",
+   "genres": [
+    "classical",
+    "modern classical"
+   ],
+   "id": "e1d521ea-5b97-4981-987c-ba988b2a87d7",
+   "lastfmPages": [
+    "erik satie"
+   ],
+   "name": "Erik Satie",
+   "tags": [
+    "classical",
+    "composer",
+    "european",
+    "french",
+    "french composer",
+    "modern classical",
+    "nuno",
+    "pianist",
+    "piano"
+   ],
+   "type": "Person"
+  },
+  "e1fae923-bf20-4d7b-89fb-38ecc0a8236b": {
+   "disambiguation": "US sunshine pop group",
+   "genres": [
+    "pop",
+    "sunshine pop"
+   ],
+   "id": "e1fae923-bf20-4d7b-89fb-38ecc0a8236b",
+   "lastfmPages": [],
+   "name": "The Association",
+   "tags": [
+    "pop",
+    "sunshine pop"
+   ],
+   "type": "Group"
+  },
+  "e384b4b3-a5e0-4a08-b92c-b534140e1890": {
+   "disambiguation": "Japanese Rock Band",
+   "genres": [
+    "visual kei"
+   ],
+   "id": "e384b4b3-a5e0-4a08-b92c-b534140e1890",
+   "lastfmPages": [],
+   "name": "The Turtles",
+   "tags": [
+    "visual kei"
+   ],
+   "type": "Group"
+  },
+  "e413ae3e-0c69-4bc6-b16b-aa7491350652": {
+   "disambiguation": "Germany 96-97",
+   "genres": [],
+   "id": "e413ae3e-0c69-4bc6-b16b-aa7491350652",
+   "lastfmPages": [],
+   "name": "Lisa",
+   "tags": [],
+   "type": "Person"
+  },
+  "e4b06dc9-c196-49e1-a20a-554e72d95268": {
+   "disambiguation": "Russian rock band",
+   "genres": [
+    "gothic rock",
+    "post-punk"
+   ],
+   "id": "e4b06dc9-c196-49e1-a20a-554e72d95268",
+   "lastfmPages": [],
+   "name": "\u0410\u0433\u0430\u0442\u0430 \u041a\u0440\u0438\u0441\u0442\u0438",
+   "tags": [
+    "darkwave",
+    "gothic rock",
+    "post-punk",
+    "russian",
+    "synth rock"
+   ],
+   "type": "Group"
+  },
+  "e659c09d-8ec1-43d8-ab3f-72630b926157": {
+   "disambiguation": "British doom metal band",
+   "genres": [
+    "doom metal",
+    "metal",
+    "stoner metal"
+   ],
+   "id": "e659c09d-8ec1-43d8-ab3f-72630b926157",
+   "lastfmPages": [
+    "cathedral"
+   ],
+   "name": "Cathedral",
+   "tags": [
+    "british",
+    "doom metal",
+    "metal",
+    "stoner metal"
+   ],
+   "type": "Group"
+  },
+  "e664d1cd-23ab-48d5-b8fa-e98485daa5be": {
+   "disambiguation": "",
+   "genres": [
+    "dream pop",
+    "indie pop",
+    "shoegaze"
+   ],
+   "id": "e664d1cd-23ab-48d5-b8fa-e98485daa5be",
+   "lastfmPages": [],
+   "name": "The Radio Dept.",
+   "tags": [
+    "dream pop",
+    "indie pop",
+    "shoegaze"
+   ],
+   "type": "Group"
+  },
+  "e6dbe57d-74cf-4f6e-9e16-ed6cce18baef": {
+   "disambiguation": "fiddler",
+   "genres": [
+    "bluegrass",
+    "country",
+    "folk"
+   ],
+   "id": "e6dbe57d-74cf-4f6e-9e16-ed6cce18baef",
+   "lastfmPages": [
+    "sara watkins"
+   ],
+   "name": "Sara Watkins",
+   "tags": [
+    "bluegrass",
+    "country",
+    "folk"
+   ],
+   "type": "Person"
+  },
+  "e795e03d-b5d5-4a5f-834d-162cfb308a2c": {
+   "disambiguation": "",
+   "genres": [
+    "alternative rock",
+    "art rock",
+    "chamber folk",
+    "folk rock",
+    "indie rock",
+    "rock",
+    "singer-songwriter"
+   ],
+   "id": "e795e03d-b5d5-4a5f-834d-162cfb308a2c",
+   "lastfmPages": [
+    "pj harvey"
+   ],
+   "name": "PJ Harvey",
+   "tags": [
+    "alternative rock",
+    "alternative singer-songwriter",
+    "art rock",
+    "chamber folk",
+    "folk rock",
+    "indie rock",
+    "rock",
+    "singer-songwriter",
+    "the lost generation",
+    "too pure"
+   ],
+   "type": "Person"
+  },
+  "e9243b8e-84ed-4a8f-82d1-ea084a2f0c4a": {
+   "disambiguation": "",
+   "genres": [
+    "dream pop",
+    "indie pop"
+   ],
+   "id": "e9243b8e-84ed-4a8f-82d1-ea084a2f0c4a",
+   "lastfmPages": [],
+   "name": "Lunar Vacation",
+   "tags": [
+    "dream pop",
+    "indie",
+    "indie pop"
+   ],
+   "type": "Group"
+  },
+  "ea73b35f-7194-4c36-b365-af4994fdd9fb": {
+   "disambiguation": "hip-hop producer Sidney Brown",
+   "genres": [
+    "hip hop"
+   ],
+   "id": "ea73b35f-7194-4c36-b365-af4994fdd9fb",
+   "lastfmPages": [],
+   "name": "Omen",
+   "tags": [
+    "hip hop"
+   ],
+   "type": "Person"
+  },
+  "ebfc1398-8d96-47e3-82c3-f782abcdb13d": {
+   "disambiguation": "American rock band",
+   "genres": [
+    "baroque pop",
+    "classic rock",
+    "pop",
+    "pop rock",
+    "progressive pop",
+    "psychedelic pop",
+    "rock",
+    "sunshine pop",
+    "surf rock",
+    "vocal surf"
+   ],
+   "id": "ebfc1398-8d96-47e3-82c3-f782abcdb13d",
+   "lastfmPages": [
+    "the beach boys"
+   ],
+   "name": "The Beach Boys",
+   "tags": [
+    "american",
+    "baroque pop",
+    "classic rock",
+    "pop",
+    "pop rock",
+    "progressive pop",
+    "psychedelic pop",
+    "rock",
+    "sunshine pop",
+    "surf rock",
+    "vocal surf"
+   ],
+   "type": "Group"
+  },
+  "ec37ecfe-65b4-49a4-83c7-ee1ccaeec2e3": {
+   "disambiguation": "",
+   "genres": [
+    "bluegrass",
+    "contemporary country",
+    "country",
+    "country pop"
+   ],
+   "id": "ec37ecfe-65b4-49a4-83c7-ee1ccaeec2e3",
+   "lastfmPages": [
+    "vince gill"
+   ],
+   "name": "Vince Gill",
+   "tags": [
+    "adult contemporary",
+    "bluegrass",
+    "contemporary country",
+    "country",
+    "country pop",
+    "grammy winner",
+    "session"
+   ],
+   "type": "Person"
+  },
+  "ecb3911f-94da-49ac-8cf1-70e53e7ca633": {
+   "disambiguation": "Greek",
+   "genres": [],
+   "id": "ecb3911f-94da-49ac-8cf1-70e53e7ca633",
+   "lastfmPages": [],
+   "name": "Pentagram",
+   "tags": [
+    "greek"
+   ],
+   "type": "Group"
+  },
+  "ef3bfe99-3b8e-46f3-8ccc-8289f40b4285": {
+   "disambiguation": "$uiciderecord$",
+   "genres": [],
+   "id": "ef3bfe99-3b8e-46f3-8ccc-8289f40b4285",
+   "lastfmPages": [],
+   "name": "JENNIE",
+   "tags": [],
+   "type": null
+  },
+  "ef67a875-9e45-4057-b91d-56c4e744d901": {
+   "disambiguation": "",
+   "genres": [
+    "dream pop",
+    "indie pop"
+   ],
+   "id": "ef67a875-9e45-4057-b91d-56c4e744d901",
+   "lastfmPages": [
+    "hazel english"
+   ],
+   "name": "Hazel English",
+   "tags": [
+    "dream pop",
+    "indie pop"
+   ],
+   "type": "Person"
+  },
+  "f0254eec-383d-42ca-84c7-d452f3a1e638": {
+   "disambiguation": "drum & bass artist; Joseph Blase Mathews",
+   "genres": [
+    "drum and bass"
+   ],
+   "id": "f0254eec-383d-42ca-84c7-d452f3a1e638",
+   "lastfmPages": [],
+   "name": "Omen",
+   "tags": [
+    "drum and bass"
+   ],
+   "type": "Person"
+  },
+  "f0602f55-1770-483d-89bd-4bae0d0ac086": {
+   "disambiguation": "American singer and actress aka J.Lo",
+   "genres": [
+    "contemporary r&b",
+    "dance",
+    "dance-pop",
+    "electro house",
+    "electronic",
+    "latin",
+    "latin pop",
+    "pop",
+    "pop rap",
+    "reggaeton"
+   ],
+   "id": "f0602f55-1770-483d-89bd-4bae0d0ac086",
+   "lastfmPages": [
+    "jennifer lopez"
+   ],
+   "name": "Jennifer Lopez",
+   "tags": [
+    "contemporary r&b",
+    "dance",
+    "dance-pop",
+    "electro house",
+    "electronic",
+    "latin",
+    "latin pop",
+    "pop",
+    "pop rap",
+    "reggaeton"
+   ],
+   "type": "Person"
+  },
+  "f22942a1-6f70-4f48-866e-238cb2308fbd": {
+   "disambiguation": "",
+   "genres": [
+    "acid breaks",
+    "acid techno",
+    "ambient",
+    "ambient techno",
+    "bleep techno",
+    "breakbeat",
+    "breakcore",
+    "breaks",
+    "club",
+    "drill and bass",
+    "drum and bass",
+    "electro",
+    "electroacoustic",
+    "electronic",
+    "electronica",
+    "experimental",
+    "house",
+    "idm",
+    "instrumental",
+    "organic house",
+    "pop",
+    "techno"
+   ],
+   "id": "f22942a1-6f70-4f48-866e-238cb2308fbd",
+   "lastfmPages": [
+    "aphex twin"
+   ],
+   "name": "Aphex Twin",
+   "tags": [
+    "acid breaks",
+    "acid techno",
+    "ambient",
+    "ambient music",
+    "ambient techno",
+    "bleep techno",
+    "breakbeat",
+    "breakcore",
+    "breaks",
+    "british",
+    "club",
+    "drill and bass",
+    "drum and bass",
+    "electro",
+    "electroacoustic",
+    "electronic",
+    "electronica",
+    "experimental",
+    "experimental ambient",
+    "experimental jungle",
+    "experimental techno",
+    "house",
+    "idm",
+    "instrumental",
+    "organic house",
+    "pop",
+    "progressive techno",
+    "techno"
+   ],
+   "type": "Person"
+  },
+  "f315f045-48e3-4a45-a4ed-14c9a522e4db": {
+   "disambiguation": "danish jazz trio",
+   "genres": [
+    "jazz"
+   ],
+   "id": "f315f045-48e3-4a45-a4ed-14c9a522e4db",
+   "lastfmPages": [],
+   "name": "Phronesis",
+   "tags": [
+    "jazz"
+   ],
+   "type": "Group"
+  },
+  "f40d2ad4-187f-40e7-9a9f-6bae9f3e9286": {
+   "disambiguation": "Dutch death metal",
+   "genres": [
+    "death metal",
+    "doom metal"
+   ],
+   "id": "f40d2ad4-187f-40e7-9a9f-6bae9f3e9286",
+   "lastfmPages": [],
+   "name": "Solstice",
+   "tags": [
+    "death metal",
+    "doom metal",
+    "doom/death metal"
+   ],
+   "type": "Group"
+  },
+  "f4992dae-69f2-4c0d-95fa-0b65f47906f2": {
+   "disambiguation": "",
+   "genres": [
+    "alternative country",
+    "country"
+   ],
+   "id": "f4992dae-69f2-4c0d-95fa-0b65f47906f2",
+   "lastfmPages": [],
+   "name": "Shelby Lynne",
+   "tags": [
+    "alternative",
+    "alternative country",
+    "country"
+   ],
+   "type": "Person"
+  },
+  "f569a00a-a5d4-4269-b383-e125a0b515a4": {
+   "disambiguation": "",
+   "genres": [
+    "avant-garde",
+    "dark wave",
+    "death industrial",
+    "experimental",
+    "neoclassical dark wave",
+    "piano blues",
+    "spoken word"
+   ],
+   "id": "f569a00a-a5d4-4269-b383-e125a0b515a4",
+   "lastfmPages": [
+    "diamanda gal\u00e1s"
+   ],
+   "name": "Diamanda Gal\u00e1s",
+   "tags": [
+    "a cappella",
+    "avant-garde",
+    "dark wave",
+    "death industrial",
+    "experimental",
+    "neoclassical dark wave",
+    "piano blues",
+    "spoken word",
+    "vocal terror"
+   ],
+   "type": "Person"
+  },
+  "f5b33d1b-e8bc-444e-bc5c-490473aa0f50": {
+   "disambiguation": "",
+   "genres": [
+    "latin",
+    "latin pop",
+    "latin rock",
+    "pop",
+    "pop rock"
+   ],
+   "id": "f5b33d1b-e8bc-444e-bc5c-490473aa0f50",
+   "lastfmPages": [
+    "gloria trevi"
+   ],
+   "name": "Gloria Trevi",
+   "tags": [
+    "latin",
+    "latin pop",
+    "latin rock",
+    "pop",
+    "pop rock"
+   ],
+   "type": "Person"
+  },
+  "f62d7553-5fd0-4c8f-8457-47516c327937": {
+   "disambiguation": "",
+   "genres": [
+    "indie pop",
+    "indie rock",
+    "post-punk"
+   ],
+   "id": "f62d7553-5fd0-4c8f-8457-47516c327937",
+   "lastfmPages": [],
+   "name": "\u041f\u0435\u0440\u0435\u043c\u043e\u0442\u043a\u0430",
+   "tags": [
+    "indie pop",
+    "indie rock",
+    "post-punk"
+   ],
+   "type": "Group"
+  },
+  "f7456b5b-e5a5-454e-b5db-047308210c8e": {
+   "disambiguation": "Russian rock band",
+   "genres": [
+    "rock"
+   ],
+   "id": "f7456b5b-e5a5-454e-b5db-047308210c8e",
+   "lastfmPages": [
+    "\u0434\u0434\u0442"
+   ],
+   "name": "\u0414\u0414\u0422",
+   "tags": [
+    "rock",
+    "russian",
+    "russian rock"
+   ],
+   "type": "Group"
+  },
+  "f906154a-7011-49c3-8f6a-44ca83311b08": {
+   "disambiguation": "BLACKPINK",
+   "genres": [
+    "k-pop"
+   ],
+   "id": "f906154a-7011-49c3-8f6a-44ca83311b08",
+   "lastfmPages": [
+    "jisoo",
+    "\uc9c0\uc218"
+   ],
+   "name": "JISOO",
+   "tags": [
+    "2020s",
+    "3rd gen k-pop",
+    "k-pop"
+   ],
+   "type": "Person"
+  },
+  "f91b9b28-25b7-4064-81d1-f43163085770": {
+   "disambiguation": "",
+   "genres": [
+    "alternative rock",
+    "indie rock",
+    "pop rock",
+    "rock",
+    "soft rock"
+   ],
+   "id": "f91b9b28-25b7-4064-81d1-f43163085770",
+   "lastfmPages": [
+    "mumiy troll"
+   ],
+   "name": "\u041c\u0443\u043c\u0438\u0439 \u0422\u0440\u043e\u043b\u043b\u044c",
+   "tags": [
+    "alternative rock",
+    "indie rock",
+    "pop rock",
+    "rock",
+    "russian",
+    "russian rock",
+    "soft rock",
+    "\u043c\u0443\u043c\u0438\u0439 \u0442\u0440\u043e\u043b\u043b\u044c"
+   ],
+   "type": "Group"
+  },
+  "f91e3a88-24ee-4563-8963-fab73d2765ed": {
+   "disambiguation": "composer",
+   "genres": [
+    "classical",
+    "classical period",
+    "romantic classical"
+   ],
+   "id": "f91e3a88-24ee-4563-8963-fab73d2765ed",
+   "lastfmPages": [
+    "franz schubert"
+   ],
+   "name": "Franz Schubert",
+   "tags": [
+    "austrian",
+    "austrian composer",
+    "classical",
+    "classical period",
+    "composer",
+    "european",
+    "romantic",
+    "romantic classical"
+   ],
+   "type": "Person"
+  },
+  "f94a59be-8e2f-456b-9ccb-e742048c6654": {
+   "disambiguation": "US guitar and dobro player",
+   "genres": [
+    "americana",
+    "bluegrass",
+    "country",
+    "folk",
+    "gospel"
+   ],
+   "id": "f94a59be-8e2f-456b-9ccb-e742048c6654",
+   "lastfmPages": [
+    "jerry douglas"
+   ],
+   "name": "Jerry Douglas",
+   "tags": [
+    "alternative",
+    "americana",
+    "bluegrass",
+    "country",
+    "folk",
+    "gospel",
+    "instrumentalist"
+   ],
+   "type": "Person"
+  },
+  "fa19a8b6-e7f4-40d4-af15-7a7c41ac7d8f": {
+   "disambiguation": "French composer",
+   "genres": [
+    "classical",
+    "romantic classical"
+   ],
+   "id": "fa19a8b6-e7f4-40d4-af15-7a7c41ac7d8f",
+   "lastfmPages": [
+    "gabriel faur\u00e9"
+   ],
+   "name": "Gabriel Faur\u00e9",
+   "tags": [
+    "classical",
+    "composer",
+    "french",
+    "french composer",
+    "romantic classical"
+   ],
+   "type": "Person"
+  },
+  "faa78a51-9aee-4d8c-85ef-8ef4c245ddbc": {
+   "disambiguation": "Belgian power metal band",
+   "genres": [],
+   "id": "faa78a51-9aee-4d8c-85ef-8ef4c245ddbc",
+   "lastfmPages": [],
+   "name": "Everglow",
+   "tags": [],
+   "type": "Group"
+  },
+  "fd14da1b-3c2d-4cc8-9ca6-fc8c62ce6988": {
+   "disambiguation": "composer",
+   "genres": [
+    "classical",
+    "modern classical"
+   ],
+   "id": "fd14da1b-3c2d-4cc8-9ca6-fc8c62ce6988",
+   "lastfmPages": [],
+   "name": "Bart\u00f3k B\u00e9la",
+   "tags": [
+    "20th century",
+    "classical",
+    "composer",
+    "concerto for orchestra / peacock",
+    "concerto pour orchestre",
+    "european",
+    "hungarian",
+    "hungarian composer",
+    "hungary",
+    "magyar",
+    "modern classical"
+   ],
+   "type": "Person"
+  },
+  "fe0f43fb-3a33-4757-8633-cdd210c2874e": {
+   "disambiguation": "psychedelic rock band",
+   "genres": [
+    "blues rock",
+    "bubblegum pop",
+    "country rock",
+    "pop rock",
+    "psychedelic pop",
+    "psychedelic rock",
+    "sunshine pop"
+   ],
+   "id": "fe0f43fb-3a33-4757-8633-cdd210c2874e",
+   "lastfmPages": [
+    "strawberry alarm clock"
+   ],
+   "name": "Strawberry Alarm Clock",
+   "tags": [
+    "blues rock",
+    "bubblegum pop",
+    "country rock",
+    "pop rock",
+    "psychedelic pop",
+    "psychedelic rock",
+    "sunshine pop"
+   ],
+   "type": "Group"
+  },
+  "ff294730-0315-440d-a543-54005779c15b": {
+   "disambiguation": "American folk rock vocal group",
+   "genres": [
+    "folk pop",
+    "folk rock",
+    "pop",
+    "pop rock",
+    "psychedelic folk",
+    "psychedelic pop",
+    "rock",
+    "sunshine pop"
+   ],
+   "id": "ff294730-0315-440d-a543-54005779c15b",
+   "lastfmPages": [
+    "the mamas & the papas"
+   ],
+   "name": "The Mamas & the Papas",
+   "tags": [
+    "2008 universal fire victim",
+    "folk pop",
+    "folk rock",
+    "pop",
+    "pop rock",
+    "psychedelic folk",
+    "psychedelic pop",
+    "rock",
+    "sunshine pop"
+   ],
+   "type": "Group"
+  },
+  "ff44f779-74ab-48f8-aac3-39ebe8f7c18e": {
+   "disambiguation": "",
+   "genres": [
+    "acid jazz",
+    "alternative hip hop",
+    "boom bap",
+    "conscious hip hop",
+    "hip hop",
+    "jazz rap"
+   ],
+   "id": "ff44f779-74ab-48f8-aac3-39ebe8f7c18e",
+   "lastfmPages": [
+    "digable planets"
+   ],
+   "name": "Digable Planets",
+   "tags": [
+    "acid jazz",
+    "alternative hip hop",
+    "boom bap",
+    "conscious hip hop",
+    "hip hop",
+    "jazz rap"
+   ],
+   "type": "Group"
+  }
+ },
+ "capturedOn": "2026-09-06",
+ "groundTruth": {
+  "a-tribe-called-quest|0": {
+   "mbid": "a8ebde98-7e91-46c7-992c-90039ba42017",
+   "owner": "",
+   "verdict": "MATCH"
+  },
+  "a-tribe-called-quest|1": {
+   "mbid": "d7134426-a937-43bf-bc54-f10ad8102ed9",
+   "owner": "",
+   "verdict": "MATCH"
+  },
+  "a-tribe-called-quest|10": {
+   "mbid": "cfbc0924-0035-4d6c-8197-f024653af823",
+   "owner": "",
+   "verdict": "MATCH"
+  },
+  "a-tribe-called-quest|11": {
+   "mbid": "39a973f2-0785-4ef6-90d9-551378864f89",
+   "owner": "",
+   "verdict": "MATCH"
+  },
+  "a-tribe-called-quest|12": {
+   "mbid": "550cb78b-4995-4873-baea-76ef265531f5",
+   "owner": "",
+   "verdict": "MATCH"
+  },
+  "a-tribe-called-quest|13": {
+   "mbid": "d75d1f08-bbb8-4eae-9877-399ca9121197",
+   "owner": "",
+   "verdict": "MATCH"
+  },
+  "a-tribe-called-quest|14": {
+   "mbid": "7b61cf8f-c042-4bd4-b64a-25cb40f3dd50",
+   "owner": "",
+   "verdict": "MATCH"
+  },
+  "a-tribe-called-quest|15": {
+   "mbid": "925228de-bbe5-4c7b-b76f-78e382ec9148",
+   "owner": "",
+   "verdict": "UNCONTESTED"
+  },
+  "a-tribe-called-quest|16": {
+   "mbid": "63034f55-692a-4f3b-a19a-ac2072eac3bb",
+   "owner": "",
+   "verdict": "UNADJUDICATED"
+  },
+  "a-tribe-called-quest|2": {
+   "mbid": "cff77480-7ba4-4206-b1a8-e1b98b38f07c",
+   "owner": "",
+   "verdict": "UNCONTESTED"
+  },
+  "a-tribe-called-quest|3": {
+   "mbid": "80b3cf5e-18fe-4c59-98c7-e5bb87210710",
+   "owner": "",
+   "verdict": "MATCH"
+  },
+  "a-tribe-called-quest|4": {
+   "mbid": "9ef8042a-2528-4f5c-b7c1-5e72b1efe170",
+   "owner": "",
+   "verdict": "MATCH"
+  },
+  "a-tribe-called-quest|5": {
+   "mbid": "ff44f779-74ab-48f8-aac3-39ebe8f7c18e",
+   "owner": "",
+   "verdict": "MATCH"
+  },
+  "a-tribe-called-quest|6": {
+   "mbid": "c0a1179b-b14a-4d68-a3c1-1fdab16ed602",
+   "owner": "",
+   "verdict": "MATCH"
+  },
+  "a-tribe-called-quest|7": {
+   "mbid": "02708fd6-0fe6-4738-a27d-0561ace8b4c6",
+   "owner": "",
+   "verdict": "MATCH"
+  },
+  "a-tribe-called-quest|8": {
+   "mbid": "c0c1183e-6940-48ca-8f96-98250fcb3ef1",
+   "owner": "",
+   "verdict": "MATCH"
+  },
+  "a-tribe-called-quest|9": {
+   "mbid": "73fdb566-a9b1-494c-9f32-51768ec9fd27",
+   "owner": "",
+   "verdict": "MATCH"
+  },
+  "alison-krauss|0": {
+   "mbid": "b91c664b-5eee-4536-8b70-b1f2be519ac0",
+   "owner": "",
+   "verdict": "MATCH"
+  },
+  "alison-krauss|1": {
+   "mbid": "f4992dae-69f2-4c0d-95fa-0b65f47906f2",
+   "owner": "",
+   "verdict": "UNCONTESTED"
+  },
+  "alison-krauss|10": {
+   "mbid": "365144f7-85af-4c83-b24b-b1d0b26160bb",
+   "owner": "",
+   "verdict": "UNCONTESTED"
+  },
+  "alison-krauss|11": {
+   "mbid": "7b8c7275-4359-449e-ae21-e4fa657ccad3",
+   "owner": "",
+   "verdict": "UNCONTESTED"
+  },
+  "alison-krauss|12": {
+   "mbid": "ec37ecfe-65b4-49a4-83c7-ee1ccaeec2e3",
+   "owner": "",
+   "verdict": "MATCH"
+  },
+  "alison-krauss|13": {
+   "mbid": "16c5bb7a-35b7-418d-880e-7ed3399f1b40",
+   "owner": "",
+   "verdict": "MATCH"
+  },
+  "alison-krauss|14": {
+   "mbid": "7241e3ed-5ad4-4849-94df-6858ea833472",
+   "owner": "",
+   "verdict": "UNCONTESTED"
+  },
+  "alison-krauss|15": {
+   "mbid": "81b38118-c135-4ac4-8334-c57a2455b798",
+   "owner": "",
+   "verdict": "UNCONTESTED"
+  },
+  "alison-krauss|16": {
+   "mbid": "e6dbe57d-74cf-4f6e-9e16-ed6cce18baef",
+   "owner": "",
+   "verdict": "MATCH"
+  },
+  "alison-krauss|17": {
+   "mbid": "f94a59be-8e2f-456b-9ccb-e742048c6654",
+   "owner": "",
+   "verdict": "MATCH"
+  },
+  "alison-krauss|18": {
+   "mbid": "968fb129-2c95-4fd5-b195-86552ba45c94",
+   "owner": "",
+   "verdict": "UNCONTESTED"
+  },
+  "alison-krauss|2": {
+   "mbid": "38eb4af8-2282-4b8f-8819-1c7f92640dde",
+   "owner": "",
+   "verdict": "UNCONTESTED"
+  },
+  "alison-krauss|3": {
+   "mbid": "5ff6f6eb-31ad-4903-a3c3-4c9283fcde8b",
+   "owner": "",
+   "verdict": "MATCH"
+  },
+  "alison-krauss|4": {
+   "mbid": "2f140aa6-b99b-4f79-ae33-96018af87fa3",
+   "owner": "",
+   "verdict": "UNCONTESTED"
+  },
+  "alison-krauss|5": {
+   "mbid": "6c44e99b-3450-45b7-b240-6e7026d0bcff",
+   "owner": "",
+   "verdict": "MATCH"
+  },
+  "alison-krauss|6": {
+   "mbid": "ba1bf556-2af2-4772-835f-ed2e15070758",
+   "owner": "",
+   "verdict": "MATCH"
+  },
+  "alison-krauss|7": {
+   "mbid": "6f2dfabb-f0bb-4801-a392-592489a148e7",
+   "owner": "",
+   "verdict": "MATCH"
+  },
+  "alison-krauss|8": {
+   "mbid": "b9ffd0e7-7f95-46db-bc1c-8094d459f084",
+   "owner": "",
+   "verdict": "MATCH"
+  },
+  "alison-krauss|9": {
+   "mbid": "35ef61ca-43db-4772-ba27-0489e9ebcb69",
+   "owner": "",
+   "verdict": "UNCONTESTED"
+  },
+  "alvvays|0": {
+   "mbid": "8c529495-91f5-4e2f-b71b-adcb66878d04",
+   "owner": "",
+   "verdict": "MATCH"
+  },
+  "alvvays|1": {
+   "mbid": "d5cc67b8-1cc4-453b-96e8-44487acdebea",
+   "owner": "",
+   "verdict": "MATCH"
+  },
+  "alvvays|10": {
+   "mbid": "25ab7547-a4d2-480b-b028-c7f3497bc858",
+   "owner": "",
+   "verdict": "MATCH"
+  },
+  "alvvays|11": {
+   "mbid": "e9243b8e-84ed-4a8f-82d1-ea084a2f0c4a",
+   "owner": "",
+   "verdict": "UNCONTESTED"
+  },
+  "alvvays|12": {
+   "mbid": "a8982cb0-7886-4e60-9f6a-3b71baa370e6",
+   "owner": "",
+   "verdict": "MATCH"
+  },
+  "alvvays|13": {
+   "mbid": "e664d1cd-23ab-48d5-b8fa-e98485daa5be",
+   "owner": "",
+   "verdict": "UNCONTESTED"
+  },
+  "alvvays|14": {
+   "mbid": "af37c51c-0790-4a29-b995-456f98a6b8c9",
+   "owner": "",
+   "verdict": "MATCH"
+  },
+  "alvvays|15": {
+   "mbid": "a181595e-5b84-4439-a5f4-f548ddfb64df",
+   "owner": "",
+   "verdict": "MATCH"
+  },
+  "alvvays|16": {
+   "mbid": "ef67a875-9e45-4057-b91d-56c4e744d901",
+   "owner": "",
+   "verdict": "MATCH"
+  },
+  "alvvays|17": {
+   "mbid": "3f542031-b054-454d-b57b-812fa2a81b11",
+   "owner": "",
+   "verdict": "MATCH"
+  },
+  "alvvays|18": {
+   "mbid": "abf74786-2f3e-47e0-ae68-69a55c13909a",
+   "owner": "",
+   "verdict": "MATCH"
+  },
+  "alvvays|19": {
+   "mbid": "da5eaa3b-397e-4af8-9a12-5c4ec93e8b48",
+   "owner": "",
+   "verdict": "MATCH"
+  },
+  "alvvays|2": {
+   "mbid": "00505f51-68a8-45fc-b6d6-51be64751378",
+   "owner": "",
+   "verdict": "MATCH"
+  },
+  "alvvays|3": {
+   "mbid": "d51ce0e4-027e-4ecf-a87e-c02a08149f42",
+   "owner": "",
+   "verdict": "MATCH"
+  },
+  "alvvays|4": {
+   "mbid": "86cd4d38-857c-42bd-a5da-9acedcab1e01",
+   "owner": "",
+   "verdict": "MATCH"
+  },
+  "alvvays|5": {
+   "mbid": "94219793-a46b-4c39-9397-e05ad633f32d",
+   "owner": "",
+   "verdict": "MATCH"
+  },
+  "alvvays|6": {
+   "mbid": "84803b1d-dcb3-490d-9af5-debbba64a011",
+   "owner": "",
+   "verdict": "MATCH"
+  },
+  "alvvays|7": {
+   "mbid": "b51f07c9-a42c-4ea7-b5ed-ce4b7f47101a",
+   "owner": "",
+   "verdict": "MATCH"
+  },
+  "alvvays|8": {
+   "mbid": "3b910f7b-018f-408f-950b-47e02d2ce305",
+   "owner": "",
+   "verdict": "MATCH"
+  },
+  "alvvays|9": {
+   "mbid": "46f4e349-ddec-4131-9367-91b630a821d0",
+   "owner": "",
+   "verdict": "MATCH"
+  },
+  "blackpink|0": {
+   "mbid": "d32de3a1-01f0-430e-859a-72307724041c",
+   "owner": "779351de-0da5-4943-928b-495a3c40e8c0",
+   "verdict": "MISMATCH"
+  },
+  "blackpink|1": {
+   "mbid": "f906154a-7011-49c3-8f6a-44ca83311b08",
+   "owner": "",
+   "verdict": "MATCH"
+  },
+  "blackpink|10": {
+   "mbid": "1ee37742-1e3d-4e61-84d2-bc85f4c1459a",
+   "owner": "",
+   "verdict": "MATCH"
+  },
+  "blackpink|11": {
+   "mbid": "49204a7a-ed85-407a-828f-6fd46f1d8126",
+   "owner": "",
+   "verdict": "MATCH"
+  },
+  "blackpink|12": {
+   "mbid": "cc3054c1-803c-4b55-9c59-200acd60b5e4",
+   "owner": "",
+   "verdict": "MATCH"
+  },
+  "blackpink|2": {
+   "mbid": "70198b37-f6c7-4cc7-a728-4224e860a15f",
+   "owner": "85d76093-9865-4605-97fa-8c910929d366",
+   "verdict": "MISMATCH"
+  },
+  "blackpink|3": {
+   "mbid": "26ecbba4-a425-4d98-8a96-16eed147ff09",
+   "owner": "",
+   "verdict": "UNCONTESTED"
+  },
+  "blackpink|4": {
+   "mbid": "8d4e6a86-fa1c-4a1b-b8c4-3b58a46dde9f",
+   "owner": "",
+   "verdict": "MATCH"
+  },
+  "blackpink|5": {
+   "mbid": "b51c672b-85e0-48fe-8648-470a2422229f",
+   "owner": "",
+   "verdict": "MATCH"
+  },
+  "blackpink|6": {
+   "mbid": "17ecfa07-185f-49c1-a3c1-324fa5a07b1b",
+   "owner": "bd04c7b4-530c-4802-ae16-962d004a5093",
+   "verdict": "MISMATCH"
+  },
+  "blackpink|7": {
+   "mbid": "bce172fc-51bb-43f7-9a25-b406a0a581d5",
+   "owner": "",
+   "verdict": "MATCH"
+  },
+  "blackpink|8": {
+   "mbid": "b2f2216a-d7a9-4ce0-8b8f-f494d9a8c196",
+   "owner": "",
+   "verdict": "MATCH"
+  },
+  "blackpink|9": {
+   "mbid": "abbf7d85-9a7f-4a6c-80bd-bf71f2c7d520",
+   "owner": "",
+   "verdict": "MATCH"
+  },
+  "claude-debussy|0": {
+   "mbid": "6fdd3b3e-1ea6-4da9-8d6f-8f8de01c133a",
+   "owner": "",
+   "verdict": "MATCH"
+  },
+  "claude-debussy|1": {
+   "mbid": "2cd475bb-1abd-40c4-9904-6d4b691c752c",
+   "owner": "",
+   "verdict": "UNCONTESTED"
+  },
+  "claude-debussy|10": {
+   "mbid": "b972f589-fb0e-474e-b64a-803b0364fa75",
+   "owner": "",
+   "verdict": "MATCH"
+  },
+  "claude-debussy|11": {
+   "mbid": "691b0e9d-9e57-41cf-932d-a3d21b068e75",
+   "owner": "",
+   "verdict": "MATCH"
+  },
+  "claude-debussy|12": {
+   "mbid": "0e85eb79-1c05-44ba-827c-7b259a3d941a",
+   "owner": "",
+   "verdict": "MATCH"
+  },
+  "claude-debussy|13": {
+   "mbid": "24f1766e-9635-4d58-a4d4-9413f9f98a4c",
+   "owner": "",
+   "verdict": "MATCH"
+  },
+  "claude-debussy|14": {
+   "mbid": "819eaeb2-8dd8-48a5-ad07-0bcd137985ef",
+   "owner": "",
+   "verdict": "MATCH"
+  },
+  "claude-debussy|2": {
+   "mbid": "e1d521ea-5b97-4981-987c-ba988b2a87d7",
+   "owner": "",
+   "verdict": "MATCH"
+  },
+  "claude-debussy|3": {
+   "mbid": "3cd3882c-00f8-4362-a0c2-ad89ed248533",
+   "owner": "",
+   "verdict": "MATCH"
+  },
+  "claude-debussy|4": {
+   "mbid": "013c8e5b-d72a-4cd3-8dee-6c64d6125823",
+   "owner": "",
+   "verdict": "MATCH"
+  },
+  "claude-debussy|5": {
+   "mbid": "f91e3a88-24ee-4563-8963-fab73d2765ed",
+   "owner": "",
+   "verdict": "MATCH"
+  },
+  "claude-debussy|6": {
+   "mbid": "fa19a8b6-e7f4-40d4-af15-7a7c41ac7d8f",
+   "owner": "",
+   "verdict": "MATCH"
+  },
+  "claude-debussy|7": {
+   "mbid": "1f9df192-a621-4f54-8850-2c5373b7eac9",
+   "owner": "",
+   "verdict": "MATCH"
+  },
+  "claude-debussy|8": {
+   "mbid": "c70d12a2-24fe-4f83-a6e6-57d84f8efb51",
+   "owner": "",
+   "verdict": "MATCH"
+  },
+  "claude-debussy|9": {
+   "mbid": "fd14da1b-3c2d-4cc8-9ca6-fc8c62ce6988",
+   "owner": "",
+   "verdict": "UNCONTESTED"
+  },
+  "four-tet|0": {
+   "mbid": "2d9745dd-5dc6-4145-9453-fec582cfa9b8",
+   "owner": "",
+   "verdict": "MATCH"
+  },
+  "four-tet|1": {
+   "mbid": "69d9c5ba-7bba-4cb7-ab32-8ccc48ad4f97",
+   "owner": "",
+   "verdict": "MATCH"
+  },
+  "four-tet|10": {
+   "mbid": "4d86ad4e-28d8-4e9f-8cf4-735c57060fdc",
+   "owner": "",
+   "verdict": "MATCH"
+  },
+  "four-tet|11": {
+   "mbid": "859216c4-5d01-479b-b6c3-e20cc591a86a",
+   "owner": "",
+   "verdict": "MATCH"
+  },
+  "four-tet|12": {
+   "mbid": "5d0c202c-e30f-40c4-abf5-c0007af0d1cc",
+   "owner": "",
+   "verdict": "MATCH"
+  },
+  "four-tet|13": {
+   "mbid": "bfbccd40-1a06-4ee7-b24d-b2f8cc714fa9",
+   "owner": "",
+   "verdict": "MATCH"
+  },
+  "four-tet|14": {
+   "mbid": "410c9baf-5469-44f6-9852-826524b80c61",
+   "owner": "",
+   "verdict": "MATCH"
+  },
+  "four-tet|15": {
+   "mbid": "24ee4021-50ac-4285-b76e-860082d0d731",
+   "owner": "",
+   "verdict": "MATCH"
+  },
+  "four-tet|16": {
+   "mbid": "f22942a1-6f70-4f48-866e-238cb2308fbd",
+   "owner": "",
+   "verdict": "MATCH"
+  },
+  "four-tet|17": {
+   "mbid": "4a3a5fc0-af4b-4990-957b-8d94f7bfe706",
+   "owner": "",
+   "verdict": "MATCH"
+  },
+  "four-tet|2": {
+   "mbid": "735e3514-a8ae-401f-af3b-6300df1b8d2c",
+   "owner": "",
+   "verdict": "MATCH"
+  },
+  "four-tet|3": {
+   "mbid": "0b0c25f4-f31c-46a5-a4fb-ccbf53d663bd",
+   "owner": "",
+   "verdict": "MATCH"
+  },
+  "four-tet|4": {
+   "mbid": "803f2853-7e3e-4dff-96a7-9f77b5f56de5",
+   "owner": "",
+   "verdict": "MATCH"
+  },
+  "four-tet|5": {
+   "mbid": "9ddce51c-2b75-4b3e-ac8c-1db09e7c89c6",
+   "owner": "",
+   "verdict": "MATCH"
+  },
+  "four-tet|6": {
+   "mbid": "69158f97-4c07-4c4e-baf8-4e4ab1ed666e",
+   "owner": "",
+   "verdict": "MATCH"
+  },
+  "four-tet|7": {
+   "mbid": "4c1a7fe5-e619-40c4-bbee-371e6e027f07",
+   "owner": "",
+   "verdict": "UNCONTESTED"
+  },
+  "four-tet|8": {
+   "mbid": "9a709693-b4f8-4da9-8cc1-038c911a61be",
+   "owner": "",
+   "verdict": "MATCH"
+  },
+  "four-tet|9": {
+   "mbid": "7e54d133-2525-4bc0-ae94-65584145a386",
+   "owner": "",
+   "verdict": "MATCH"
+  },
+  "kino|0": {
+   "mbid": "247efe0f-80f1-477c-a4a0-b5cb1b8c832e",
+   "owner": "",
+   "verdict": "MATCH"
+  },
+  "kino|1": {
+   "mbid": "7da030e4-3b08-4e29-b497-344d809589fd",
+   "owner": "",
+   "verdict": "UNCONTESTED"
+  },
+  "kino|10": {
+   "mbid": "f91b9b28-25b7-4064-81d1-f43163085770",
+   "owner": "",
+   "verdict": "UNCONTESTED"
+  },
+  "kino|11": {
+   "mbid": "8d741103-d319-4cc8-9f4f-9926b5bf112a",
+   "owner": "",
+   "verdict": "MATCH"
+  },
+  "kino|12": {
+   "mbid": "bec3b214-0f07-4026-a859-07b7bbaa6ce0",
+   "owner": "",
+   "verdict": "MATCH"
+  },
+  "kino|13": {
+   "mbid": "f62d7553-5fd0-4c8f-8457-47516c327937",
+   "owner": "",
+   "verdict": "UNCONTESTED"
+  },
+  "kino|14": {
+   "mbid": "4fceb4c9-5b56-4136-b966-b7b35a0aa528",
+   "owner": "",
+   "verdict": "MATCH"
+  },
+  "kino|15": {
+   "mbid": "b7452e13-952d-4faf-a113-a49499a39a0b",
+   "owner": "",
+   "verdict": "MATCH"
+  },
+  "kino|16": {
+   "mbid": "9b135e33-2fbc-4155-b351-cc2a39997975",
+   "owner": "",
+   "verdict": "UNCONTESTED"
+  },
+  "kino|2": {
+   "mbid": "f7456b5b-e5a5-454e-b5db-047308210c8e",
+   "owner": "",
+   "verdict": "MATCH"
+  },
+  "kino|3": {
+   "mbid": "e1325488-3808-4331-9e7a-38a89fac6597",
+   "owner": "",
+   "verdict": "MATCH"
+  },
+  "kino|4": {
+   "mbid": "e4b06dc9-c196-49e1-a20a-554e72d95268",
+   "owner": "",
+   "verdict": "UNCONTESTED"
+  },
+  "kino|5": {
+   "mbid": "0783b768-6719-450b-a7e1-7e891da17af3",
+   "owner": "",
+   "verdict": "MATCH"
+  },
+  "kino|6": {
+   "mbid": "de2f6b7a-9d08-4a16-88c1-68c141e0b0c6",
+   "owner": "",
+   "verdict": "UNCONTESTED"
+  },
+  "kino|7": {
+   "mbid": "a1f0bd3b-6977-4ab2-8d5c-2464bada895d",
+   "owner": "",
+   "verdict": "MATCH"
+  },
+  "kino|8": {
+   "mbid": "207f47ac-9368-4c6b-b05a-e8ad4dcabeca",
+   "owner": "",
+   "verdict": "MATCH"
+  },
+  "kino|9": {
+   "mbid": "5ca35ace-4006-4d4a-af04-5cd91dafab14",
+   "owner": "",
+   "verdict": "MATCH"
+  },
+  "nico|0": {
+   "mbid": "94b0fb9d-a066-4823-b2ec-af1d324bcfcf",
+   "owner": "",
+   "verdict": "MATCH"
+  },
+  "nico|1": {
+   "mbid": "72c090b6-a68e-4cb9-b330-85278681a714",
+   "owner": "",
+   "verdict": "MATCH"
+  },
+  "nico|10": {
+   "mbid": "89967ce2-3f9a-4dad-b8c8-491bb87b73fe",
+   "owner": "",
+   "verdict": "UNCONTESTED"
+  },
+  "nico|11": {
+   "mbid": "99524243-dc2e-4bf3-82c0-72395391d21f",
+   "owner": "",
+   "verdict": "MATCH"
+  },
+  "nico|12": {
+   "mbid": "c7abb29e-6e5c-4e07-a45d-ff5028a81099",
+   "owner": "",
+   "verdict": "MATCH"
+  },
+  "nico|13": {
+   "mbid": "14c5a3a3-f5ed-4978-99af-486010e3a007",
+   "owner": "",
+   "verdict": "UNCONTESTED"
+  },
+  "nico|14": {
+   "mbid": "b4cadc83-7307-4196-9f2f-29ebf1650045",
+   "owner": "",
+   "verdict": "MATCH"
+  },
+  "nico|15": {
+   "mbid": "6bd920ac-3b7c-47e0-8f0f-c390f63f5112",
+   "owner": "",
+   "verdict": "MATCH"
+  },
+  "nico|16": {
+   "mbid": "bb0a1e95-9444-4a05-a1bb-22b8d7ed7844",
+   "owner": "",
+   "verdict": "MATCH"
+  },
+  "nico|17": {
+   "mbid": "4b585938-f271-45e2-b19a-91c634b5e396",
+   "owner": "",
+   "verdict": "MATCH"
+  },
+  "nico|2": {
+   "mbid": "f569a00a-a5d4-4269-b383-e125a0b515a4",
+   "owner": "",
+   "verdict": "MATCH"
+  },
+  "nico|3": {
+   "mbid": "d135874d-9cae-4fef-97e3-36acbd9f5a26",
+   "owner": "",
+   "verdict": "MATCH"
+  },
+  "nico|4": {
+   "mbid": "8546949d-f46c-45ab-8391-85b26dda6b65",
+   "owner": "",
+   "verdict": "MATCH"
+  },
+  "nico|5": {
+   "mbid": "cb69e1f1-bc76-4df5-93c9-cf97dd8a3b5c",
+   "owner": "",
+   "verdict": "MATCH"
+  },
+  "nico|6": {
+   "mbid": "b0b33754-a664-43b7-ba00-be0dc4ec2396",
+   "owner": "",
+   "verdict": "UNCONTESTED"
+  },
+  "nico|7": {
+   "mbid": "a6de8ef9-b1a1-4756-97aa-481bbb8a4069",
+   "owner": "",
+   "verdict": "MATCH"
+  },
+  "nico|8": {
+   "mbid": "31aa8446-3dbf-4d22-9504-0f1bd58bf785",
+   "owner": "",
+   "verdict": "MATCH"
+  },
+  "nico|9": {
+   "mbid": "e795e03d-b5d5-4a5f-834d-162cfb308a2c",
+   "owner": "",
+   "verdict": "MATCH"
+  },
+  "shakira|0": {
+   "mbid": "5938c629-1d06-480b-9780-859b153af11e",
+   "owner": "",
+   "verdict": "MATCH"
+  },
+  "shakira|1": {
+   "mbid": "ae33ce8d-f41a-4f6b-b9c6-7859acbd04ef",
+   "owner": "",
+   "verdict": "MATCH"
+  },
+  "shakira|10": {
+   "mbid": "4792522c-9eec-4491-9640-8922d5fbf2c5",
+   "owner": "",
+   "verdict": "MATCH"
+  },
+  "shakira|11": {
+   "mbid": "79239441-bfd5-4981-a70c-55c3f15c1287",
+   "owner": "",
+   "verdict": "MATCH"
+  },
+  "shakira|12": {
+   "mbid": "9bacf78f-9132-43da-8873-8a9eb49da0e9",
+   "owner": "",
+   "verdict": "MATCH"
+  },
+  "shakira|13": {
+   "mbid": "a7c38944-b3fa-4a3d-a4bd-d3b3b06f0cbf",
+   "owner": "",
+   "verdict": "UNCONTESTED"
+  },
+  "shakira|14": {
+   "mbid": "09c85751-d9fa-4dc3-bc7d-6ab15ac809de",
+   "owner": "",
+   "verdict": "UNCONTESTED"
+  },
+  "shakira|15": {
+   "mbid": "70ea63ea-70dc-4b63-951a-2c249d2b3b0a",
+   "owner": "",
+   "verdict": "MATCH"
+  },
+  "shakira|16": {
+   "mbid": "618bf47d-48ff-4aec-8d82-435b93dcca76",
+   "owner": "",
+   "verdict": "MATCH"
+  },
+  "shakira|17": {
+   "mbid": "472b9953-1f10-4aed-b1ec-d0c23ffb2cf1",
+   "owner": "",
+   "verdict": "MATCH"
+  },
+  "shakira|18": {
+   "mbid": "64b85e52-08db-4995-a6e3-d2a6acc5a058",
+   "owner": "",
+   "verdict": "MATCH"
+  },
+  "shakira|19": {
+   "mbid": "20dac54f-07a0-4418-b545-49d09813951c",
+   "owner": "",
+   "verdict": "UNCONTESTED"
+  },
+  "shakira|2": {
+   "mbid": "14d78134-bb77-4c1e-8c9b-b74284abf1cc",
+   "owner": "",
+   "verdict": "MATCH"
+  },
+  "shakira|3": {
+   "mbid": "de22adae-f8ac-414f-b653-b0162611bd60",
+   "owner": "",
+   "verdict": "MATCH"
+  },
+  "shakira|4": {
+   "mbid": "b202beb7-99bd-47e7-8b72-195c8d72ebdd",
+   "owner": "",
+   "verdict": "MATCH"
+  },
+  "shakira|5": {
+   "mbid": "601f8530-9009-4f73-94fb-a355b4497b70",
+   "owner": "",
+   "verdict": "UNCONTESTED"
+  },
+  "shakira|6": {
+   "mbid": "f0602f55-1770-483d-89bd-4bae0d0ac086",
+   "owner": "",
+   "verdict": "MATCH"
+  },
+  "shakira|7": {
+   "mbid": "3ad91c4e-ef5a-4d7c-99e7-21a8b0c9379d",
+   "owner": "",
+   "verdict": "UNCONTESTED"
+  },
+  "shakira|8": {
+   "mbid": "b3bc168f-24f6-4c46-b901-2c491c0a7abf",
+   "owner": "",
+   "verdict": "MATCH"
+  },
+  "shakira|9": {
+   "mbid": "f5b33d1b-e8bc-444e-bc5c-490473aa0f50",
+   "owner": "",
+   "verdict": "MATCH"
+  },
+  "the-bad-plus|0": {
+   "mbid": "d0b9a780-439a-4c4e-a658-4b0d81fa6796",
+   "owner": "",
+   "verdict": "UNCONTESTED"
+  },
+  "the-bad-plus|1": {
+   "mbid": "17d78170-7194-4603-8dbb-ca1108430882",
+   "owner": "",
+   "verdict": "UNADJUDICATED"
+  },
+  "the-bad-plus|10": {
+   "mbid": "5fd9d175-1fed-45e5-a2b4-e4e727f34d8b",
+   "owner": "",
+   "verdict": "MATCH"
+  },
+  "the-bad-plus|11": {
+   "mbid": "51b553fa-1604-4110-ba48-f54e38f50678",
+   "owner": "",
+   "verdict": "UNCONTESTED"
+  },
+  "the-bad-plus|12": {
+   "mbid": "2f97f8ef-1bd6-439e-b725-c65081d12d86",
+   "owner": "",
+   "verdict": "UNCONTESTED"
+  },
+  "the-bad-plus|13": {
+   "mbid": "c116b504-ce24-4264-96dc-d10a7458236f",
+   "owner": "",
+   "verdict": "MATCH"
+  },
+  "the-bad-plus|14": {
+   "mbid": "b328de0e-ee48-4d74-9d36-7c7ee16ffc69",
+   "owner": "",
+   "verdict": "MATCH"
+  },
+  "the-bad-plus|15": {
+   "mbid": "795071f0-f110-41c8-aaee-f5ea7f460a4d",
+   "owner": "",
+   "verdict": "UNCONTESTED"
+  },
+  "the-bad-plus|16": {
+   "mbid": "f315f045-48e3-4a45-a4ed-14c9a522e4db",
+   "owner": "",
+   "verdict": "UNCONTESTED"
+  },
+  "the-bad-plus|17": {
+   "mbid": "80fd1c1c-7153-4a5b-b0e9-2242d8a6cbf5",
+   "owner": "",
+   "verdict": "UNADJUDICATED"
+  },
+  "the-bad-plus|18": {
+   "mbid": "61112049-cba4-409b-a4dc-a5f5a4d7c62e",
+   "owner": "",
+   "verdict": "UNCONTESTED"
+  },
+  "the-bad-plus|2": {
+   "mbid": "b00a17c3-72b2-4e39-96f9-770ba6cf4573",
+   "owner": "",
+   "verdict": "UNCONTESTED"
+  },
+  "the-bad-plus|3": {
+   "mbid": "4dd62d49-9868-465b-882f-733afb40eb0d",
+   "owner": "",
+   "verdict": "UNADJUDICATED"
+  },
+  "the-bad-plus|4": {
+   "mbid": "b7723b3f-9a35-438d-bc42-8ad8b5e027ae",
+   "owner": "",
+   "verdict": "MATCH"
+  },
+  "the-bad-plus|5": {
+   "mbid": "ba2ff5ad-b5a4-499b-aac1-b31fd093112b",
+   "owner": "",
+   "verdict": "UNCONTESTED"
+  },
+  "the-bad-plus|6": {
+   "mbid": "d922fda2-1d1c-4c26-b3f8-4eaff1eda85d",
+   "owner": "",
+   "verdict": "UNCONTESTED"
+  },
+  "the-bad-plus|7": {
+   "mbid": "2c43503a-fb94-433a-98a9-8898367ea71f",
+   "owner": "",
+   "verdict": "MATCH"
+  },
+  "the-bad-plus|8": {
+   "mbid": "cfa7c6b1-bbb3-4f9a-a636-cbfafb9b4bcf",
+   "owner": "",
+   "verdict": "UNCONTESTED"
+  },
+  "the-bad-plus|9": {
+   "mbid": "12fb47e3-526d-470f-b439-b80bfee3dbeb",
+   "owner": "",
+   "verdict": "MATCH"
+  },
+  "the-zombies|0": {
+   "mbid": "b5c4dbf3-95da-4d3a-8a37-94bc50b8e7a7",
+   "owner": "",
+   "verdict": "UNCONTESTED"
+  },
+  "the-zombies|1": {
+   "mbid": "17b53d9f-5c63-4a09-a593-dde4608e0db9",
+   "owner": "",
+   "verdict": "MATCH"
+  },
+  "the-zombies|10": {
+   "mbid": "fe0f43fb-3a33-4757-8633-cdd210c2874e",
+   "owner": "",
+   "verdict": "MATCH"
+  },
+  "the-zombies|11": {
+   "mbid": "07deede6-db1d-4ede-b19e-5d46df592841",
+   "owner": "",
+   "verdict": "MATCH"
+  },
+  "the-zombies|12": {
+   "mbid": "72d7d717-0837-4f2a-9641-d0f9fdd3acf7",
+   "owner": "",
+   "verdict": "MATCH"
+  },
+  "the-zombies|13": {
+   "mbid": "b10bbbfc-cf9e-42e0-be17-e2c3e1d2600d",
+   "owner": "",
+   "verdict": "MATCH"
+  },
+  "the-zombies|14": {
+   "mbid": "22dc19af-d085-4c9b-adfb-22ec256251f1",
+   "owner": "",
+   "verdict": "MATCH"
+  },
+  "the-zombies|15": {
+   "mbid": "9fdaa16b-a6c4-4831-b87c-bc9ca8ce7eaa",
+   "owner": "",
+   "verdict": "MATCH"
+  },
+  "the-zombies|16": {
+   "mbid": "e1fae923-bf20-4d7b-89fb-38ecc0a8236b",
+   "owner": "",
+   "verdict": "UNADJUDICATED"
+  },
+  "the-zombies|17": {
+   "mbid": "ff294730-0315-440d-a543-54005779c15b",
+   "owner": "",
+   "verdict": "MATCH"
+  },
+  "the-zombies|18": {
+   "mbid": "94b0fb9d-a066-4823-b2ec-af1d324bcfcf",
+   "owner": "",
+   "verdict": "MATCH"
+  },
+  "the-zombies|2": {
+   "mbid": "34ec9a8d-c65b-48fd-bcdd-aad2f72fdb47",
+   "owner": "",
+   "verdict": "MATCH"
+  },
+  "the-zombies|3": {
+   "mbid": "2819834e-4e08-47b0-a2c4-b7672318e8f0",
+   "owner": "",
+   "verdict": "MATCH"
+  },
+  "the-zombies|4": {
+   "mbid": "7771a68c-ef6a-400f-978d-64050d45a54c",
+   "owner": "",
+   "verdict": "UNCONTESTED"
+  },
+  "the-zombies|5": {
+   "mbid": "d4305549-6b4e-4a57-b24d-8af0743fe191",
+   "owner": "",
+   "verdict": "MATCH"
+  },
+  "the-zombies|6": {
+   "mbid": "b8549efe-f4fd-4dc0-8ef1-226e9c400233",
+   "owner": "",
+   "verdict": "MATCH"
+  },
+  "the-zombies|7": {
+   "mbid": "ebfc1398-8d96-47e3-82c3-f782abcdb13d",
+   "owner": "",
+   "verdict": "MATCH"
+  },
+  "the-zombies|8": {
+   "mbid": "335b6182-0da8-4dc6-a5ec-fe13f0f87e4b",
+   "owner": "",
+   "verdict": "UNADJUDICATED"
+  },
+  "the-zombies|9": {
+   "mbid": "2ba70e66-ec59-4083-89bb-60ec67e624b8",
+   "owner": "",
+   "verdict": "MATCH"
+  },
+  "trouble|0": {
+   "mbid": "596cc676-32c7-480c-9bf4-dcc9d8ff62d3",
+   "owner": "",
+   "verdict": "UNADJUDICATED"
+  },
+  "trouble|1": {
+   "mbid": "707d26d5-51ee-42b2-9bc4-19884689d51c",
+   "owner": "",
+   "verdict": "MATCH"
+  },
+  "trouble|10": {
+   "mbid": "aa043c18-c0a0-4cbe-bda0-8541f1fe59bd",
+   "owner": "",
+   "verdict": "UNADJUDICATED"
+  },
+  "trouble|11": {
+   "mbid": "c1341251-e2c7-4eae-989c-645f0c22487c",
+   "owner": "",
+   "verdict": "MATCH"
+  },
+  "trouble|12": {
+   "mbid": "7dba6614-d0bd-4950-8b7b-841b31c413c2",
+   "owner": "",
+   "verdict": "MATCH"
+  },
+  "trouble|13": {
+   "mbid": "3e18f915-205b-4014-ac21-6f4536854bee",
+   "owner": "",
+   "verdict": "MATCH"
+  },
+  "trouble|14": {
+   "mbid": "2231125d-8979-4911-8ca8-bda5426ddbbc",
+   "owner": "",
+   "verdict": "MATCH"
+  },
+  "trouble|15": {
+   "mbid": "3f03ad4f-99e1-4e52-8eb8-eb79f2a0c55e",
+   "owner": "06942e9b-567b-45c4-97a6-9d98265ba479",
+   "verdict": "MISMATCH"
+  },
+  "trouble|16": {
+   "mbid": "60e5f747-8d52-4ac5-afbd-9c452d227d72",
+   "owner": "",
+   "verdict": "UNCONTESTED"
+  },
+  "trouble|17": {
+   "mbid": "9dd28f79-06b1-4ddc-8fab-cd739dcf8a78",
+   "owner": "",
+   "verdict": "UNCONTESTED"
+  },
+  "trouble|18": {
+   "mbid": "779a6b10-0eec-4bcc-8fb7-eb54e9888d23",
+   "owner": "",
+   "verdict": "UNCONTESTED"
+  },
+  "trouble|2": {
+   "mbid": "73b8e2c9-967b-45a5-8894-fa2298a191ec",
+   "owner": "",
+   "verdict": "MATCH"
+  },
+  "trouble|3": {
+   "mbid": "2cf7ba64-5f16-4382-be45-7f3ae2473e01",
+   "owner": "",
+   "verdict": "MATCH"
+  },
+  "trouble|4": {
+   "mbid": "89618a45-ff4a-4e5f-942e-3ef93c8c555c",
+   "owner": "",
+   "verdict": "MATCH"
+  },
+  "trouble|5": {
+   "mbid": "8ba17cf6-bec2-4ae4-9820-b1cda47adc08",
+   "owner": "",
+   "verdict": "UNCONTESTED"
+  },
+  "trouble|6": {
+   "mbid": "d7e9b9e7-8ac3-4be4-85c8-64601d68261c",
+   "owner": "8c2e4f17-540c-42d9-abba-bc1e6c9d9e6d",
+   "verdict": "MISMATCH"
+  },
+  "trouble|7": {
+   "mbid": "8162d8d3-ae45-4550-87f1-fa1262166e8a",
+   "owner": "",
+   "verdict": "UNCONTESTED"
+  },
+  "trouble|8": {
+   "mbid": "e659c09d-8ec1-43d8-ab3f-72630b926157",
+   "owner": "",
+   "verdict": "MATCH"
+  },
+  "trouble|9": {
+   "mbid": "97992045-1d3f-469d-91ce-27afd0bd216b",
+   "owner": "",
+   "verdict": "UNCONTESTED"
+  }
+ },
+ "nameCandidates": {
+  "00110100 01010100": [
+   "4c1a7fe5-e619-40c4-bbee-371e6e027f07"
+  ],
+  "aaron parks": [
+   "4dd62d49-9868-465b-882f-733afb40eb0d",
+   "71d0c8a2-bdc1-4d29-a476-8bde3c35027a"
+  ],
+  "avishai cohen": [
+   "17d78170-7194-4603-8dbb-ca1108430882",
+   "a9adebe6-3436-4746-bc76-3623e66f6e76"
+  ],
+  "baby monster": [
+   "26ecbba4-a425-4d98-8a96-16eed147ff09"
+  ],
+  "black sheep": [
+   "63034f55-692a-4f3b-a19a-ac2072eac3bb",
+   "d7f07620-a4b9-4afd-9991-472478a65848",
+   "6c762441-5fd2-4302-8462-2ffde7856e3e",
+   "000a6565-8398-4465-a230-060531cbfa37",
+   "0b4ea14f-9f54-4384-9a1d-2ab1b2a922b1",
+   "875d49d4-0968-47f8-a4d0-be419ca02691",
+   "ac01bd6c-0ea6-4c9f-97f7-baf73261b464",
+   "c9c01f52-3927-43ff-a670-8027f4fb7626",
+   "418fab5a-ce59-48a5-a54c-93e38cc00c81",
+   "cf5bbb04-a6c8-4c07-8549-fe9c4323e64a",
+   "da43f62d-a67d-43af-ba85-d3aa3520e6c7"
+  ],
+  "boosie badazz": [
+   "8ba17cf6-bec2-4ae4-9820-b1cda47adc08"
+  ],
+  "b\u00e9la bart\u00f3k": [],
+  "chris potter": [
+   "80fd1c1c-7153-4a5b-b0e9-2242d8a6cbf5",
+   "46eec14d-6cee-41fa-9778-b278b86455cb",
+   "9706f794-eb6b-4dfa-a0b6-115c7533ae2f",
+   "b63d39fd-618d-46ff-8d36-f3a246660b8e"
+  ],
+  "danna paola": [
+   "3ad91c4e-ef5a-4d7c-99e7-21a8b0c9379d"
+  ],
+  "doomsword": [
+   "779a6b10-0eec-4bcc-8fb7-eb54e9888d23"
+  ],
+  "emmylou harris": [
+   "35ef61ca-43db-4772-ba27-0489e9ebcb69"
+  ],
+  "eric b. & rakim": [
+   "925228de-bbe5-4c7b-b76f-78e382ec9148"
+  ],
+  "esbj\u00f6rn svensson trio": [
+   "cfa7c6b1-bbb3-4f9a-a636-cbfafb9b4bcf"
+  ],
+  "everglow": [
+   "bd04c7b4-530c-4802-ae16-962d004a5093",
+   "faa78a51-9aee-4d8c-85ef-8ef4c245ddbc",
+   "17ecfa07-185f-49c1-a3c1-324fa5a07b1b"
+  ],
+  "franz liszt": [
+   "2cd475bb-1abd-40c4-9904-6d4b691c752c"
+  ],
+  "gerald clayton": [
+   "795071f0-f110-41c8-aaee-f5ea7f460a4d"
+  ],
+  "immanuel wilkins": [
+   "61112049-cba4-409b-a4dc-a5f5a4d7c62e"
+  ],
+  "jason moran": [
+   "2f97f8ef-1bd6-439e-b725-c65081d12d86"
+  ],
+  "jennie": [
+   "779351de-0da5-4943-928b-495a3c40e8c0",
+   "d32de3a1-01f0-430e-859a-72307724041c",
+   "cc9e91cd-c8dc-4302-bb5d-cff7afb019e1",
+   "ef3bfe99-3b8e-46f3-8ccc-8289f40b4285"
+  ],
+  "jennifer warnes": [
+   "2f140aa6-b99b-4f79-ae33-96018af87fa3"
+  ],
+  "joshua redman": [
+   "b00a17c3-72b2-4e39-96f9-770ba6cf4573"
+  ],
+  "julieta venegas": [
+   "601f8530-9009-4f73-94fb-a355b4497b70"
+  ],
+  "la oreja de van gogh": [
+   "a7c38944-b3fa-4a3d-a4bd-d3b3b06f0cbf"
+  ],
+  "la quinta estaci\u00f3n": [
+   "09c85751-d9fa-4dc3-bc7d-6ab15ac809de"
+  ],
+  "linda perhacs": [
+   "89967ce2-3f9a-4dad-b8c8-491bb87b73fe"
+  ],
+  "lisa": [
+   "85d76093-9865-4605-97fa-8c910929d366",
+   "e413ae3e-0c69-4bc6-b16b-aa7491350652",
+   "5a74c3ce-9478-484f-99af-a63b4388a454"
+  ],
+  "lunar vacation": [
+   "e9243b8e-84ed-4a8f-82d1-ea084a2f0c4a"
+  ],
+  "lyle lovett": [
+   "7241e3ed-5ad4-4849-94df-6858ea833472"
+  ],
+  "molly tuttle": [
+   "968fb129-2c95-4fd5-b195-86552ba45c94"
+  ],
+  "neil cowley trio": [
+   "d0b9a780-439a-4c4e-a658-4b0d81fa6796"
+  ],
+  "nickel creek": [
+   "365144f7-85af-4c83-b24b-b1d0b26160bb"
+  ],
+  "omen": [
+   "596cc676-32c7-480c-9bf4-dcc9d8ff62d3",
+   "7c07c61b-585f-437e-931a-d810f1471b70",
+   "6131498e-8b1b-420b-93f8-4a027f43b9c5",
+   "924e20e6-fe82-45dd-8ff4-55642aad4018",
+   "9b20562f-b1ac-479d-84a3-6efdf2671065",
+   "889b717c-e180-4dae-b6a0-0fcfb026a618",
+   "d2d87167-e0a5-4ba6-bea3-2fc2ee341c19",
+   "0816797c-ee38-4ef0-96e7-99140be340aa",
+   "ea73b35f-7194-4c36-b365-af4994fdd9fb",
+   "f0254eec-383d-42ca-84c7-d452f3a1e638",
+   "731f8ff8-8206-47cd-9f5d-9b95a2e5eca3",
+   "6e71a7f7-f991-4787-a51f-2f14b86c6017",
+   "1422e91a-7f2c-48f6-bcac-543201b95df5",
+   "35a842f8-a4ba-4079-a049-95dab42ea960",
+   "669026ba-8a93-46e1-a353-7481ddca99c1",
+   "a3b12378-ed7b-434b-9074-f195becf1080"
+  ],
+  "pagan altar": [
+   "8162d8d3-ae45-4550-87f1-fa1262166e8a"
+  ],
+  "paty cant\u00fa": [
+   "20dac54f-07a0-4418-b545-49d09813951c"
+  ],
+  "paul chain": [
+   "60e5f747-8d52-4ac5-afbd-9c452d227d72"
+  ],
+  "pentagram": [
+   "36733227-864b-4ed1-82a0-abc3ba801754",
+   "d7e9b9e7-8ac3-4be4-85c8-64601d68261c",
+   "8c2e4f17-540c-42d9-abba-bc1e6c9d9e6d",
+   "72baf7ed-2c17-4ee8-921e-8b650c6cc914",
+   "ecb3911f-94da-49ac-8cf1-70e53e7ca633",
+   "9b746c5f-d243-4baf-ba96-1a7573e6a06f"
+  ],
+  "pete rock & c.l. smooth": [
+   "cff77480-7ba4-4206-b1a8-e1b98b38f07c"
+  ],
+  "phronesis": [
+   "f315f045-48e3-4a45-a4ed-14c9a522e4db"
+  ],
+  "psychic tv": [
+   "14c5a3a3-f5ed-4978-99af-486010e3a007"
+  ],
+  "reverend bizarre": [
+   "97992045-1d3f-469d-91ce-27afd0bd216b"
+  ],
+  "robert plant & alison krauss": [
+   "38eb4af8-2282-4b8f-8819-1c7f92640dde"
+  ],
+  "shelby lynne": [
+   "f4992dae-69f2-4c0d-95fa-0b65f47906f2"
+  ],
+  "sierra hull": [
+   "81b38118-c135-4ac4-8334-c57a2455b798"
+  ],
+  "small faces": [
+   "7771a68c-ef6a-400f-978d-64050d45a54c"
+  ],
+  "solstice": [
+   "3f03ad4f-99e1-4e52-8eb8-eb79f2a0c55e",
+   "06942e9b-567b-45c4-97a6-9d98265ba479",
+   "1a0fa8d8-fb02-4172-8a5c-5b0498bf7769",
+   "5d1ed9b1-1bb2-4461-a89b-761eb695558a",
+   "bbb8df41-678f-4bba-8814-8702c6fa78ee",
+   "31425c7a-c418-4b01-b080-d305ae54751f",
+   "e0343f45-4293-4e60-8653-8ba3c1061722",
+   "f40d2ad4-187f-40e7-9a9f-6bae9f3e9286",
+   "c6b67d9d-2365-47b8-bce2-6011971dd19c",
+   "2e0c74c7-d1a8-49bf-b179-ea2355e8224b",
+   "9a6f4336-0e80-44ff-a931-a5036855b762",
+   "1602e08c-ce1b-46f8-8f77-6551fa0a4038",
+   "093936cb-70dd-487e-b572-23a73efb8a42",
+   "224b821f-b143-4d59-9f4f-4c07e954fc9c",
+   "4bff7038-424f-4065-9c5b-c1117c4a68c9",
+   "3bc794b4-7300-4d5e-9e53-bc55bd327ff0",
+   "8622a9a2-b49e-4299-8997-bc94f008d7bc",
+   "2a10c19b-cae3-4651-bf44-82cb6c464bf4",
+   "d6ecf01d-4876-47fd-aec9-adf418788219",
+   "dce2721e-989c-4a4d-b4ff-08af02de4b79",
+   "9e623a05-1f8e-4e92-9bc6-b8a44fec1fe0",
+   "85b5d142-7784-4c0d-8016-d4d7d1d06585"
+  ],
+  "spiritus mortis": [
+   "9dd28f79-06b1-4ddc-8fab-cd739dcf8a78"
+  ],
+  "the association": [
+   "e1fae923-bf20-4d7b-89fb-38ecc0a8236b",
+   "cdcc016c-2813-4fc7-8376-391acb19ba0b",
+   "66d7175f-949f-4566-a0c5-27e2a74c81bf"
+  ],
+  "the cox family": [
+   "7b8c7275-4359-449e-ae21-e4fa657ccad3"
+  ],
+  "the left banke": [
+   "b5c4dbf3-95da-4d3a-8a37-94bc50b8e7a7"
+  ],
+  "the obsessed": [
+   "aa043c18-c0a0-4cbe-bda0-8541f1fe59bd",
+   "23dcff56-daa3-4389-8950-276fe4680294"
+  ],
+  "the radio dept.": [
+   "e664d1cd-23ab-48d5-b8fa-e98485daa5be"
+  ],
+  "the turtles": [
+   "335b6182-0da8-4dc6-a5ec-fe13f0f87e4b",
+   "e384b4b3-a5e0-4a08-b92c-b534140e1890"
+  ],
+  "tingvall trio": [
+   "51b553fa-1604-4110-ba48-f54e38f50678"
+  ],
+  "vijay iyer": [
+   "ba2ff5ad-b5a4-499b-aac1-b31fd093112b"
+  ],
+  "vijay iyer trio": [
+   "d922fda2-1d1c-4c26-b3f8-4eaff1eda85d"
+  ],
+  "yoko ono": [
+   "b0b33754-a664-43b7-ba00-be0dc4ec2396"
+  ],
+  "\u0430\u0433\u0430\u0442\u0430 \u043a\u0440\u0438\u0441\u0442\u0438": [
+   "e4b06dc9-c196-49e1-a20a-554e72d95268"
+  ],
+  "\u0432\u0438\u043a\u0442\u043e\u0440 \u0446\u043e\u0439": [
+   "7da030e4-3b08-4e29-b497-344d809589fd"
+  ],
+  "\u0432\u044f\u0447\u0435\u0441\u043b\u0430\u0432 \u0431\u0443\u0442\u0443\u0441\u043e\u0432": [
+   "de2f6b7a-9d08-4a16-88c1-68c141e0b0c6"
+  ],
+  "\u043a\u0440\u0435\u043c\u0430\u0442\u043e\u0440\u0438\u0439": [
+   "9b135e33-2fbc-4155-b351-cc2a39997975"
+  ],
+  "\u043c\u0443\u043c\u0438\u0439 \u0442\u0440\u043e\u043b\u043b\u044c": [
+   "f91b9b28-25b7-4064-81d1-f43163085770"
+  ],
+  "\u043f\u0435\u0440\u0435\u043c\u043e\u0442\u043a\u0430": [
+   "f62d7553-5fd0-4c8f-8457-47516c327937"
+  ]
+ },
+ "requested": {
+  "a-tribe-called-quest": {
+   "genres": [
+    "alternative hip hop",
+    "boom bap",
+    "conscious hip hop",
+    "east coast hip hop",
+    "hip hop",
+    "jazz rap"
+   ],
+   "id": "9689aa5a-4471-4fb4-9721-07cecda0fa9f",
+   "name": "A Tribe Called Quest",
+   "tags": [
+    "alternative hip hop",
+    "boom bap",
+    "conscious hip hop",
+    "east coast hip hop",
+    "hip hop",
+    "jazz rap"
+   ]
+  },
+  "alison-krauss": {
+   "genres": [
+    "americana",
+    "bluegrass",
+    "contemporary country",
+    "country",
+    "folk"
+   ],
+   "id": "6b064ead-91a4-4ac8-8076-b1febe4f4aac",
+   "name": "Alison Krauss",
+   "tags": [
+    "1990s",
+    "americana",
+    "bluegrass",
+    "contemporary bluegrass",
+    "contemporary country",
+    "country",
+    "folk",
+    "grammy winner"
+   ]
+  },
+  "alvvays": {
+   "genres": [
+    "alternative rock",
+    "chamber pop",
+    "dream pop",
+    "indie pop",
+    "indie rock",
+    "jangle pop",
+    "power pop",
+    "rock",
+    "shoegaze",
+    "twee pop"
+   ],
+   "id": "99450990-b24e-4132-bb68-235f8c3e2564",
+   "name": "Alvvays",
+   "tags": [
+    "alternative rock",
+    "chamber pop",
+    "dream pop",
+    "indie pop",
+    "indie rock",
+    "jangle pop",
+    "low fidelity",
+    "power pop",
+    "rock",
+    "shoegaze",
+    "twee pop"
+   ]
+  },
+  "blackpink": {
+   "genres": [
+    "hip hop",
+    "k-pop",
+    "pop"
+   ],
+   "id": "48646387-1664-4c9a-9139-9bfd091b823c",
+   "name": "BLACKPINK",
+   "tags": [
+    "2010s",
+    "2020s",
+    "3rd gen k-pop",
+    "female vocals",
+    "girl crush",
+    "girl group",
+    "hip hop",
+    "k-pop",
+    "pop"
+   ]
+  },
+  "claude-debussy": {
+   "genres": [
+    "art song",
+    "ballet",
+    "classical",
+    "impressionism",
+    "orchestral"
+   ],
+   "id": "be50643c-0377-4968-b48c-47e06b2e2a3b",
+   "name": "Claude Debussy",
+   "tags": [
+    "00289 479 0056",
+    "19th century",
+    "20th century",
+    "art song",
+    "ballet",
+    "classical",
+    "composer",
+    "early 20th century",
+    "european",
+    "fransk",
+    "french",
+    "french composer",
+    "impressionism",
+    "impressionist",
+    "komponist",
+    "music critic",
+    "orchestral",
+    "pianist",
+    "piano",
+    "symbolist"
+   ]
+  },
+  "four-tet": {
+   "genres": [
+    "club",
+    "dance",
+    "downtempo",
+    "dubstep",
+    "electronic",
+    "electronica",
+    "folktronica",
+    "future garage",
+    "idm",
+    "indie rock",
+    "indietronica",
+    "microhouse",
+    "post-dubstep",
+    "post-rock",
+    "tech house",
+    "techno",
+    "trip hop"
+   ],
+   "id": "3bcff06f-675a-451f-9075-99e8657047e8",
+   "name": "Four Tet",
+   "tags": [
+    "british",
+    "club",
+    "dance",
+    "downtempo",
+    "dubstep",
+    "electronic",
+    "electronica",
+    "english",
+    "folktronica",
+    "future garage",
+    "idm",
+    "indie rock",
+    "indietronica",
+    "microhouse",
+    "post-dubstep",
+    "post-rock",
+    "tech house",
+    "techno",
+    "trip hop",
+    "uk"
+   ]
+  },
+  "kino": {
+   "genres": [
+    "new wave",
+    "post-punk"
+   ],
+   "id": "064db6e8-fdfb-4acb-a327-fc2de75b37de",
+   "name": "\u041a\u0438\u043d\u043e",
+   "tags": [
+    "_private tag 1",
+    "new wave",
+    "post-punk",
+    "russian",
+    "russian rock",
+    "saint petersburg",
+    "soviet",
+    "soviet rock"
+   ]
+  },
+  "nico": {
+   "genres": [
+    "avant-folk",
+    "avant-garde",
+    "chamber folk",
+    "gothic rock",
+    "lied",
+    "neo-medieval folk",
+    "neoclassical dark wave",
+    "neoromanticism",
+    "post-punk",
+    "rock"
+   ],
+   "id": "37c61bf2-5fb1-47ae-9605-80025d956958",
+   "name": "Nico",
+   "tags": [
+    "avant-folk",
+    "avant-garde",
+    "chamber folk",
+    "gothic rock",
+    "lied",
+    "neo-medieval folk",
+    "neoclassical dark wave",
+    "neoromanticism",
+    "post-punk",
+    "rock"
+   ]
+  },
+  "shakira": {
+   "genres": [
+    "dance-pop",
+    "latin",
+    "latin pop",
+    "pop",
+    "pop rock"
+   ],
+   "id": "bf24ca37-25f4-4e34-9aec-460b94364cfc",
+   "name": "Shakira",
+   "tags": [
+    "dance-pop",
+    "latin",
+    "latin pop",
+    "pop",
+    "pop rock"
+   ]
+  },
+  "the-bad-plus": {
+   "genres": [
+    "jazz",
+    "post-bop"
+   ],
+   "id": "b9bede5d-89b6-4c43-9c45-ca3930cf4db8",
+   "name": "The Bad Plus",
+   "tags": [
+    "jazz",
+    "jazz and blues",
+    "post-bop"
+   ]
+  },
+  "the-zombies": {
+   "genres": [
+    "art pop",
+    "baroque pop",
+    "beat music",
+    "british rhythm & blues",
+    "pop",
+    "pop rock",
+    "psychedelic pop",
+    "rock"
+   ],
+   "id": "230ca093-1d00-4c57-9235-147942f66930",
+   "name": "The Zombies",
+   "tags": [
+    "art pop",
+    "baroque pop",
+    "beat music",
+    "british rhythm & blues",
+    "pop",
+    "pop rock",
+    "psychedelic pop",
+    "rock"
+   ]
+  },
+  "trouble": {
+   "genres": [
+    "doom metal",
+    "heavy metal",
+    "traditional doom metal"
+   ],
+   "id": "2bfd6269-90a6-405e-8ce2-db6ad23a489c",
+   "name": "Trouble",
+   "tags": [
+    "doom metal",
+    "heavy metal",
+    "traditional doom metal"
+   ]
+  }
+ }
+}

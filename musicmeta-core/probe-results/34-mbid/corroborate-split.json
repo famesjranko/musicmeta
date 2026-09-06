@@ -1,0 +1,222 @@
+{
+ "frozen": {
+  "mismatchRows": 8,
+  "metric5_flagged": 0,
+  "metric1_corrected": 3,
+  "matchRows": 130,
+  "changes": [
+   {
+    "set": "frozen",
+    "correct": true,
+    "verdict": "MISMATCH",
+    "workload": "sleep-token",
+    "from": "8834d8b5-72a4-4a6e-9d35-3a041b8579fa",
+    "row": "Bad Omens",
+    "to": "eecada09-acfc-472d-ae55-e9e5a43f12d8"
+   },
+   {
+    "set": "frozen",
+    "correct": true,
+    "verdict": "MISMATCH",
+    "workload": "sleep-token",
+    "from": "a39ad456-a697-4f32-aa36-c107f654d318",
+    "row": "Spiritbox",
+    "to": "9c935736-7530-41e4-b776-1dbcf534c061"
+   },
+   {
+    "set": "frozen",
+    "correct": true,
+    "verdict": "MISMATCH",
+    "workload": "sleep-token",
+    "from": "e9ea0fbc-ccc7-4e98-9290-0a41aa848fa2",
+    "row": "Loathe",
+    "to": "56eb02c4-1f16-4613-8bb3-b4a752283fc3"
+   }
+  ],
+  "metric3_totalRequests": 8,
+  "metric5_flaggedMismatch": 0,
+  "rowsChanged": 3,
+  "perArtist": {
+   "fleetwood-mac": {
+    "ledger": [],
+    "requests": 0,
+    "top10Moved": 0
+   },
+   "aphex-twin": {
+    "ledger": [],
+    "requests": 0,
+    "top10Moved": 0
+   },
+   "burial": {
+    "ledger": [],
+    "requests": 0,
+    "top10Moved": 0
+   },
+   "kendrick-lamar": {
+    "ledger": [],
+    "requests": 0,
+    "top10Moved": 0
+   },
+   "changg": {
+    "ledger": [],
+    "requests": 0,
+    "top10Moved": 0
+   },
+   "bjork": {
+    "ledger": [],
+    "requests": 0,
+    "top10Moved": 0
+   },
+   "fela-kuti": {
+    "ledger": [],
+    "requests": 0,
+    "top10Moved": 0
+   },
+   "boards-of-canada": {
+    "ledger": [],
+    "requests": 0,
+    "top10Moved": 0
+   },
+   "tigran-hamasyan": {
+    "ledger": [
+     "GET /ws/2/artist/{mbid}?inc=url-rels 21006fdb-2e22-4950-91ed-8575a1a96b58",
+     "GET /ws/2/artist/{mbid}?inc=url-rels beb404c4-9d0b-4042-a56c-aad7673c677d"
+    ],
+    "requests": 2,
+    "top10Moved": 0
+   },
+   "sleep-token": {
+    "ledger": [
+     "GET /ws/2/artist/{mbid}?inc=url-rels 8834d8b5-72a4-4a6e-9d35-3a041b8579fa",
+     "GET /ws/2/artist/{mbid}?inc=url-rels eecada09-acfc-472d-ae55-e9e5a43f12d8",
+     "GET /ws/2/artist/{mbid}?inc=url-rels a39ad456-a697-4f32-aa36-c107f654d318",
+     "GET /ws/2/artist/{mbid}?inc=url-rels 9c935736-7530-41e4-b776-1dbcf534c061",
+     "GET /ws/2/artist/{mbid}?inc=url-rels e9ea0fbc-ccc7-4e98-9290-0a41aa848fa2",
+     "GET /ws/2/artist/{mbid}?inc=url-rels 56eb02c4-1f16-4613-8bb3-b4a752283fc3"
+    ],
+    "requests": 6,
+    "top10Moved": 5
+   },
+   "4wheel": {
+    "ledger": [],
+    "requests": 0,
+    "top10Moved": 0
+   },
+   "radiohead": {
+    "ledger": [],
+    "requests": 0,
+    "top10Moved": 0
+   }
+  },
+  "metric4_top10Moved": 5,
+  "capturedOn": "2026-09-06",
+  "metric3_worstArtist": 6,
+  "metric6_flaggedMatch": 0,
+  "arm": "corroborate-split",
+  "metric2_wronglyChanged": 0
+ },
+ "heldout": {
+  "mismatchRows": 5,
+  "metric5_flagged": 0,
+  "metric1_corrected": 2,
+  "matchRows": 152,
+  "changes": [
+   {
+    "set": "heldout",
+    "correct": true,
+    "verdict": "MISMATCH",
+    "workload": "blackpink",
+    "from": "d32de3a1-01f0-430e-859a-72307724041c",
+    "row": "Jennie",
+    "to": "779351de-0da5-4943-928b-495a3c40e8c0"
+   },
+   {
+    "set": "heldout",
+    "correct": true,
+    "verdict": "MISMATCH",
+    "workload": "blackpink",
+    "from": "17ecfa07-185f-49c1-a3c1-324fa5a07b1b",
+    "row": "Everglow",
+    "to": "bd04c7b4-530c-4802-ae16-962d004a5093"
+   }
+  ],
+  "metric3_totalRequests": 6,
+  "metric5_flaggedMismatch": 0,
+  "rowsChanged": 2,
+  "perArtist": {
+   "blackpink": {
+    "ledger": [
+     "GET /ws/2/artist/{mbid}?inc=url-rels d32de3a1-01f0-430e-859a-72307724041c",
+     "GET /ws/2/artist/{mbid}?inc=url-rels 779351de-0da5-4943-928b-495a3c40e8c0",
+     "GET /ws/2/artist/{mbid}?inc=url-rels 70198b37-f6c7-4cc7-a728-4224e860a15f",
+     "GET /ws/2/artist/{mbid}?inc=url-rels 30aeb57f-bb16-47fa-86ca-79fc57b4d12c",
+     "GET /ws/2/artist/{mbid}?inc=url-rels 17ecfa07-185f-49c1-a3c1-324fa5a07b1b",
+     "GET /ws/2/artist/{mbid}?inc=url-rels bd04c7b4-530c-4802-ae16-962d004a5093"
+    ],
+    "requests": 6,
+    "top10Moved": 7
+   },
+   "four-tet": {
+    "ledger": [],
+    "requests": 0,
+    "top10Moved": 0
+   },
+   "shakira": {
+    "ledger": [],
+    "requests": 0,
+    "top10Moved": 0
+   },
+   "nico": {
+    "ledger": [],
+    "requests": 0,
+    "top10Moved": 0
+   },
+   "the-bad-plus": {
+    "ledger": [],
+    "requests": 0,
+    "top10Moved": 0
+   },
+   "alison-krauss": {
+    "ledger": [],
+    "requests": 0,
+    "top10Moved": 0
+   },
+   "a-tribe-called-quest": {
+    "ledger": [],
+    "requests": 0,
+    "top10Moved": 0
+   },
+   "trouble": {
+    "ledger": [],
+    "requests": 0,
+    "top10Moved": 0
+   },
+   "the-zombies": {
+    "ledger": [],
+    "requests": 0,
+    "top10Moved": 0
+   },
+   "claude-debussy": {
+    "ledger": [],
+    "requests": 0,
+    "top10Moved": 0
+   },
+   "kino": {
+    "ledger": [],
+    "requests": 0,
+    "top10Moved": 0
+   },
+   "alvvays": {
+    "ledger": [],
+    "requests": 0,
+    "top10Moved": 0
+   }
+  },
+  "metric4_top10Moved": 7,
+  "capturedOn": "2026-09-06",
+  "metric3_worstArtist": 6,
+  "metric6_flaggedMatch": 0,
+  "arm": "corroborate-split",
+  "metric2_wronglyChanged": 0
+ }
+}

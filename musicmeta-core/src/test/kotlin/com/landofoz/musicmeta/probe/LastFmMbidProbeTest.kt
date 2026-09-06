@@ -24,19 +24,43 @@ import java.net.URLDecoder
  *
  * `ARM_NAME` and `applyArm` are the only two things that differ between branches.
  */
-private const val ARM_NAME = "control"
+private const val ARM_NAME = "corroborate-split"
 
 /**
  * The arm's whole property: what a Last.fm row's MBID becomes, and what asking cost.
  *
- * The control asks nothing and changes nothing.
+ * B1 corroborates, and its candidate set is the merged list itself: only where another contributor
+ * already named the same act does this arm ask MusicBrainz anything. `plan.md`'s three-step rule,
+ * unchanged — the id stands if it owns the row's own last.fm page; it is replaced only when exactly
+ * one same-name entry of the merged list owns that page instead; otherwise nothing happens.
  */
 private fun applyArm(
+    ctx: ArmContext,
     rows: List<LastFmRow>,
     others: List<SimilarArtist>,
     mb: MbTable,
     ledger: Ledger,
-): List<LastFmRow> = rows
+): List<LastFmRow> {
+    val asked = mutableSetOf<String>()
+    fun pagesOf(mbid: String): List<String> {
+        if (asked.add(mbid.lowercase())) ledger.bill("GET /ws/2/artist/{mbid}?inc=url-rels", mbid)
+        return mb.lastfmPages(mbid)
+    }
+    val byName = others.mapNotNull { o ->
+        o.identifiers.musicBrainzId?.trim()?.lowercase()?.takeIf { it.isNotEmpty() }
+            ?.let { key(o.name) to it }
+    }.groupBy({ it.first }, { it.second })
+
+    return rows.map { row ->
+        val mine = row.artist.mbid?.trim()?.lowercase()?.takeIf { it.isNotEmpty() } ?: return@map row
+        val page = row.page ?: return@map row
+        val siblings = (byName[key(row.artist.name)] ?: return@map row).filter { it != mine }
+        if (siblings.isEmpty()) return@map row
+        if (page in pagesOf(mine)) return@map row
+        val owners = siblings.distinct().filter { page in pagesOf(it) }
+        if (owners.size != 1) row else row.copy(artist = row.artist.copy(mbid = owners.single()))
+    }
+}
 
 // ---- Shared harness below this line; identical on every branch ------------------------------
 
@@ -69,6 +93,9 @@ internal data class LastFmRow(
     val mbidIndex: Int,
 )
 
+/** Which workload the arm is running over, so an arm may read that artist's own pool. */
+internal data class ArmContext(val set: String, val slug: String)
+
 /** One arm's request ledger. Every consultation of [MbTable] bills the request it stands in for. */
 internal class Ledger {
     val lines = mutableListOf<String>()
@@ -98,6 +125,27 @@ internal class MbTable(private val root: JSONObject) {
     }
 
     fun isKnown(mbid: String): Boolean = root.getJSONObject("artists").has(mbid.lowercase())
+
+    /**
+     * The requested artist's own curated genres and vote-carrying tags, from the lookup
+     * `MusicBrainzApi.lookupArtistWithRels` already makes on every artist enrich.
+     */
+    fun requestedVocabulary(slug: String): Set<String> {
+        val requested = root.optJSONObject("requested")?.optJSONObject(slug) ?: return emptySet()
+        val out = mutableSetOf<String>()
+        for (field in listOf("tags", "genres")) {
+            val arr = requested.optJSONArray(field) ?: continue
+            for (i in 0 until arr.length()) out += arr.getString(i)
+        }
+        return out
+    }
+
+    /** A similar entry's vote-carrying tags — the only vocabulary a *search* hit carries. */
+    fun searchHitTags(mbid: String): Set<String> {
+        val a = root.getJSONObject("artists").optJSONObject(mbid.lowercase()) ?: return emptySet()
+        val arr = a.optJSONArray("tags") ?: return emptySet()
+        return (0 until arr.length()).map { arr.getString(it) }.toSet()
+    }
 
     /** Every same-name MusicBrainz artist, for the names a search was captured for. */
     fun sameNameCandidates(name: String): List<String>? {
@@ -247,7 +295,7 @@ class LastFmMbidProbeTest {
             val w = Workload(set, slug)
             val ledger = Ledger()
             val others = w.deezer + w.labs
-            val after = applyArm(w.lastFm, others, mb, ledger)
+            val after = applyArm(ArmContext(set, slug), w.lastFm, others, mb, ledger)
             val before = w.lastFm
 
             val controlTop = topTen(w.flattened(before))
