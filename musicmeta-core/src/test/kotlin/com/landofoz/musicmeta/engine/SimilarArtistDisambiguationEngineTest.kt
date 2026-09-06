@@ -11,11 +11,16 @@ import com.landofoz.musicmeta.EnrichmentType
 import com.landofoz.musicmeta.ProviderCapability
 import com.landofoz.musicmeta.SimilarArtist
 import com.landofoz.musicmeta.cache.InMemoryEnrichmentCache
+import com.landofoz.musicmeta.http.HttpClient
+import com.landofoz.musicmeta.http.HttpResult
 import com.landofoz.musicmeta.http.RateLimiter
 import com.landofoz.musicmeta.provider.musicbrainz.MusicBrainzProvider
 import com.landofoz.musicmeta.testkit.UpstreamPools
 import com.landofoz.musicmeta.testutil.FakeHttpClient
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.test.runTest
+import org.json.JSONArray
+import org.json.JSONObject
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -62,6 +67,55 @@ class SimilarArtistDisambiguationEngineTest {
                 provider = id,
                 confidence = 1.0f,
             )
+    }
+
+    /** A contributor for an unrelated type, so a run's other answers can be checked for collateral. */
+    private class GenreProvider : EnrichmentProvider {
+        override val id: String = "fake_genre"
+        override val displayName: String = "Fake genre"
+        override val requiresApiKey: Boolean = false
+        override val isAvailable: Boolean = true
+        override val capabilities: List<ProviderCapability> =
+            listOf(ProviderCapability(EnrichmentType.GENRE, priority = 100))
+
+        override suspend fun enrich(request: EnrichmentRequest, type: EnrichmentType): EnrichmentResult =
+            EnrichmentResult.Success(
+                type = EnrichmentType.GENRE,
+                data = EnrichmentData.Metadata(genres = listOf("metal")),
+                provider = id,
+                confidence = 1.0f,
+            )
+    }
+
+    /**
+     * [delegate], with the batch search made slower than any budget it may be given.
+     *
+     * `delay` rather than a blocking sleep on purpose: the point under test is that the step's own
+     * ceiling *cancels* the wait, and a wait no cancellation can reach would prove nothing.
+     */
+    private class SlowAridHttpClient(
+        private val delegate: FakeHttpClient,
+        private val delayMs: Long,
+    ) : HttpClient {
+        override suspend fun fetchJsonResult(url: String): HttpResult<JSONObject> {
+            if (url.contains("arid")) delay(delayMs)
+            return delegate.fetchJsonResult(url)
+        }
+
+        override suspend fun fetchJsonResult(url: String, headers: Map<String, String>): HttpResult<JSONObject> =
+            delegate.fetchJsonResult(url, headers)
+
+        override suspend fun fetchJsonArrayResult(url: String): HttpResult<JSONArray> =
+            delegate.fetchJsonArrayResult(url)
+
+        override suspend fun fetchRedirectUrlResult(url: String): HttpResult<String> =
+            delegate.fetchRedirectUrlResult(url)
+
+        override suspend fun postJsonResult(url: String, body: String): HttpResult<JSONObject> =
+            delegate.postJsonResult(url, body)
+
+        override suspend fun postJsonArrayResult(url: String, body: String): HttpResult<JSONArray> =
+            delegate.postJsonArrayResult(url, body)
     }
 
     private fun http(): FakeHttpClient = FakeHttpClient().apply {
@@ -196,6 +250,41 @@ class SimilarArtistDisambiguationEngineTest {
     }
 
     @Test
+    fun `a slow batch gives up on its own ceiling rather than spending the run's whole budget`() = runTest {
+        // Given - a MusicBrainz that hangs on the batch for far longer than the run's own deadline,
+        // and a run whose deadline is itself far longer than the label's ceiling. On the shared
+        // 1 req/s limiter this is an ordinary shape, not a pathological one.
+        val slow = SlowAridHttpClient(http(), delayMs = SLOW_BATCH_MS)
+        val engine = EnrichmentEngine.Builder()
+            .httpClient(slow)
+            .config(EnrichmentConfig(enrichTimeoutMs = RUN_DEADLINE_MS))
+            .addProvider(SplitPairProvider())
+            .addProvider(GenreProvider())
+            .addProvider(MusicBrainzProvider(slow, RateLimiter(0L)))
+            .build()
+
+        // When - a run asks for the merged list and one unrelated type
+        val results = engine.enrich(
+            EnrichmentRequest.forArtist("Sleep Token"),
+            setOf(EnrichmentType.SIMILAR_ARTISTS, EnrichmentType.GENRE),
+        )
+
+        // Then - the label is abandoned at its own ceiling, so the merged list still arrives with the
+        // free half intact and the paid half blank...
+        val similar = results.raw[EnrichmentType.SIMILAR_ARTISTS]
+        assertTrue("expected a Success, got $similar", similar is EnrichmentResult.Success)
+        val artists = ((similar as EnrichmentResult.Success).data as EnrichmentData.SimilarArtists).artists
+        assertEquals("UK experimental metal", artists.single { it.identifiers.musicBrainzId == LOATHE_UK }.disambiguation)
+        assertNull(artists.single { it.identifiers.musicBrainzId == LOATHE_MT }.disambiguation)
+
+        // ...and every other type of the same run is untouched. Bounded by the run's own deadline
+        // instead, a cosmetic label would hold the fan-out until that deadline fired and take the
+        // unrelated answers — and the cache write-back — down with it
+        val genre = results.raw[EnrichmentType.GENRE]
+        assertTrue("a label must not cost an unrelated type its answer, got $genre", genre is EnrichmentResult.Success)
+    }
+
+    @Test
     fun `a failing MusicBrainz leaves the entry unlabelled rather than failing the type`() = runTest {
         // Given - a MusicBrainz that sheds the batch search
         val http = FakeHttpClient().apply { givenError("artist?query=arid") }
@@ -215,6 +304,12 @@ class SimilarArtistDisambiguationEngineTest {
 
         /** `CircuitBreaker.DEFAULT_FAILURE_THRESHOLD` — restated so tripping it is deliberate here. */
         const val BREAKER_THRESHOLD = 5
+
+        /** Longer than the run's deadline, so the label cannot be the thing that finishes first. */
+        const val SLOW_BATCH_MS = 30_000L
+
+        /** Longer than the label's own ceiling, so the ceiling is what the test observes. */
+        const val RUN_DEADLINE_MS = 10_000L
 
         /** A one-hit MusicBrainz artist search, enough for identity to resolve and the run to cache. */
         val SLEEP_TOKEN_SEARCH = """

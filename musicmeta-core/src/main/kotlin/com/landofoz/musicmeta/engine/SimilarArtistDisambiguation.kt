@@ -1,6 +1,7 @@
 package com.landofoz.musicmeta.engine
 
 import com.landofoz.musicmeta.SimilarArtist
+import com.landofoz.musicmeta.isMusicBrainzIdShape
 
 /**
  * A similar-artist name as the merge keys it: trimmed and lowercased.
@@ -48,6 +49,10 @@ internal object SimilarArtistDisambiguation {
             .filter { it.disambiguation.isNullOrBlank() }
             .filter { similarArtistNameKey(it.name) in sharedNames }
             .mapNotNull { similarArtistMbidKey(it.identifiers.musicBrainzId) }
+            // Shape-checked before the cap, not after: these ids come off other providers' answers,
+            // and `MusicBrainzApi` drops anything that is not a UUID when it builds the query. A cap
+            // counted first would spend its 25 places on ids the query then throws away.
+            .filter { it.isMusicBrainzIdShape() }
             .distinct()
             .take(BATCH_LIMIT)
             .toList()

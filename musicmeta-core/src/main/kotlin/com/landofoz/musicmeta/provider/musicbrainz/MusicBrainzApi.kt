@@ -6,6 +6,7 @@ import com.landofoz.musicmeta.engine.ProviderCallScope
 import com.landofoz.musicmeta.http.HttpClient
 import com.landofoz.musicmeta.http.RateLimiter
 import com.landofoz.musicmeta.http.bodyOrThrowTransient
+import com.landofoz.musicmeta.isMusicBrainzIdShape
 import com.landofoz.musicmeta.provider.encodePathSegment
 import com.landofoz.musicmeta.provider.encodeQueryValue
 import kotlinx.coroutines.currentCoroutineContext
@@ -46,7 +47,7 @@ internal class MusicBrainzApi(
         // Shape-checked rather than escaped. These ids arrive on other providers' responses, so they
         // are upstream input reaching a Lucene query; an id that is not a UUID is dropped rather
         // than escaped into a term that cannot match anything anyway.
-        val ids = mbids.filter { MBID_SHAPE.matches(it) }
+        val ids = mbids.filter { it.isMusicBrainzIdShape() }
         if (ids.isEmpty()) return emptyMap()
         val json = rateLimiter.execute {
             httpClient.fetchJsonResult(artistDisambiguationSearchUrl(ids)).bodyOrThrowTransient()
@@ -471,17 +472,13 @@ internal class MusicBrainzApi(
 
         /**
          * The URL [searchArtistDisambiguations] requests. [mbids] must already be shape-checked
-         * against [MBID_SHAPE]: a UUID carries no Lucene metacharacter, so the terms go in unescaped
+         * with `isMusicBrainzIdShape`: a UUID carries no Lucene metacharacter, so terms go in unescaped
          * and the URL names the ids it is asking about.
          */
         fun artistDisambiguationSearchUrl(mbids: List<String>): String {
             val query = encodeQueryValue(mbids.joinToString(" OR ") { "arid:$it" })
             return "$BASE_URL/artist?query=$query&fmt=json&limit=${mbids.size}"
         }
-
-        /** What a MusicBrainz id looks like, lowercased — the only thing an `arid:` term may carry. */
-        private val MBID_SHAPE =
-            Regex("[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}")
 
         /**
          * How many ids one [searchArtistDisambiguations] may name.

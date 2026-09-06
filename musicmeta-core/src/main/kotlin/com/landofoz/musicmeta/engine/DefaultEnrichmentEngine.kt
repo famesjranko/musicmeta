@@ -930,12 +930,16 @@ internal class DefaultEnrichmentEngine(
         if (mbids.isEmpty()) return merged
         val musicBrainz = registry.musicBrainzProvider() ?: return merged
         if (!registry.allowsRequest(musicBrainz.id)) return merged
-        // Bounded twice on purpose. The enclosing enrich() deadline would stop this eventually, but
-        // a step that spends the last of the run's budget makes *that* timeout fire, and a run which
-        // times out writes nothing back to the cache — so a label would have cost the whole result.
+        // The ceiling is the point, and it must be the *smaller* of the two bounds. Bounding this
+        // by what is left of the run buys nothing: the two clocks expire together, so a batch stuck
+        // behind MusicBrainz's shared 1 req/s limiter would hold the fan-out until the enclosing
+        // enrich() deadline fired — which fails every type in the run and skips the cache write-back
+        // for all of them, to add a label to two entries. A run with less than the ceiling left
+        // bounds it lower still, and one with nothing left does not ask at all.
         val remaining = enrichDeadlineRemainingMs()
         if (remaining != null && remaining <= 0) return merged
-        val texts = withTimeoutOrNull(remaining ?: DISAMBIGUATION_BUDGET_MS) {
+        val budget = minOf(remaining ?: Long.MAX_VALUE, DISAMBIGUATION_BUDGET_MS)
+        val texts = withTimeoutOrNull(budget) {
             musicBrainz.describeArtists(mbids)
         }.orEmpty()
         if (texts.isEmpty()) return merged
@@ -1067,9 +1071,9 @@ internal class DefaultEnrichmentEngine(
         )
 
         /**
-         * The similar-artist labelling step's own ceiling, used only when no `enrich()` deadline
-         * encloses it — a consumer driving the engine with no timeout of its own. Inside a run the
-         * remaining deadline is the bound, and always the smaller of the two.
+         * The longest a similar-artist label may hold the fan-out, whatever the run's own deadline
+         * allows. Always applied: it is a ceiling, and what is left of an `enrich()` deadline only
+         * ever lowers it further.
          */
         private const val DISAMBIGUATION_BUDGET_MS = 3_000L
 

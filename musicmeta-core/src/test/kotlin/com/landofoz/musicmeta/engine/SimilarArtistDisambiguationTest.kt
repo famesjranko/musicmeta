@@ -89,6 +89,24 @@ class SimilarArtistDisambiguationTest {
         assertEquals(SimilarArtistDisambiguation.BATCH_LIMIT, ids.size)
     }
 
+    @Test
+    fun `the cap counts ids the query can actually ask about`() {
+        // Given - a list whose same-name entries carry 25 ids that are not MusicBrainz ids at all,
+        // ahead of one that is. Ids arrive on other providers' answers, so this is their shape to
+        // decide, not ours
+        val junk = (1..25).flatMap { index ->
+            listOf(artist("Act $index", "not-an-mbid-$index"), artist("Act $index", "also-not-$index"))
+        }
+        val real = listOf(artist("Loathe", LOATHE_UK), artist("Loathe", LOATHE_MT))
+
+        // When - the ids a batched lookup would name are computed
+        val ids = SimilarArtistDisambiguation.undescribedSplitPairMbids(junk + real)
+
+        // Then - the real ids are asked about. Capping before the shape check would spend all 25
+        // places on ids `MusicBrainzApi` then drops, and ask MusicBrainz about nothing
+        assertEquals(listOf(LOATHE_UK, LOATHE_MT), ids)
+    }
+
     // --- how an answer is applied ---
 
     @Test
