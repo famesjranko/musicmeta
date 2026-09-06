@@ -172,6 +172,15 @@ no line to read: `CacheEnvelope<out T : EnrichmentResult>` dumps as a bare `Cach
 Narrowing a bound, flipping variance, or removing `reified` from an inline function is a source
 break that moves no `.api` line, so any change to one is reviewed from the `.kt`.
 
+A `const val` in a **private companion object** is a `public static final` field on the *enclosing*
+class. Kotlin honours the private companion and the JVM does not, so the constant is unreachable
+from Kotlin, reachable from Java, and recorded by `apiCheck` as published surface — six of them
+were, a log tag and a base URL among them, until they were removed under a `### Breaking Changes`
+line for constants nobody meant to publish. `private const val` in the same companion does not leak
+and the enclosing class still reads it unqualified, so the fix costs nothing at any call site.
+`scripts/checks/check_private_companion_consts.py` gates the bare form now; what it cannot tell you
+is whether a constant in a *public* companion belongs there.
+
 The surface was narrowed to the four-role boundary in v0.10.0 (#5). `CircuitBreaker`,
 `MusicBrainzParser` and the built-in mergers/synthesizers are `internal`, so a refactor confined to
 them leaves `apiCheck` green. `RateLimiter` is public only because it is a parameter of nearly every
@@ -398,6 +407,13 @@ therefore checks for `ClientError` before the helper runs and throws, so `mapErr
 Ask what the route's own "nothing" looks like before reaching for the helper. Where the upstream has
 a success shape for absence, a 4xx is a statement about the *request*, and collapsing it to absence
 destroys the only signal that the request stopped being valid.
+
+Wikidata's two routes take the other option, and the difference is worth reading. Both
+`getEnwikiSitelink` and `getEntityProperties` name the unreadable answer in their own return type,
+log it, and still answer `NotFound` rather than throwing: the enrichment answer is `NotFound` either
+way, so the only thing an `Error` would add is an open breaker — and a request-shaped 4xx on one
+route would then take every other Wikidata capability down with it. The log is the signal, and the
+schema pins are what turn a route that has moved into something someone reads.
 
 Classifying it correctly has a cost worth knowing, because a breaker is per *provider*, not per
 route: five of these errors with no other route's success in between open ListenBrainz's breaker and
