@@ -29,7 +29,7 @@ Call `engine.close()` when you are done with the engine. It releases the scope t
 ### With OkHttp (recommended for Android)
 
 ```kotlin
-// Add: implementation("io.github.famesjranko:musicmeta-okhttp:0.12.0")
+// Add: implementation("io.github.famesjranko:musicmeta-okhttp:0.13.0")
 val engine = EnrichmentEngine.Builder()
     .httpClient(OkHttpEnrichmentClient(myOkHttpClient, "MyApp/1.0 ( https://example.com/myapp )"))
     .withDefaultProviders()
