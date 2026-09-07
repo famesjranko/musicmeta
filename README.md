@@ -25,10 +25,11 @@ MusicBrainz resolves the MBID first, so every lookup after it is an identifier l
 name search. Rate limiting, circuit breaking, confidence scoring and caching are built in. Every type
 resolves on its own, so a provider that fails costs you that type and nothing else.
 
-The values above come from one real call with all four optional keys set, captured 2026-08-18;
+The values above come from one real call with all four optional keys set, captured 2026-09-07;
 upstream data moves, so treat them as a shape rather than a guarantee. Keyless it answers 12 of
-those 15 types, with fewer image alternates, 20 similar artists rather than 31, and genre confidence
-at 0.70.
+those 16 types, with two image alternates rather than four, 105 similar artists rather than 109, and
+genre confidence at 0.70. The discography is one 100-item browse page, so an artist with a larger
+catalogue is truncated there.
 
 ## Quick start
 
