@@ -9,7 +9,7 @@
 # caller — bump it only after confirming the version is released (CHANGELOG.md).
 # --build-arg DEMO_CORE_VERSION= (empty) builds core from the local checkout instead — a dev-only
 # image for testing unreleased core; never deploy one.
-ARG DEMO_CORE_VERSION=0.12.0
+ARG DEMO_CORE_VERSION=0.13.0
 
 FROM eclipse-temurin:17-jdk AS build
 WORKDIR /src

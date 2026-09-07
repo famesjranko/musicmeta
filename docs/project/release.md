@@ -51,6 +51,12 @@ curl -s https://repo1.maven.org/maven2/io/github/famesjranko/musicmeta-core/mave
       gh workflow run release.yml --ref main -f mode=release
 
 - [ ] Drop the `X.Y.Z-rc.<run number>` deployment `stage` left behind
+- [ ] Bump `demo-web/Dockerfile`'s `ARG DEMO_CORE_VERSION` to `X.Y.Z`, and redeploy the demo against
+      it: Actions → **Deploy demo-web**, `core_version=X.Y.Z`, `public=keep`. No check reads that
+      `ARG`, and it cannot be pinned against `gradle.properties` the way the coordinates are —
+      between gate 1 and gate 3 that file names a version Central does not carry yet, so a gate
+      tying the two would fail on every release branch. It only binds a `docker build` that passes
+      no `--build-arg`, which is why it can sit a release behind unnoticed.
 - [ ] Confirm what shipped: the tag, the GitHub Release, and all three modules resolving:
 
       gh release view vX.Y.Z

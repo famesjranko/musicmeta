@@ -73,6 +73,14 @@ than it looks like, each learned the hard way.
   is invisible to every gate we have. The failure is silent and only a consumer discovers it,
   mid-upgrade.
 
+- **Nothing reads `demo-web/Dockerfile`'s `ARG DEMO_CORE_VERSION`.** It names the published core
+  the demo image builds against, and `check_release_coordinates.py` cannot own it: that check pins
+  every version-bearing line to `gradle.properties`, which between gate 1 and gate 3 names a version
+  Maven Central does not carry yet, so tying the two would fail on every release branch. The deploy
+  workflow always passes `--build-arg`, so the default binds only a hand-run `docker build` — which
+  is exactly why it can sit a release behind and nobody notice. `docs/project/release.md`'s gate 3
+  checklist carries the bump instead, which is a person remembering, not a mechanism.
+
 - **CI's `demo-canary` job compiles and tests the demos; it does not lint them.** It runs
   `../gradlew compileKotlin test` in each demo, while `make check` also runs the demos' ktlint.
   A demo style violation therefore merges green and breaks `make check` on `main` for whoever
