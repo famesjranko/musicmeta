@@ -55,6 +55,21 @@ def _same_minor(a: str, b: str) -> bool:
     return a.split(".")[:2] == b.split(".")[:2]
 
 
+def unreleased_body(text: str) -> str:
+    """Everything under `## [Unreleased]` up to the next `## ` heading, or `""` if there is none.
+
+    One definition of "what would ship", read by both [pin_changelog] and the release-branch case
+    in `test_check_migration_guide.py`. A second copy of this parse in the test is how the two
+    would drift.
+    """
+    match = UNRELEASED.search(text)
+    if not match:
+        return ""
+    rest = text[match.end() :]
+    next_heading = rest.find("\n## ")
+    return rest if next_heading == -1 else rest[:next_heading]
+
+
 def pin_changelog(text: str, version: str, date: str) -> str:
     """Rename `## [Unreleased]` to `## [version] - date` and open a fresh empty `[Unreleased]`."""
     match = UNRELEASED.search(text)
@@ -67,9 +82,7 @@ def pin_changelog(text: str, version: str, date: str) -> str:
         raise PinError(f"CHANGELOG already has a '## [{version}]' section")
 
     # Everything between [Unreleased] and the next `## ` heading is what would ship.
-    rest = text[match.end() :]
-    next_heading = rest.find("\n## ")
-    body = rest if next_heading == -1 else rest[:next_heading]
+    body = unreleased_body(text)
     if not body.strip():
         raise PinError("the [Unreleased] section is empty — there is nothing to release")
 

@@ -18,7 +18,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "github-workflows")
 
 from build_release_notes import released_versions  # noqa: E402
 from check_migration_guide import run  # noqa: E402
-from pin_release import pin_changelog, pin_migration_guide  # noqa: E402
+from pin_release import pin_changelog, pin_migration_guide, unreleased_body  # noqa: E402
 
 CHANGELOG = """# Changelog
 
@@ -135,10 +135,25 @@ class MigrationGuideTest(unittest.TestCase):
 
         Each is tested against the live repo in its own suite; this is the only place both run
         together, which is what a real release actually does.
+
+        The rehearsal needs something to pin. On a `release/x.y.z` branch there is nothing:
+        gate 1 has already pinned `[Unreleased]` and opened a fresh empty one, so `pin_changelog`
+        raises "nothing to release" and this errored on every release branch — the one branch where
+        `./check` most has to pass (`docs/project/release.md`, gate 2). That state is not a failure,
+        it is the post-pin half of the same invariant, so it is asserted rather than skipped: the
+        already-pinned files must agree exactly as the freshly-pinned ones must.
         """
         root = Path(__file__).resolve().parents[2]
         changelog_text = (root / "CHANGELOG.md").read_text(encoding="utf-8")
         guide_text = (root / "docs" / "guides" / "migration.md").read_text(encoding="utf-8")
+
+        if not unreleased_body(changelog_text).strip():
+            self.assertEqual(
+                run(root),
+                [],
+                "on an already-pinned tree the live files must still agree",
+            )
+            return
 
         last = released_versions(changelog_text)[0]
         major, minor, _ = (int(p) for p in last.split("."))
