@@ -25,26 +25,26 @@
 
   <rect x="1" y="128" width="937" height="222" rx="9" fill="none" stroke="#2f8a63" stroke-width="1.75"/>
   <text x="20" y="154" font-size="13" font-weight="600" fill="#2f8a63">ArtistProfile</text>
-  <text x="122" y="154" font-size="11.5" fill="#656d76">&#8212; 15 types on one object, each with its own source, confidence and outcome</text>
+  <text x="122" y="154" font-size="11.5" fill="#656d76">&#8212; 16 types on one object, each with its own source, confidence and outcome</text>
   <line x1="20" y1="164" x2="918" y2="164" stroke="#d0d7de"/>
   <text x="20" y="190" font-size="12.5" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" fill="#1f2328">photo</text>
   <text x="142" y="190" font-size="12" fill="#656d76">wikidata, +4 alts</text>
   <text x="330" y="190" font-size="12.5" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" fill="#1f2328">bio</text>
   <text x="452" y="190" font-size="12" fill="#656d76">wikipedia</text>
   <text x="640" y="190" font-size="12.5" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" fill="#1f2328">discography</text>
-  <text x="762" y="190" font-size="12" fill="#656d76">45 releases</text>
+  <text x="762" y="190" font-size="12" fill="#656d76">100 albums</text>
   <text x="20" y="215" font-size="12.5" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" fill="#1f2328">background</text>
   <text x="142" y="215" font-size="12" fill="#656d76">fanart.tv</text>
   <text x="330" y="215" font-size="12.5" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" fill="#1f2328">genres</text>
   <text x="452" y="215" font-size="12" fill="#656d76">alt rock (1.00)</text>
   <text x="640" y="215" font-size="12.5" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" fill="#1f2328">topTracks</text>
-  <text x="762" y="215" font-size="12" fill="#656d76">1001 tracks</text>
+  <text x="762" y="215" font-size="12" fill="#656d76">3048 tracks</text>
   <text x="20" y="240" font-size="12.5" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" fill="#1f2328">logo</text>
   <text x="142" y="240" font-size="12" fill="#656d76">fanart.tv</text>
   <text x="330" y="240" font-size="12.5" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" fill="#1f2328">members</text>
   <text x="452" y="240" font-size="12" fill="#656d76">5, with roles</text>
   <text x="640" y="240" font-size="12.5" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" fill="#1f2328">similarArtists</text>
-  <text x="762" y="240" font-size="12" fill="#656d76">31, 2 sources</text>
+  <text x="762" y="240" font-size="12" fill="#656d76">109, 3 sources</text>
   <text x="20" y="265" font-size="12.5" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" fill="#1f2328">banner</text>
   <text x="142" y="265" font-size="12" fill="#656d76">fanart.tv</text>
   <text x="330" y="265" font-size="12.5" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" fill="#1f2328">links</text>
@@ -54,7 +54,7 @@
   <text x="20" y="290" font-size="12.5" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" fill="#1f2328">popularity</text>
   <text x="142" y="290" font-size="12" fill="#656d76">455k listeners</text>
   <text x="330" y="290" font-size="12.5" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" fill="#1f2328">timeline</text>
-  <text x="452" y="290" font-size="12" fill="#656d76">21 events</text>
+  <text x="452" y="290" font-size="12" fill="#656d76">32 events</text>
   <text x="640" y="290" font-size="12.5" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" fill="#1f2328">genreDiscovery</text>
   <text x="762" y="290" font-size="12" fill="#656d76">17 genres</text>
   <line x1="20" y1="300" x2="918" y2="300" stroke="#d0d7de"/>

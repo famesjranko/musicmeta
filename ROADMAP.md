@@ -104,7 +104,7 @@ judgement, not a measurement — of how well each type is covered.
 
 ### Provider Surface Used
 
-Distinct upstream paths each provider calls, counted in `provider/*/*Api.kt` on **2026-08-12**.
+Distinct upstream paths each provider calls, counted in `provider/*/*Api.kt` on **2026-09-07**.
 Parameter variants fold into one path: Last.fm's six `method=` calls are one path, iTunes' three
 `lookup` forms are one, and a search and a lookup on the same entity are two.
 
@@ -112,7 +112,7 @@ Parameter variants fold into one path: Last.fm's six `method=` calls are one pat
 |----------|--------------|
 | **MusicBrainz** | 8 — search + lookup for artist, recording and release; browse + lookup for release-group |
 | **Deezer** | 10 |
-| **ListenBrainz** | 5 |
+| **ListenBrainz** | 6 — four popularity paths, LB Radio, and similar-artists on the Labs host |
 | **Discogs** | 4 |
 | **Cover Art Archive** | 3 |
 | **Fanart.tv** | 2 |

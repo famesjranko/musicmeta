@@ -78,10 +78,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `engine.DEFAULT_SYNTHESIZER_DEPENDENCIES`: each composite type the engine synthesizes mapped to its source sub-types, for crediting a synthesized result without hand-copying the graph
 - demo-web's enrich page now streams over `enrichProgressive` via server-sent events: the page paints each card as its type settles instead of waiting for the slowest provider
 - demo-web credits every card with the upstream that supplied it, from response provenance, with each provider's required wording, link-back and licence notice rendered beside its data
-- demo-web shows Deezer's private-use notice at the preview player, and states each provider's standing notices in the footer
+- demo-web states each provider's standing notices, Deezer's private-use notice included, in the footer
 - demo-web's Cloud Run artifacts are back (`Dockerfile`, `deploy.sh`); `-PdemoCoreVersion` builds the image against the released Maven Central core, unset builds from source as before
 - demo-web reads `DEMO_PUBLIC=1` for a ToS-safe public posture (Last.fm off, personal tokens withheld, Discogs images off and 6h freshness ceiling); `DEMO_PUBLIC_ALLOW` lifts named restrictions
 - demo-web bounds one client's share of upstream-bearing endpoints (20-burst, 30/min per client), and skips its transient-failure retry pass while the admission gate is saturated
+- demo-web also refuses with `429` and `Retry-After: 15` once five lookups are already running on the instance, so a client well inside its own budget can still be turned away
+- demo-web under `DEMO_PUBLIC` needs a maintainer secret to POST `/api/config`, and caps what it will read: 64 KiB on a request body, 256 characters on a free-text query parameter
 - demo-cli's album profile shows a `Description:` row read through the `albumDescription()` named accessor, and `--types` gains `desc` and `reltype` aliases
 - demo-cli gains `stream` (progressive enrichment, a row per type as it settles) and `pin` (`markManuallySelected`, shown as `[pinned]`); `invalidate` now honours `--types`
 - demo-cli's track profile shows `Album:`/`Duration:` from `TrackProfile.trackMetadata`, and `config` reaches the `ttl`, per-provider confidence and priority override maps
@@ -113,6 +115,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Every `country` field now documents one rule: alpha-2 where the upstream names a *current* ISO country, else the upstream's own label — `Europe`, `Yugoslavia`, `XE`/`XW` reach you
 - ListenBrainz `ARTIST_POPULARITY` answers `NotFound` when its artist-popularity endpoint has nothing, instead of a payload holding only top tracks; request `ARTIST_TOP_TRACKS` for those
 - Two published-surface conventions documented: every score is a `Float` on 0.0-1.0, every date a `String` in ISO-8601 and every `year` an `Int?` — with their frozen exceptions named
+- The docs no longer call `ARTIST_RADIO_DISCOVERY` dark: ListenBrainz's radio route answers again, and it needs `listenBrainzToken` — a request without one is refused `401`
+- demo-cli and demo-web label a similar-artist or similar-track score as a rank, not `match NN%`: since the rescale the top entry always read 100%, which was never a similarity
 
 ### Fixed
 - A Discogs credit marked as a name variation (a trailing `*`) is now read as the name under the marker, so an album whose credit Discogs printed that way stops rejecting the artist who made it
@@ -166,6 +170,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The results reference now lists the published shape — `ENGINE_CLOSED`, `isStale`, `isCatalogDegraded`, `CONTRADICTED`, `RESOLVING` — and documents `enrich()` as throwing only for cancellation
 - A Fanart.tv or Last.fm API key holding a reserved character (`|`, `#`, `&`) now sends: it is percent-encoded like every other interpolated value, instead of throwing on `DefaultHttpClient`
 - Discogs' literal `Unknown` country sentinel now reads as absent, not a place: `Metadata.country`/`ReleaseEdition.country` no longer carry it; cached entries keep it until cleared or expired
+- A fact identity resolution learns after the fan-out has started no longer vanishes from what `enrich()` returns: the terminal snapshot reads the resolution the run updates, not a stale copy
 
 ### Migration note
 If you use `EnrichmentCache`, clear it after upgrading from 0.12.0 or earlier: a cached `SIMILAR_ARTISTS` list decodes on the old summed-and-clamped `matchScore` scale.
