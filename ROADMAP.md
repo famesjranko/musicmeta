@@ -225,7 +225,7 @@ milestone:
 | Artwork | 8 types, ALBUM_ART (5 merged) + ARTIST_PHOTO (5 merged) + CD_ART (2) | ✅ **Complete** — ArtworkMerger collects from all providers, alternatives preserved |
 | Metadata | 12 types including credits + editions | ✅ **Complete** |
 | Text content | Artist bios, album descriptions, synced/plain lyrics | ✅ **Complete** |
-| Relationships | Similar artists (2 merged), similar tracks (2 merged), links (2 sources) | ✅ **Complete** |
+| Relationships | Similar artists (3 merged), similar tracks (2 merged), links (2 sources) | ✅ **Complete** |
 | Statistics | Artist + track popularity merged from 3 sources as per-source signals, top tracks (3 merged) | ✅ **Complete** |
 | Links | All MusicBrainz URL relation types, plus Wikidata P856 | ✅ **Complete** |
 | Credits | Performers, producers, composers, engineers | ✅ **Complete** |

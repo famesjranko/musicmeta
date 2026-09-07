@@ -83,7 +83,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - demo-web reads `DEMO_PUBLIC=1` for a ToS-safe public posture (Last.fm off, personal tokens withheld, Discogs images off and 6h freshness ceiling); `DEMO_PUBLIC_ALLOW` lifts named restrictions
 - demo-web bounds one client's share of upstream-bearing endpoints (20-burst, 30/min per client), and skips its transient-failure retry pass while the admission gate is saturated
 - demo-web also refuses with `429` and `Retry-After: 15` once five lookups are already running on the instance, so a client well inside its own budget can still be turned away
-- demo-web under `DEMO_PUBLIC` needs a maintainer secret to POST `/api/config`, and caps what it will read: 64 KiB on a request body, 256 characters on a free-text query parameter
+- demo-web under `DEMO_PUBLIC` needs a maintainer secret to POST `/api/config`, so a public instance can be read but not reconfigured
+- demo-web caps what it reads on every deployment, posture or not: 64 KiB on an `/api/config` or `/api/invalidate` body, 256 characters on a free-text query parameter
 - demo-cli's album profile shows a `Description:` row read through the `albumDescription()` named accessor, and `--types` gains `desc` and `reltype` aliases
 - demo-cli gains `stream` (progressive enrichment, a row per type as it settles) and `pin` (`markManuallySelected`, shown as `[pinned]`); `invalidate` now honours `--types`
 - demo-cli's track profile shows `Album:`/`Duration:` from `TrackProfile.trackMetadata`, and `config` reaches the `ttl`, per-provider confidence and priority override maps
