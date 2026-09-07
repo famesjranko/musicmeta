@@ -29,6 +29,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.13.0] - 2026-09-07
+
 ### Breaking Changes
 - `SearchCandidate.year` is now `Int?` (was `String?` and could carry a full date): read the year as a number; a date-only upstream value is truncated to it
 - `DiscographyAlbum.year` is now `Int?` (was `String?`), matching `SimilarAlbum` and `ReleaseEdition`; a Room-cached 0.12.0 discography still reads, and a row with a non-numeric year refetches once
