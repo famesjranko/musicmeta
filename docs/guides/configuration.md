@@ -277,9 +277,9 @@ val minimal = setOf(EnrichmentType.ALBUM_ART, EnrichmentType.GENRE)
 
 The library includes several discovery types that go beyond basic metadata.
 
-### Similar artists (merged from 2 providers)
+### Similar artists (merged from 3 providers)
 
-Last.fm and Deezer each return similar artists. The engine deduplicates them, combines scores, and tracks which providers contributed each match:
+Last.fm, ListenBrainz and Deezer each return similar artists. The engine deduplicates them, ranks them within the merged list, and tracks which providers contributed each match:
 
 ```kotlin
 val results = engine.enrich(

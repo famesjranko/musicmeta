@@ -85,10 +85,12 @@ ruff check .
 step "shell lint (shellcheck)"
 # Discovered, not a fixed glob: a hand-listed set silently stops covering the next script someone
 # adds, which is the same silent-skip failure this gate exists to prevent. `check` has no
-# extension so it is named explicitly. `.claude/` is excluded because agent worktrees under it are
-# whole copies of this repo — without that, every script gets linted once per live worktree.
-find . -name '*.sh' -not -path './.git/*' -not -path './.claude/*' -not -path '*/build/*' \
-    -print0 | sort -z | xargs -0 shellcheck check
+# extension so it is named explicitly. The discovery is `git ls-files` rather than `find` because
+# only a tracked file can reach CI: `find` also walks untracked, gitignored trees — `.scratch/`
+# prototypes, agent worktrees under `.claude/` — so it failed locally on scripts CI cannot see,
+# and a permanently red gate is one nobody reads. A new script is linted once it is `git add`ed,
+# which is the same moment it becomes something CI runs.
+git ls-files -z '*.sh' | sort -z | xargs -0 shellcheck check
 
 step "python types (mypy)"
 mypy

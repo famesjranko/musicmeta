@@ -157,6 +157,57 @@ val identityScore = results.identity.matchScore
 val confidentIdentity = identityScore != null && identityScore >= 0.9f
 ```
 
+### `SimilarArtist.matchScore` is a rank in its own merged list, not a clamped sum
+
+The merger used to add each provider's figure together and clamp the total at 1.0, so several
+artists could share a 1.0 and the number ordered nothing. It now divides every sum by the largest
+in the answer, making the top entry 1.0 and every other entry a position under it.
+
+This compiles either way. What breaks is a threshold, because the score no longer measures
+similarity — it measures where an artist sat in *this* merge:
+
+```kotlin
+// Reads a rank as though it were a similarity: with the top entry pinned at 1.0, this now keeps
+// a fixed slice of every list rather than the artists any provider called close.
+val strong = results.similarArtists()?.artists?.filter { it.matchScore >= 0.8f }
+```
+
+Take a position, or read `sources` for the corroboration the score never carried:
+
+```kotlin
+val strong = results.similarArtists()?.artists?.take(10)
+val corroborated = results.similarArtists()?.artists?.filter { it.sources.size > 1 }
+```
+
+A score is comparable only against others in the same answer: against another answer's, or against
+the figure a provider reported, it means nothing. Two edges to know — a list in which every entry
+scored zero stays at zero, having no scale to rank against, and the top entry is 1.0 only when no
+`CatalogProvider` is configured or the mode is `UNFILTERED`, since `AVAILABLE_ONLY` can remove the
+1.0 entry outright.
+
+**Clear your cache.** A `SIMILAR_ARTISTS` list cached by 0.12.0 or earlier decodes on the old
+summed-and-clamped scale, so a cached list and a fresh one are not comparable until it is cleared.
+
+### `SimilarTrack.matchScore` is a position in its own merged list, not a clamped sum
+
+Same rescale, with one extra consequence. The merger takes Last.fm's figure un-summed where Last.fm
+contributed and sums the other contributors' where it did not, then divides every result by the
+largest:
+
+```kotlin
+// Same defect as above: a fixed cut-off applied to a number that now describes rank.
+val strong = results.similarTracks()?.tracks?.filter { it.matchScore >= 0.8f }
+```
+
+```kotlin
+val strong = results.similarTracks()?.tracks?.take(10)
+```
+
+With three or more contributors a Last.fm track can now rank *below* one that two other providers
+agree on, so re-read any threshold you tuned against a two-provider answer. The all-zero and
+catalog-filtering edges are the same as `SimilarArtist`, and the same cache-clear applies to a
+`SIMILAR_TRACKS` list you merged with a provider of your own.
+
 ### `discoverMbidEntityType` is an `EnrichmentEngine` member, not a top-level extension
 
 An engine you wrap could not carry the extension; a member travels with the engine it asks.
@@ -409,6 +460,7 @@ val candidateIsNineties = candidateYear != null && candidateYear in 1990..1999
 | `EnrichmentEngine` gains `enrichProgressive`, `enrichBatchProgressive`, `close()` and `discoverMbidEntityType`, all defaulted | Nothing, unless you implement `EnrichmentEngine` yourself: an implementation built against an older `.jar` throws `AbstractMethodError` on the first call until recompiled |
 | `EnrichmentResult.Success` gains `isCatalogDegraded`, appended last and defaulted | Recompile: the constructor and `copy` descriptors changed |
 | `EnrichmentRequest.forAlbum`'s pre-`trackCount`/`year` overload is removed | Recompile: source is unaffected because both parameters default, but a `.jar` compiled against 0.12.0 throws `NoSuchMethodError` |
+| `SimilarArtist` gains a trailing `disambiguation` parameter | Recompile: source is unaffected if you construct it with named arguments, but the constructor and `copy` descriptors moved |
 
 ## 0.12.0
 

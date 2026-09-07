@@ -1200,7 +1200,7 @@ function renderProviders(providers) {
     .filter((p) => p.policy && ATTRIBUTION_OWED.includes(p.policy.attribution) && p.policy.attributionNotice)
     .map((p) => p.policy.attributionNotice)
     // Notices a provider's terms owe the page as a whole, which musicmeta's policy snapshot does
-    // not carry — the same Deezer notice the player states where a recording is actually playable.
+    // not carry — Deezer's private-use notice among them.
     .concat(standingNotices(reachable.map((p) => p.id)));
   if (notices.length === 0) return;
   creditsNotices.innerHTML = notices.map((n) => `<span class="credit">${esc(n)}</span>`).join('');
