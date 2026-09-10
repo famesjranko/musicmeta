@@ -1518,3 +1518,43 @@ arm's output makes the gap visible. Before freezing, write down the defect's mir
 answer that is the *inverse* of the thin one — and give it its own metric even where no arm is
 expected to move it. Failing that, run the sanity gates against the control first: a baseline
 scoring non-zero on a gate is not a plan defect to note in the report, it is the finding.
+
+## 41. A rule with no mechanism is deleted by the restructure that tidies the file it lives in
+
+`CLAUDE.md` carried "never add `Co-Authored-By`, 'Generated with Claude', or any AI/Anthropic/tool
+attribution" from the first commit that created the file. PR #75 restructured the file and deleted
+the `## Git rules` section it sat in, along with the `git revert` ban beside it. Nothing failed.
+Six weeks later two commits carrying `Co-authored-by: Claude …` had merged and GitHub was listing an
+assistant among the repository's contributors. Undoing four trailer lines meant rewriting sixteen
+commits of `main`, moving the `v0.13.0` tag, and dropping GitHub's signature on every commit
+touched — none of which a `git revert` can express, because the defect is in the messages.
+
+Two separate things went wrong, and only one of them is about this rule.
+
+**A prose rule is deleted silently.** Every other kind of content here fails loudly when it goes:
+delete a check and `./check` stops mentioning it, delete an `api/*.api` line and `apiCheck` fails,
+delete a pitfall heading and `check_pitfall_citations.py` orphans its citers. A bullet in this
+file's ancestor is the one form of content whose removal is invisible, and a restructure is exactly
+when a section gets moved wholesale rather than line by line. The bullets under "Rules with no
+mechanism" are the standing exposure — that heading names the risk precisely.
+
+**The rule's violator was a tool, so the audience could not comply.** Claude Code appends the
+trailer itself unless `includeCoAuthoredBy` is false, and a hosted session is handed the same
+instruction at a level above any file in this repository. Restoring the prose would not have
+stopped a single one of those commits. Turning the setting off does not finish it either, as the
+same session proved: with `includeCoAuthoredBy: false` the injected instruction lost its
+`Co-Authored-By` line and kept `Claude-Session:`, which is a different trailer saying the same
+thing. `scripts/checks/check_commit_attribution.py` reads both, and any later third, off the
+branch's own commits.
+
+The shape to watch: when a rule's likely violator is a tool rather than a person, prose addressed to
+the person cannot enforce it — the tool never reads it, or reads it and is overridden. Write the
+config that turns the behaviour off *and* the gate that fails when the config is absent, and treat
+the prose as the note for what neither can reach.
+
+A third vector sits beside the two above and belongs to neither: the container a hosted agent
+session runs in arrives with `user.name`/`user.email` already set to the assistant. That names the
+assistant in the field GitHub builds its contributor list from, with no trailer involved at all.
+Nothing here noticed because `main` takes squash merges only, and a squash rewrites the author to
+the PR's — so the exposure is one merge-method change away, and `check_commit_attribution.py` reads
+the author and committer identities for that reason.

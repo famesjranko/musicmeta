@@ -138,6 +138,14 @@ step "migration guide headings"
 # they already have, or a guide heading naming a version the changelog has no section for.
 python3 scripts/checks/check_migration_guide.py
 
+step "commit attribution"
+# The one rule here whose violator is a tool that adds it back: Claude Code appends a co-author
+# trailer unless `.claude/settings.json` turns it off, and a hosted session is handed that
+# instruction above any file in this repo. Reads the branch's commits rather than the tree, so it
+# needs history — `build.yml` checks out unshallow for it, and the check fails rather than passes
+# when the base will not resolve.
+python3 scripts/checks/check_commit_attribution.py
+
 step "script self-tests"
 # Unguarded, a regression in a release script surfaces only as a release check that silently passes.
 for t in scripts/checks/test_*.py scripts/github-workflows/test_*.py; do

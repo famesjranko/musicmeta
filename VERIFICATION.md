@@ -31,6 +31,7 @@ because the config is the thing that fails.
 | Release-note caps | `build_release_notes.py Unreleased` | `CHANGELOG.md`'s `[Unreleased]` stays under 48000 chars and 200 per line — the same `check_caps()` the release runs, so it fails here rather than at release prep. An empty section passes: `pin_release.py` opens one on every release branch |
 | Release coordinates | `scripts/checks/check_release_coordinates.py` | every version-bearing line outside `CHANGELOG.md` equals the version `gradle.properties` declares: `ROADMAP.md`'s `## Where We Are` block and its `### Unreleased` subsection, and the `musicmeta-*` coordinates in `README.md` and the three `docs/guides/`. Regions are found by heading, so renaming one fails the check rather than silently guarding nothing. Versions elsewhere in `ROADMAP.md` name the release a capability landed in and are left alone. It reads a version, never a claim: nothing checks that the artifact it names actually resolves |
 | Migration guide headings | `scripts/checks/check_migration_guide.py` | every `## <x>` heading in `docs/guides/migration.md` is `Unreleased` or a version with a `## [<x>]` section in `CHANGELOG.md`, and `## Unreleased` is present in the guide if and only if `CHANGELOG.md`'s `## [Unreleased]` has a `### Breaking Changes` heading. `pin_release.py` renames the guide's heading alongside the changelog's on every release. It checks headings exist, never that an individual `### Breaking Changes` line has its own guide section — see "Known gaps" |
+| Commit attribution | `scripts/checks/check_commit_attribution.py` | no commit this branch adds to its base credits an assistant — as its author or committer identity, or in a `Co-authored-by:` naming one, a `Claude-Session:` link, or a "Generated with" footer. The identity half is not theoretical: a hosted agent session's container arrives with `user.email` set to an assistant's address, and only squash-merging (which rewrites the author to the PR's) has been hiding it. It reads the branch's commit messages, not the tree, so CI checks out unshallow for it and it fails rather than passes when the base will not resolve. There is no bot allowlist: `dependabot[bot]` and `github-actions[bot]` match nothing it looks for, while a `[bot]` identity that names an assistant is the finding. It reads trailers, never prose — a body discussing the tool passes, which is what lets this row exist — and it cannot see the squash body GitHub composes at merge, or a PR title, description or issue comment; see "Known gaps" |
 | Script self-tests | `scripts/**/test_*.py` | discovered, not listed |
 | Demo frontend | `node --test` via `demo-web/package.json` | the demo browser code's wire-protocol reading and its "is this worth retrying" decision, as the pure functions in `demo-web/src/main/resources/stream-protocol.js`. Runs on every `./check`, including `--fast`. node is a **minimum major** (`NODE_MIN_MAJOR` in `scripts/bootstrap.sh`) rather than an exact pin, and bootstrap reports it rather than installing it — it is the machine's runtime, not an executable the script can fetch and verify by digest |
 | Kotlin format | ktlint (version pinned in `libs.versions.toml`) | all modules, `demo-cli/`, and `demo-web/` |
@@ -62,6 +63,16 @@ conventions are not.
 
 Not an audit of everything unenforced — these are the specific places where a green run means less
 than it looks like, each learned the hard way.
+
+- **Nothing reads the text that leaves this machine without being a commit.** `CLAUDE.md` forbids
+  AI/tool attribution on PR titles and bodies, issue comments and review replies as much as on
+  commits, and `check_commit_attribution.py` reads only the latter. Two of those are where the
+  attribution actually tends to appear — a "Generated with Claude Code" footer belongs to a PR
+  description, not a commit message — so the gate covers the surface that happened to be hit here,
+  not the surface the rule names. GitHub composing a squash body at merge is the same gap from the
+  other end: the gate reads the branch's commits, and the extra `Co-authored-by:` the squash UI
+  harvests from them is written after every check has passed. Both rest on `.claude/settings.json`
+  turning the behaviour off at the source, which is one repository's setting on one tool.
 
 - **Nothing gates that every `### Breaking Changes` *line* has a migration-guide section.**
   `check_migration_guide.py` gates the two files' headings agreeing — `## Unreleased` exists in the

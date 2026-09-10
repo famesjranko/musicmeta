@@ -1,4 +1,5 @@
 {
+  "includeCoAuthoredBy": false,
   "permissions": {
     "ask": ["Edit(CLAUDE.md)"]
   },

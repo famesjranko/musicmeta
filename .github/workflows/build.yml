@@ -22,6 +22,11 @@ jobs:
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v7
+        with:
+          # ./check's commit-attribution gate reads the commits this branch adds to its base, and
+          # the default depth-1 checkout has none of them. It fails closed on an unresolvable base,
+          # so a shallow clone here is a red build rather than a gate that quietly reads nothing.
+          fetch-depth: 0
 
       - uses: actions/setup-java@v6
         with:
