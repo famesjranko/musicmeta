@@ -1558,3 +1558,23 @@ assistant in the field GitHub builds its contributor list from, with no trailer 
 Nothing here noticed because `main` takes squash merges only, and a squash rewrites the author to
 the PR's — so the exposure is one merge-method change away, and `check_commit_attribution.py` reads
 the author and committer identities for that reason.
+
+The gate written to close all this had the same shape of hole in it, and review found three:
+
+- **It guarded the wrong thing.** It refused when the base revision would not resolve, and called
+  that failing closed. A `--depth 1` clone still creates `origin/main`, so the base resolved, the
+  range was empty, and it reported green having read nothing. The guard is now on the clone being
+  shallow, which is the condition that actually makes a range untrustworthy.
+- **It was a no-op on exactly the surface it documented as unreachable.** On a push build `HEAD` is
+  `origin/main`, so the range is empty by construction — and a push build is where the squash body
+  GitHub composes at merge first becomes readable. The known gap said no gate *could* see that body;
+  it was sitting in `HEAD`, unread, on the next build.
+- **Its own tests could not tell whether it worked.** Mutating `return 1 if findings else 0` to
+  `return 0` — a gate that can never fail — left every test green, because they exercised the pure
+  matching function and nothing else. The same PR had just deleted a bot allowlist for being in that
+  position (§19), and did not check whether the rest of the file was in it too.
+
+The generalisation is the same one, one level up: a gate is a claim about a range, and the range is
+as capable of being empty as the matcher is of being wrong. Test the emptiness, not only the match —
+and when a gate's own documentation says a surface cannot be reached, check whether that is a fact
+about the surface or about the range you chose.

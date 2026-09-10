@@ -139,11 +139,8 @@ step "migration guide headings"
 python3 scripts/checks/check_migration_guide.py
 
 step "commit attribution"
-# The one rule here whose violator is a tool that adds it back: Claude Code appends a co-author
-# trailer unless `.claude/settings.json` turns it off, and a hosted session is handed that
-# instruction above any file in this repo. Reads the branch's commits rather than the tree, so it
-# needs history — `build.yml` checks out unshallow for it, and the check fails rather than passes
-# when the base will not resolve.
+# Reads commits, not the tree, so it needs real history: it refuses on a shallow clone rather than
+# resolving a base and reading an empty range. Why prose could not hold this rule: pitfalls §41.
 python3 scripts/checks/check_commit_attribution.py
 
 step "script self-tests"
