@@ -1529,6 +1529,14 @@ assistant among the repository's contributors. Undoing four trailer lines meant 
 commits of `main`, moving the `v0.13.0` tag, and dropping GitHub's signature on every commit
 touched — none of which a `git revert` can express, because the defect is in the messages.
 
+Counting from `main` undercounted the incident twice. It was **two sessions, not one**: the commits
+found on `main` came from one, and `refs/pull/308/head` holds a trailered commit from another, whose
+squash body reached `main` clean and so left nothing on the branch to find. And the rewrite reaches
+`main` only — `refs/pull/<n>/head` is a ref GitHub owns, which no branch deletion removes and no
+repository owner can rewrite, so **six distinct commits still carry the trailers there**: the four
+pre-squash originals and the two the rewrite replaced. Read a message-level defect off every ref the
+host keeps, not off the branch, and expect whatever sits outside `main` to be permanent.
+
 Two separate things went wrong, and only one of them is about this rule.
 
 **A prose rule is deleted silently.** Every other kind of content here fails loudly when it goes:
