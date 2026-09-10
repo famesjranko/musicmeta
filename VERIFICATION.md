@@ -72,8 +72,11 @@ than it looks like, each learned the hard way.
   which is how PR #375's own body acquired the thing it exists to remove. The tree is unread too: a
   banned trailer sitting in a doc or a Kotlin comment passes every gate. And history reachable only
   through a tag is outside `origin/main..HEAD` permanently, which is why the `v0.13.0` retag after
-  the September rewrite was not optional. All of this rests on `.claude/settings.json` turning the
-  behaviour off at the source, which is one repository's setting on one tool.
+  the September rewrite was not optional. `refs/pull/<n>/head` is the same hole with no lid: GitHub
+  owns those refs, no branch deletion removes them and no rewrite reaches them, and six commits
+  carrying the September trailers sit there now — outside every range this check can be given, and
+  outside anything a repository owner can do. All of this rests on `.claude/settings.json` turning
+  the behaviour off at the source, which is one repository's setting on one tool.
 
   The squash body GitHub composes at merge is **no longer** in this list: the gate reads the commit
   a push lands (`MUSICMETA_PUSH_BEFORE` in `build.yml`), so it arrives on `main`'s next build rather
