@@ -74,8 +74,9 @@ MACHINE_ADDRESS = re.compile(
 
 REMEDY = (
     "CLAUDE.md forbids AI/tool attribution on anything that leaves this machine. "
-    "Amend the commit (`git rebase -i` for an older one), and set includeCoAuthoredBy to false in "
-    ".claude/settings.json so a trailer is not re-added."
+    "Amend the commit (`git rebase -i` for an older one), and set `attribution` in "
+    ".claude/settings.json to empty `commit` and `pr` text with `sessionUrl` false, so no "
+    "trailer is re-added."
 )
 
 

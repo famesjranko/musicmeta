@@ -1539,13 +1539,16 @@ when a section gets moved wholesale rather than line by line. The bullets under 
 mechanism" are the standing exposure — that heading names the risk precisely.
 
 **The rule's violator was a tool, so the audience could not comply.** Claude Code appends the
-trailer itself unless `includeCoAuthoredBy` is false, and a hosted session is handed the same
-instruction at a level above any file in this repository. Restoring the prose would not have
-stopped a single one of those commits. Turning the setting off does not finish it either, as the
-same session proved: with `includeCoAuthoredBy: false` the injected instruction lost its
-`Co-Authored-By` line and kept `Claude-Session:`, which is a different trailer saying the same
-thing. `scripts/checks/check_commit_attribution.py` reads both, and any later third, off the
-branch's own commits.
+trailer itself, and a hosted session is handed the same instruction at a level above any file in
+this repository. Restoring the prose would not have stopped a single one of those commits. Nor is
+one setting enough, as the same session proved: `includeCoAuthoredBy: false` — the deprecated key —
+took the `Co-Authored-By` line out of the injected instruction and left `Claude-Session:`, a
+different trailer saying the same thing. The key that covers both is `attribution`, whose `commit`
+and `pr` fields hide the text when empty and whose `sessionUrl: false` drops the session trailer;
+`.claude/settings.json` carries all three so they reach worktrees and fresh clones.
+`scripts/checks/check_commit_attribution.py` reads both trailers, and any later third, off the
+branch's own commits — a setting that is renamed again, or absent from a machine, fails there
+rather than silently.
 
 The shape to watch: when a rule's likely violator is a tool rather than a person, prose addressed to
 the person cannot enforce it — the tool never reads it, or reads it and is overridden. Write the
