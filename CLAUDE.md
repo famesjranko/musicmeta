@@ -22,7 +22,7 @@ rest; `ls docs/` lists the docs.
 | Treating a green run as proof | `VERIFICATION.md` — what each check skips |
 | Designing across module boundaries, or adding a provider | `ARCHITECTURE.md` — the seams and what they cost |
 | Deciding whether a thing is in scope, or what `1.0.0` waits on | `ROADMAP.md` |
-| Looking for the issue list | `.scratch/`, **not** GitHub Issues — a dependency bump is the one exception; `docs/agents/issue-tracker.md` |
+| Looking for the issue list | `.scratch/` — GitHub Issues is the inbound door, not the working tracker; `docs/agents/issue-tracker.md` |
 | Reviewing a diff, a branch, or a PR | `docs/agents/review-checklist.md` — the unmechanised rules only |
 
 ## Where it goes
@@ -33,7 +33,8 @@ nothing can catch a trap nobody wrote down. This file is the home only for the l
 **Two audiences, and the boundary is `README.md`'s documentation table.** Everything in it ships to
 someone who took the library and will never see this repo: `README.md`, `docs/guides/`,
 `docs/how-it-works.md`, `docs/glossary.md`, `docs/providers.md`, `docs/project/`, `CHANGELOG.md`,
-`ARCHITECTURE.md`, `VERIFICATION.md`. Everything outside it is ours: this file, `docs/pitfalls.md`,
+`ARCHITECTURE.md`, `VERIFICATION.md`, `CONTRIBUTING.md`, `SECURITY.md`, `CODE_OF_CONDUCT.md` and
+`.github/` templates. Everything outside it is ours: this file, `docs/pitfalls.md`,
 `docs/agents/`, `.scratch/`. Write for the reader the file has — a consumer reading `ARCHITECTURE.md`
 wants the invariant and what it costs them, not which check we wrote, kept or deleted. The two
 shipped files that are *about* the repo, `ARCHITECTURE.md` and `VERIFICATION.md`, are where this

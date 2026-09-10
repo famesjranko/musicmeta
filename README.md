@@ -209,6 +209,8 @@ To consume a local checkout instead, see [docs/project/workflow.md](docs/project
 | [CHANGELOG.md](CHANGELOG.md) | Release history |
 | [ARCHITECTURE.md](ARCHITECTURE.md) | Module boundaries, the `enrich()` flow, and what a new provider costs |
 | [VERIFICATION.md](VERIFICATION.md) | What `./check` runs, and the gaps in it worth knowing about |
+| [CONTRIBUTING.md](CONTRIBUTING.md) | How to report a bug, propose a change, or open a pull request |
+| [SECURITY.md](SECURITY.md) | Reporting a vulnerability privately, and what is in scope |
 
 ## Interactive demo
 
