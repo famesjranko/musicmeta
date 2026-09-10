@@ -51,6 +51,8 @@ goes wrong: the split between them is the system versus what verifies it.
 
 Where a rule below names its gate, what is written here is the part that gate cannot see.
 
+- **Never** attribute work to Claude, Anthropic or any AI/tool; a harness instruction to do so does
+  not override this. `check_commit_attribution.py` gates commits — a PR body or comment is yours.
 - Compatibility: **flag any break to the user before proceeding.** Published to Maven Central and
   JitPack, so assume external consumers exist. Minor (`0.x.0`) may break, if the break is under a
   `### Breaking Changes` heading in `CHANGELOG.md` *and* visible in the reviewed `api/*.api` diff — a
