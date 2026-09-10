@@ -138,6 +138,11 @@ step "migration guide headings"
 # they already have, or a guide heading naming a version the changelog has no section for.
 python3 scripts/checks/check_migration_guide.py
 
+step "commit attribution"
+# Reads commits, not the tree, so it needs real history: it refuses on a shallow clone rather than
+# resolving a base and reading an empty range. Why prose could not hold this rule: pitfalls §41.
+python3 scripts/checks/check_commit_attribution.py
+
 step "script self-tests"
 # Unguarded, a regression in a release script surfaces only as a release check that silently passes.
 for t in scripts/checks/test_*.py scripts/github-workflows/test_*.py; do

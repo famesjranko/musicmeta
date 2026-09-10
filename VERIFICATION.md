@@ -31,6 +31,7 @@ because the config is the thing that fails.
 | Release-note caps | `build_release_notes.py Unreleased` | `CHANGELOG.md`'s `[Unreleased]` stays under 48000 chars and 200 per line — the same `check_caps()` the release runs, so it fails here rather than at release prep. An empty section passes: `pin_release.py` opens one on every release branch |
 | Release coordinates | `scripts/checks/check_release_coordinates.py` | every version-bearing line outside `CHANGELOG.md` equals the version `gradle.properties` declares: `ROADMAP.md`'s `## Where We Are` block and its `### Unreleased` subsection, and the `musicmeta-*` coordinates in `README.md` and the three `docs/guides/`. Regions are found by heading, so renaming one fails the check rather than silently guarding nothing. Versions elsewhere in `ROADMAP.md` name the release a capability landed in and are left alone. It reads a version, never a claim: nothing checks that the artifact it names actually resolves |
 | Migration guide headings | `scripts/checks/check_migration_guide.py` | every `## <x>` heading in `docs/guides/migration.md` is `Unreleased` or a version with a `## [<x>]` section in `CHANGELOG.md`, and `## Unreleased` is present in the guide if and only if `CHANGELOG.md`'s `## [Unreleased]` has a `### Breaking Changes` heading. `pin_release.py` renames the guide's heading alongside the changelog's on every release. It checks headings exist, never that an individual `### Breaking Changes` line has its own guide section — see "Known gaps" |
+| Commit attribution | `scripts/checks/check_commit_attribution.py` | no commit a branch adds to its base, and no commit a push lands, names an assistant — as the author or committer identity, in a `Co-authored-by:`, in a `Claude-Session:` link, or in a "Generated with/by" footer. The identity half is not theoretical: a hosted agent session's container arrives with `user.email` set to an assistant's address, and only squash-merging (which rewrites the author to the PR's) has been hiding it. An identity is a finding only when an assistant's **name** sits at a **machine address** — a vendor domain, a `[bot]` account, a noreply mailbox — so a contributor called Claude at their own address is not locked out of a repository they cannot amend their way into. That is also the residual: `Claude <claude@example.com>` passes. It reads whole lines at column 0, so an indented quotation of a banned trailer is prose, not an instance — and a `Generated with …` line carrying a comma is a sentence, not a footer. It **refuses to run on a shallow clone**: a depth-1 clone still has `origin/main`, so guarding on whether the base resolves would pass while reading nothing. It cannot see a PR title or body, an issue comment, or the tree itself; see "Known gaps" |
 | Script self-tests | `scripts/**/test_*.py` | discovered, not listed |
 | Demo frontend | `node --test` via `demo-web/package.json` | the demo browser code's wire-protocol reading and its "is this worth retrying" decision, as the pure functions in `demo-web/src/main/resources/stream-protocol.js`. Runs on every `./check`, including `--fast`. node is a **minimum major** (`NODE_MIN_MAJOR` in `scripts/bootstrap.sh`) rather than an exact pin, and bootstrap reports it rather than installing it — it is the machine's runtime, not an executable the script can fetch and verify by digest |
 | Kotlin format | ktlint (version pinned in `libs.versions.toml`) | all modules, `demo-cli/`, and `demo-web/` |
@@ -62,6 +63,21 @@ conventions are not.
 
 Not an audit of everything unenforced — these are the specific places where a green run means less
 than it looks like, each learned the hard way.
+
+- **Nothing reads the text that leaves this machine without being a commit.** `CLAUDE.md` forbids
+  AI/tool attribution on PR titles and bodies, issue comments and review replies as much as on
+  commits, and `check_commit_attribution.py` reads only commits. Two of those are where it actually
+  tends to appear — a "Generated with Claude Code" footer belongs to a PR description, not a commit
+  message, and the tooling that opens a PR can append one server-side after the text is submitted,
+  which is how PR #375's own body acquired the thing it exists to remove. The tree is unread too: a
+  banned trailer sitting in a doc or a Kotlin comment passes every gate. And history reachable only
+  through a tag is outside `origin/main..HEAD` permanently, which is why the `v0.13.0` retag after
+  the September rewrite was not optional. All of this rests on `.claude/settings.json` turning the
+  behaviour off at the source, which is one repository's setting on one tool.
+
+  The squash body GitHub composes at merge is **no longer** in this list: the gate reads the commit
+  a push lands (`MUSICMETA_PUSH_BEFORE` in `build.yml`), so it arrives on `main`'s next build rather
+  than never. That is after the merge, not before it — a bad squash body is caught, not prevented.
 
 - **Nothing gates that every `### Breaking Changes` *line* has a migration-guide section.**
   `check_migration_guide.py` gates the two files' headings agreeing — `## Unreleased` exists in the

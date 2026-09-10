@@ -22,6 +22,12 @@ jobs:
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v7
+        with:
+          # ./check's commit-attribution gate reads the commits this branch adds to its base, and
+          # the default depth-1 checkout has none of them. The gate refuses to run on a shallow
+          # clone rather than resolving a base and reading an empty range, so getting this wrong is
+          # a red build instead of a gate that quietly reads nothing.
+          fetch-depth: 0
 
       - uses: actions/setup-java@v6
         with:
@@ -42,6 +48,13 @@ jobs:
         # makes a CI failure a guessing game, so there is deliberately only one thing to run here.
         # --skip-demo only because demo-canary below is a separate required check; running it here
         # too would compile demo-cli/ twice. Local `./check` still covers everything.
+        env:
+          # The commit this push replaced. Without it a push build compares main against itself,
+          # reads an empty range, and the attribution gate passes having seen nothing — which is
+          # exactly where the squash body GitHub composes at merge is readable, and the only place
+          # the doubled trailer in #358 ever existed. Empty on a pull_request run, where
+          # GITHUB_BASE_REF names the base branch instead.
+          MUSICMETA_PUSH_BEFORE: ${{ github.event.before }}
         run: ./check --skip-demo
 
       - name: Upload test reports
