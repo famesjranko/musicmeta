@@ -15,17 +15,19 @@ depends on severity and on whether the cause is in this library or upstream. You
 ## Supported versions
 
 Pre-1.0, only the **latest released minor** gets fixes. A fix ships as the next patch or minor on
-`main`; older `0.x` lines are not backported. Both distribution channels carry the same artifacts —
+`main`; older `0.x` lines are not backported. Both channels carry the same artifacts —
 [Maven Central](https://central.sonatype.com/artifact/io.github.famesjranko/musicmeta-core) and
 [JitPack](https://jitpack.io/#famesjranko/musicmeta).
 
 ## In scope
 
-- Credential handling: `secrets.properties` parsing, how keys reach a provider, and anything that
-  could put a key into a log, an exception message, a cache entry or a URL that gets recorded.
+- Credential handling: how a key a consumer supplies through `ApiKeyConfig` reaches a provider, and
+  anything that could put one into a log, an exception message, a cache entry, or a URL that gets
+  recorded. (`secrets.properties` is a convenience for this repo's own build and demos, not
+  something the published library reads.)
 - The cache: `EnrichmentCacheDatabase` and the `@Serializable` cache types, including anything that
   lets untrusted upstream content reach a consumer's storage in a form it does not expect.
-- Parsing of upstream responses — a malformed or hostile provider response that crashes a consumer,
+- Parsing of upstream responses: a malformed or hostile response that crashes a consumer,
   exhausts memory, or escapes the type it was parsed into.
 - The HTTP layer: URL construction, redirect handling, and TLS behaviour in `DefaultHttpClient` and
   the OkHttp adapter.

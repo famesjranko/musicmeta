@@ -1,4 +1,7 @@
-blank_issues_enabled: false
+# Left enabled deliberately. The two templates cover a defect and a proposal; a question fits
+# neither, and with Discussions not enabled on this repo turning blank issues off would leave
+# someone asking "how do I do X?" with nowhere to go but a mis-filed bug report.
+blank_issues_enabled: true
 contact_links:
   - name: Security vulnerability or leaked credential
     url: https://github.com/famesjranko/musicmeta/security/policy

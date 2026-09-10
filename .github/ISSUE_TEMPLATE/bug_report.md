@@ -27,8 +27,10 @@ labels: bug, needs-triage
      Deezer, iTunes, LRCLIB, Wikidata, Wikipedia, ListenBrainz, Last.fm, Fanart.tv, Discogs. -->
 
 - [ ] Running **keyless** (no API keys configured)
-- [ ] Running with keys — which: <!-- Last.fm / Fanart.tv / Discogs / Spotify -->
-- [ ] A `contact()` / User-Agent is set <!-- MusicBrainz and Wikimedia throttle or block without one -->
+- [ ] Running with keys — which:
+      <!-- Last.fm / Fanart.tv / Discogs / ListenBrainz user token -->
+- [ ] A `contact()` / User-Agent is set
+      <!-- MusicBrainz and Wikimedia throttle or block without one -->
 
 ## Reproduction
 
@@ -40,7 +42,8 @@ val engine = EnrichmentEngine.Builder()
     .withDefaultProviders()
     .build()
 
-val profile = engine.artistProfile("...")
+// artistProfile() is a suspend fun — call it from a coroutine or runBlocking { }
+val profile = runBlocking { engine.artistProfile("...") }
 ```
 
 ## Result or error
@@ -48,9 +51,10 @@ val profile = engine.artistProfile("...")
 <!-- What came back. An EnrichmentResult carries a status and often a reason; paste it whole rather
      than summarising. If a type resolved as Error, NotFound or RateLimited, say which type. -->
 
-> ⚠️ **Redact secrets first.** Remove API keys and `secrets.properties` values from anything you
+> **Redact secrets first.** Remove API keys and `secrets.properties` values from anything you
 > paste, including URLs — several providers put the key in the query string. Do not open a public
-> issue for a vulnerability or a leaked credential; see [SECURITY.md](../SECURITY.md).
+> issue for a vulnerability or a leaked credential; see
+> [SECURITY.md](https://github.com/famesjranko/musicmeta/blob/main/SECURITY.md).
 
 ## Is it upstream?
 

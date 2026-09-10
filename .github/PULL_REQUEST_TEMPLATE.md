@@ -11,7 +11,7 @@
 Closes #
 
 <!-- Anything a reviewer will open more than once: the issue, a prior PR this follows, the
-     provider's own API docs, the migration-guide section, the .scratch spec if you have one. -->
+     provider's own API docs, the migration-guide section. -->
 
 ## What
 
@@ -43,31 +43,28 @@ Closes #
      <sha>^ and these N tests failed for this reason". Nothing mechanises this — it is the claim
      that carries its own proof. -->
 
-- [ ] `make check` is green, all steps — or I have said below which I could not run, and why
+- [ ] `make check` is green, all steps — or **Other notes** says which I could not run, and why
 - [ ] New or changed behaviour has a test that was **watched fail first**, shown above
 - [ ] Any provider fixture I assert against was captured from a real upstream response **before**
       this change, not written to match it
 
 ## Published surface
 
-<!-- Delete if this is internal, a doc, or a script. -->
+<!-- Delete if this is internal, a doc, or a script. CONTRIBUTING.md's "What a pull request
+     needs" is the long form of these. -->
 
 - [ ] `api/*.api` is unchanged, or `make api-dump` was run and **the diff is reviewed in this PR**
 - [ ] `CHANGELOG.md` has a line under `[Unreleased]` for anything a consumer can see
-- [ ] Breaking changes sit under `### Breaking Changes` **and** have a `docs/guides/migration.md`
-      section
+- [ ] Breaking changes sit under a `### Breaking Changes` heading
 
 ## If this touches
 
-<!-- Delete the lines that do not apply. Each of these is a gap no gate covers. -->
+<!-- Delete the lines that do not apply. Each is a gap no gate covers; CONTRIBUTING.md says why. -->
 
-- **A `@Serializable` cache type** — v0.4.0 broke every Room entry this way and no check saw it.
-  Treat it as a break, and say whether consumers need a cache-clear note.
-- **`EnrichmentCacheDatabase`'s schema** — the `androidTest/` migration test must be written *and
-  run on a device*, and said so here. Nothing in CI runs it, and a shipped migration is the one
-  change a revert cannot undo.
-- **A `musicmeta-core` dependency** — say why the floor moves. Every consumer inherits it
-  transitively and it cannot be withdrawn without a break.
+- **A `@Serializable` cache type** — say whether consumers need a cache-clear note.
+- **`EnrichmentCacheDatabase`'s schema** — say that the `androidTest/` migration test was run, and
+  on what device.
+- **A `musicmeta-core` dependency** — say why the floor moves.
 
 ## Other notes
 
@@ -78,5 +75,4 @@ Closes #
 ---
 
 <!-- Please don't add "Generated with", Co-Authored-By, session links, or any other AI/tool
-     attribution to this PR or its commits. CI fails a commit that carries one; this body is the
-     half no gate reads. -->
+     attribution to this PR or its commits. -->

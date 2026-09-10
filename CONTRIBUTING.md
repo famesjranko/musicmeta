@@ -31,8 +31,18 @@ make check        # everything CI runs
 `make help` lists the rest. `make check-fast` is for the edit loop only and is never evidence for a
 push; `check`'s own header says what it skips.
 
-Requirements are Java 17+ and Kotlin 2.1+; `musicmeta-android` targets min SDK 21. You do not need
-API keys — eight of the eleven providers work without them, and the test suite needs none at all.
+Build on **Java 17**, not a later JDK. The published artifacts target 17 and both CI jobs run on it,
+but Kotlin resolves JDK classes from whichever JDK is running, so a JDK 18+ API compiles cleanly
+on your machine and fails in CI. `musicmeta-core/build.gradle.kts` records why the toolchain is not
+pinned for you.
+
+`make check` also needs **Node 22 or newer** (the demo's browser tests run on node's own test
+runner; `bootstrap.sh` deliberately does not install it) and an **Android SDK** at `ANDROID_HOME` or
+`~/Android/Sdk`, because the build compiles `musicmeta-android`. Without either, `check` refuses to
+start rather than skipping the layer.
+
+You do not need API keys: eight of the eleven providers work without them, and the test suite
+needs none at all.
 
 To try a change from a real consumer before publishing, add `includeBuild("../musicmeta")` to that
 project's `settings.gradle.kts`; [docs/project/workflow.md](docs/project/workflow.md) covers the
@@ -44,9 +54,10 @@ alternatives.
 `demo-canary` must pass, and history is linear. Work on a short-lived branch and open a PR into
 `main`.
 
-**PRs are squash-merged**, so the PR title and body become the permanent commit — write the body for
-the person who lands on it from `git blame` in six months, not just for the reviewer today. Your
-branch's individual commits are working state.
+**PRs are squash-merged.** The PR title becomes the commit subject; the body of the squash commit is
+built from your **commit messages**, not from the PR description. So write the commit message for
+the person who lands on it from `git blame` in six months — the PR description is for the reviewer
+today, and it does not survive the merge.
 
 ## What a pull request needs
 
@@ -62,12 +73,13 @@ likely to come back in review.
 upstream responses. One written to match new code proves only that the code agrees with itself.
 
 **Breaking changes are allowed in a minor, but only visibly.** A break must appear under a
-`### Breaking Changes` heading in `CHANGELOG.md` *and* in the reviewed `api/*.api` diff, with a
-section in [docs/guides/migration.md](docs/guides/migration.md). A break in neither is a defect. A
-patch may not break at all. If you think your change breaks something, say so in the PR rather than
-deciding alone — [CLAUDE.md](CLAUDE.md) and
-[docs/pitfalls.md](docs/pitfalls.md) cover what counts, including the JVM descriptor traps that make
-an innocent-looking edit binary-incompatible.
+`### Breaking Changes` heading in `CHANGELOG.md` *and* in the reviewed `api/*.api` diff; a break in
+neither is a defect. A patch may not break at all. In practice a break also gets a section in
+[docs/guides/migration.md](docs/guides/migration.md) telling a consumer what edit it asks of
+them — no check can tell whether an individual break has one, so it is worth writing while the
+change is still in your head. If you think your change breaks something, say so in the PR rather
+than deciding alone: some of it is not obvious, and a JVM descriptor can make an innocent-looking
+edit binary-incompatible.
 
 Two changes carry a cost that is invisible in the diff, so flag them explicitly: a `@Serializable`
 cache type (no gate reads these, and v0.4.0 broke every cached entry that way) and
@@ -76,8 +88,8 @@ the one change a revert cannot undo).
 
 ## Adding a provider
 
-A new provider is `provider/<name>/` as `*Api`, `*Models` and `*Mapper` — all `internal` — plus a
-public `*Provider`. Keeping the first three internal is what lets them be renamed later without an
+A new provider is `provider/<name>/` as `*Api`, `*Models` and `*Mapper` — all `internal` — plus
+a public `*Provider`. Keeping the first three internal is what lets them be renamed later without an
 `apiDump`.
 
 Open an issue first. Providers set their own terms on commercial use, redistribution and
@@ -89,13 +101,13 @@ attribution, and this library is used commercially, so the terms decide it befor
 
 Run `make format`. Beyond that, two conventions that reviews do enforce:
 
-- **Comments carry the contract, not the history.** No PR or issue numbers, no "previously we…" —
-  git and the PR hold those. A comment that restates the code under it is a defect.
+- **Comments carry the contract, not the history.** No PR or issue numbers, no "previously
+  we…" — git and the PR hold those. A comment that restates the code under it is a defect.
 - **Kotlin test bodies use `// Given -` / `// When -` / `// Then -`**, each on its own line with a
   real clause. This one *is* mechanised, by `scripts/checks/check_test_shape.py`.
 
 Please don't add `Co-Authored-By`, "Generated with", session links, or any other AI or tool
-attribution to commits, PR titles or bodies, or issue comments. CI fails a commit that carries one.
+attribution to commits, PR titles or bodies, or issue comments.
 
 ## Review
 
@@ -119,19 +131,18 @@ provider's terms attached, and those terms are recorded in
 
 ## Where the writing goes
 
-Findings have exactly one home each, so a note does not end up in three files or none:
+A finding has one home, so a note does not end up in three files or none. If your change taught you
+something, put it in exactly one of these and say which in the PR:
 
 | A new | Goes in |
 |---|---|
 | Trap that cost something | [docs/pitfalls.md](docs/pitfalls.md) |
-| Consumer-visible change | a [CHANGELOG.md](CHANGELOG.md) line |
+| Consumer-visible change | a [CHANGELOG.md](CHANGELOG.md) line — its header defines the shape |
 | Fact about the tooling — a gate that does not exist | [VERIFICATION.md](VERIFICATION.md), "Known gaps" |
-| Rule no mechanism catches | [CLAUDE.md](CLAUDE.md) |
 
 ## Further reading
 
-- [docs/project/workflow.md](docs/project/workflow.md) — branch topology, worktrees, verification selection
-- [ARCHITECTURE.md](ARCHITECTURE.md) — module boundaries, the `enrich()` flow, what a provider costs
+- [docs/project/workflow.md](docs/project/workflow.md) — branch topology, worktrees, verification
+- [ARCHITECTURE.md](ARCHITECTURE.md) — module boundaries, `enrich()`, what a provider costs
 - [VERIFICATION.md](VERIFICATION.md) — what a green run does and does not prove
 - [docs/glossary.md](docs/glossary.md) — one word per concept, and each upstream's word for it
-- [CLAUDE.md](CLAUDE.md) — the rules no mechanism catches
