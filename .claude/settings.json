@@ -1,7 +1,13 @@
 {
-  "includeCoAuthoredBy": false,
+  "attribution": {
+    "commit": "",
+    "pr": "",
+    "sessionUrl": false
+  },
   "permissions": {
-    "ask": ["Edit(CLAUDE.md)"]
+    "ask": [
+      "Edit(CLAUDE.md)"
+    ]
   },
   "hooks": {
     "PostToolUse": [
