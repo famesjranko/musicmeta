@@ -1,0 +1,14 @@
+# Left enabled deliberately. The two templates cover a defect and a proposal; a question fits
+# neither, and with Discussions not enabled on this repo turning blank issues off would leave
+# someone asking "how do I do X?" with nowhere to go but a mis-filed bug report.
+blank_issues_enabled: true
+contact_links:
+  - name: Security vulnerability or leaked credential
+    url: https://github.com/famesjranko/musicmeta/security/policy
+    about: Please don't open a public issue for these; report it privately instead.
+  - name: Documentation
+    url: https://github.com/famesjranko/musicmeta#documentation
+    about: Guides, the pipeline trace, the glossary, and per-provider terms and rate limits.
+  - name: Upgrading across a breaking change
+    url: https://github.com/famesjranko/musicmeta/blob/main/docs/guides/migration.md
+    about: Every break since 0.10.0, grouped by version, with the edit each one asks of you.

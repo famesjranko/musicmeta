@@ -21,7 +21,9 @@ to — write the role string on the `Status:` line near the top of the issue fil
 Status: ready-for-agent
 ```
 
-The same five strings also exist as GitHub labels on `famesjranko/musicmeta` — all except
-`needs-triage`, which has no label yet — but the GitHub issues are a separate surface the skills do
-not write to. Keeping one vocabulary across both is deliberate: an issue moved from `.scratch/` to
-GitHub keeps its state.
+The same five strings exist as GitHub labels on `famesjranko/musicmeta` — all except
+`needs-triage`, which has no label yet — and GitHub is the inbound door for outside reports, which
+the skills do not write to. Keeping one vocabulary across both is deliberate: an issue mirrored
+between GitHub and `.scratch/` keeps its state in either direction. Until `needs-triage` exists as a
+label, the issue templates asking for it have no effect: GitHub drops a label a template names but
+the repo lacks, silently and without failing the issue.

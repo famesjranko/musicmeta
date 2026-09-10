@@ -2,11 +2,13 @@
 
 Issues and specs (you may know a spec as a PRD) for this repo live as markdown files in `.scratch/`.
 
-> This repo also has a GitHub remote with live issues (`CHANGELOG.md` cites `(#n)`; `provider-drift.yml`
-> does not file them — a failed scheduled run emails the maintainer, and that email is the drift
-> signal). Those are **not** the skill tracker: skills read and write `.scratch/`, and must not run
-> `gh issue create`. A `(#n)` reference in `CHANGELOG.md`, a commit, or a PR body still means the
-> GitHub issue.
+> **GitHub Issues is the inbound door, not this tracker.** Outside contributors report bugs and
+> propose changes there, through the templates in `.github/ISSUE_TEMPLATE/`; the maintainer triages
+> them and mirrors anything that will be worked into `.scratch/`. Skills read and write `.scratch/`
+> only, and must not run `gh issue create` — an inbound report is a person's, and closing the loop
+> on it is the maintainer's. A `(#n)` reference in `CHANGELOG.md`, a commit, or a PR body still
+> means the GitHub issue. `provider-drift.yml` files nothing either: a failed scheduled run emails
+> the maintainer, and that email is the drift signal.
 >
 > **A dependency bump is the one exception**, and `gh issue create` is allowed for it: its
 > counterpart is a Dependabot PR, so the ticket belongs where that conversation already is. The
