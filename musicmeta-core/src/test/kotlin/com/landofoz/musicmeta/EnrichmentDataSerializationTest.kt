@@ -297,4 +297,53 @@ class EnrichmentDataSerializationTest {
         // Then - the decoded value equals the original
         assertEquals(original, decoded)
     }
+
+    @Test
+    fun `Biography with every attribution field survives round-trip serialization`() {
+        // Given - a Biography whose attribution sets every field, lists included
+        val original = EnrichmentData.Biography(
+            text = "Radiohead are an English rock band.",
+            source = "Wikipedia",
+            thumbnailUrl = "https://upload.wikimedia.org/radiohead.jpg",
+            attribution = Attribution(
+                title = "Radiohead",
+                language = "en",
+                sourceUrl = "https://en.wikipedia.org/wiki/Radiohead",
+                creator = "Wikipedia contributors",
+                attributionText = "Text from Wikipedia",
+                credit = "Wikipedia",
+                licence = "CC BY-SA 4.0",
+                licenceUrl = "https://creativecommons.org/licenses/by-sa/4.0/",
+                otherLicences = listOf("GFDL"),
+                copyrightStatus = "True",
+                modification = "Lead section only",
+                restrictions = listOf("none stated"),
+            ),
+        )
+
+        // When - encoding then decoding it as EnrichmentData
+        val decoded = json.decodeFromString<EnrichmentData>(json.encodeToString<EnrichmentData>(original))
+
+        // Then - the decoded value equals the original, attribution included
+        assertEquals(original, decoded)
+    }
+
+    @Test
+    fun `Artwork whose alternatives carry their own attribution survives round-trip serialization`() {
+        // Given - an Artwork and two alternatives, each with a different attribution
+        val original = EnrichmentData.Artwork(
+            url = "https://upload.wikimedia.org/a.jpg",
+            attribution = Attribution(creator = "Raph_PH", licence = "CC BY 4.0"),
+            alternatives = listOf(
+                ArtworkSource("deezer", "https://cdn.example.test/b.jpg", attribution = Attribution(licence = "CC0")),
+                ArtworkSource("fanarttv", "https://assets.example.test/c.jpg"),
+            ),
+        )
+
+        // When - encoding then decoding it as EnrichmentData
+        val decoded = json.decodeFromString<EnrichmentData>(json.encodeToString<EnrichmentData>(original))
+
+        // Then - each image keeps its own attribution, and the one without stays null
+        assertEquals(original, decoded)
+    }
 }
