@@ -228,8 +228,10 @@ class AttributionMappingTest {
     @Test
     fun `unsafe Wikimedia alternatives and backgrounds are withheld`() {
         // Given - an eligible primary plus old Wikimedia alternative and background payloads
-        val art = EnrichmentData.Artwork("https://example.test/primary.jpg", alternatives = listOf(
-            ArtworkSource("wikipedia", "https://cdn-images.dzcdn.net/unsafe.jpg")))
+        val art = EnrichmentData.Artwork(
+            "https://example.test/primary.jpg",
+            alternatives = listOf(ArtworkSource("wikipedia", "https://cdn-images.dzcdn.net/unsafe.jpg")),
+        )
         val results = resultsWith(entries = arrayOf(
             Triple(EnrichmentType.ARTIST_PHOTO, "other", art),
             Triple(EnrichmentType.ARTIST_BACKGROUND, "wikipedia", EnrichmentData.Artwork("https://upload.wikimedia.org/unsafe.jpg"))))
@@ -279,6 +281,84 @@ class AttributionMappingTest {
     }
 
     @Test
+    fun `Wikimedia file credits with encoded controls are withheld on every image path`() {
+        // Given - complete-looking file credits whose source URLs contain encoded C0, C1, or DEL controls
+        fun creditedFile(sourceUrl: String) = ContentAttribution(
+            resourceId = "File:Unsafe.jpg",
+            sourceUrl = sourceUrl,
+            creator = "Photographer",
+            licenses = listOf(ContentLicense("CC BY 4.0")),
+            copyrighted = true,
+            attributionRequired = true,
+            nonFree = false,
+            restrictions = emptyList(),
+        )
+        val photo = EnrichmentData.Artwork(
+            "https://example.test/primary.jpg",
+            alternatives = listOf(
+                ArtworkSource(
+                    "wikipedia",
+                    "https://upload.wikimedia.org/alternative.jpg",
+                    attribution = creditedFile("https://commons.wikimedia.org/wiki/File:Alternative%2580.jpg"),
+                ),
+            ),
+        )
+        val background = EnrichmentData.Artwork(
+            "https://upload.wikimedia.org/background.jpg",
+            attribution = creditedFile("https://commons.wikimedia.org/wiki/File:Background%7F.jpg"),
+        )
+        val logo = EnrichmentData.Artwork(
+            "https://upload.wikimedia.org/logo.jpg",
+            attribution = creditedFile("https://commons.wikimedia.org/wiki/File:Logo%0A.jpg"),
+        )
+        val results = resultsWith(entries = arrayOf(
+            Triple(EnrichmentType.ARTIST_PHOTO, "other", photo),
+            Triple(EnrichmentType.ARTIST_BACKGROUND, "wikipedia", background),
+            Triple(EnrichmentType.ARTIST_LOGO, "wikipedia", logo),
+        ))
+
+        // When - mapping the cached and custom image payload shapes to the demo
+        val response = ArtistProfile("Fixture", results).toDemoResponse(0)
+
+        // Then - safe primary remains, but no Wikimedia file whose source control can change renders
+        assertEquals("https://example.test/primary.jpg", response.summary.imageUrl)
+        assertNull(response.summary.backgroundImageUrl)
+        assertEquals(emptyList<GalleryImage>(), response.gallery)
+    }
+
+    @Test
+    fun `Wikimedia file credits retain valid UTF-8 encoded source URLs and safe alternatives`() {
+        // Given - a valid UTF-8 encoded Tokyo source and a separately safe other-provider alternative
+        fun creditedFile(sourceUrl: String) = ContentAttribution(
+            resourceId = "File:Tokyo.jpg",
+            sourceUrl = sourceUrl,
+            creator = "Photographer",
+            licenses = listOf(ContentLicense("CC BY 4.0")),
+            copyrighted = true,
+            attributionRequired = true,
+            nonFree = false,
+            restrictions = emptyList(),
+        )
+        val art = EnrichmentData.Artwork(
+            "https://upload.wikimedia.org/tokyo.jpg",
+            attribution = creditedFile("https://commons.wikimedia.org/wiki/File:%E6%9D%B1%E4%BA%AC.jpg"),
+            alternatives = listOf(ArtworkSource("other", "https://cdn-images.dzcdn.net/safe.jpg")),
+        )
+        val results = resultsWith(entries = arrayOf(Triple(EnrichmentType.ARTIST_PHOTO, "wikipedia", art)))
+
+        // When - mapping an eligible Wikimedia file with a safe alternative
+        val response = ArtistProfile("Fixture", results).toDemoResponse(0)
+
+        // Then - the safe other-provider alternative remains usable and its file credit is preserved
+        assertEquals("https://upload.wikimedia.org/tokyo.jpg", response.summary.imageUrl)
+        assertEquals(
+            "https://commons.wikimedia.org/wiki/File:%E6%9D%B1%E4%BA%AC.jpg",
+            response.summary.imageAttribution?.sourceUrl,
+        )
+        assertEquals("https://cdn-images.dzcdn.net/safe.jpg", response.gallery.single().url)
+    }
+
+    @Test
     fun `Wikimedia image URLs require file attribution regardless of provider`() {
         // Given - a legacy Wikidata image hosted by Wikimedia without file attribution
         val results = resultsWith(entries = arrayOf(Triple(EnrichmentType.ARTIST_PHOTO, "wikidata",
@@ -297,8 +377,10 @@ class AttributionMappingTest {
         val attribution = ContentAttribution("Alternative", "https://example.test/alternative", creator = "Author",
             attributionText = "Custom credit", licenses = listOf(ContentLicense("CC BY 4.0"), ContentLicense("Custom grant")),
             licenseRelation = LicenseRelation.ALL_OF, usageTerms = "Both apply", restrictions = listOf("Retain notice"))
-        val art = EnrichmentData.Artwork("https://example.test/primary.jpg", alternatives = listOf(
-            ArtworkSource("other", "https://cdn-images.dzcdn.net/alternative.jpg", attribution = attribution)))
+        val art = EnrichmentData.Artwork(
+            "https://example.test/primary.jpg",
+            alternatives = listOf(ArtworkSource("other", "https://cdn-images.dzcdn.net/alternative.jpg", attribution = attribution)),
+        )
         val results = resultsWith(entries = arrayOf(Triple(EnrichmentType.ALBUM_ART, "other", art)))
 
         // When - mapping the fast alternative selected for the card

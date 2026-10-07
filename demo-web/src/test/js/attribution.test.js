@@ -130,12 +130,17 @@ test('file credit uses the selected file payload, escapes text, and rejects unsa
 test('file credit rejects literal and encoded controls in its source URL', () => {
   // Given - untrusted source URLs containing literal C0/C1/DEL values or encoded control bytes.
   const unsafeUrls = [
+    'https://example.test/%01',
     'https://example.test/%0A',
     'https://example.test/%0D',
     'https://example.test/%7F',
+    'https://example.test/%2501',
     'https://example.test/%250A',
+    'https://example.test/%257F',
     'https://example.test/%0a',
     'https://example.test/%80',
+    'https://example.test/%C2%80',
+    'https://example.test/%2580',
     'https://example.test/literal\u0001',
     'https://example.test/literal\u0080',
     'https://example.test/literal\u007f',
@@ -151,12 +156,17 @@ test('file credit rejects literal and encoded controls in its source URL', () =>
 test('file credit rejects literal and encoded controls in every licence URL', () => {
   // Given - untrusted licence URLs containing literal C0/C1/DEL values or encoded control bytes.
   const unsafeUrls = [
+    'https://example.test/%01',
     'https://example.test/%0A',
     'https://example.test/%0D',
     'https://example.test/%7F',
+    'https://example.test/%2501',
     'https://example.test/%250A',
+    'https://example.test/%257F',
     'https://example.test/%0a',
     'https://example.test/%80',
+    'https://example.test/%C2%80',
+    'https://example.test/%2580',
     'https://example.test/literal\u0001',
     'https://example.test/literal\u0080',
     'https://example.test/literal\u007f',
@@ -173,18 +183,18 @@ test('file credit rejects literal and encoded controls in every licence URL', ()
 });
 
 test('file credit retains ordinary HTTPS links and safe encoded paths', () => {
-  // Given - an ordinary HTTPS source and a licence path with ordinary URL encoding.
+  // Given - ordinary HTTPS links with path delimiters and a valid UTF-8 encoded Tokyo path.
   const credit = {
-    sourceUrl: 'https://example.test/source',
-    licenses: [{ identifier: 'Encoded licence', url: 'https://example.test/licence%20terms/path%2Fpart' }],
+    sourceUrl: 'https://example.test/source%20file/%E6%9D%B1%E4%BA%AC',
+    licenses: [{ identifier: 'Encoded licence', url: 'https://example.test/licence%20terms/%E6%9D%B1%E4%BA%AC%2Fpart' }],
   };
 
   // When - rendering the attribution.
   const html = contentCreditHtml(credit);
 
   // Then - both safe HTTPS links render unchanged.
-  assert.match(html, /href="https:\/\/example\.test\/source"/);
-  assert.match(html, /href="https:\/\/example\.test\/licence%20terms\/path%2Fpart"/);
+  assert.match(html, /href="https:\/\/example\.test\/source%20file\/%E6%9D%B1%E4%BA%AC"/);
+  assert.match(html, /href="https:\/\/example\.test\/licence%20terms\/%E6%9D%B1%E4%BA%AC%2Fpart"/);
 });
 
 test('file credit retains public-domain, custom, restricted, and multiple licence details', () => {

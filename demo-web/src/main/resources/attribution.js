@@ -12,10 +12,24 @@ export function escapeHtml(s) {
   }[c]));
 }
 
-const ENCODED_CONTROL = /%(?:[0189][0-9a-f]|7f|25(?:[0189][0-9a-f]|7f))/i;
+const ENCODED_BYTES = /(?:%[0-9a-f]{2})+/ig;
+
+function hasEncodedControl(value) {
+  const decodedPercent = value.replace(/%25/ig, '%');
+  for (const run of decodedPercent.match(ENCODED_BYTES) || []) {
+    const bytes = Uint8Array.from(run.match(/[0-9a-f]{2}/ig), (hex) => Number.parseInt(hex, 16));
+    if (bytes.some((byte) => byte <= 0x1f || byte === 0x7f)) return true;
+    if (bytes.some((byte) => byte >= 0x80 && byte <= 0x9f)) {
+      try {
+        if ([...new TextDecoder('utf-8', { fatal: true }).decode(bytes)].some((char) => /[\u0000-\u001f\u007f-\u009f]/.test(char))) return true;
+      } catch (_) { return true; }
+    }
+  }
+  return false;
+}
 
 function safeUrl(value) {
-  if (typeof value !== 'string' || /[\u0000-\u0020\u007f-\u009f]/.test(value) || ENCODED_CONTROL.test(value)) return null;
+  if (typeof value !== 'string' || /[\u0000-\u0020\u007f-\u009f]/.test(value) || hasEncodedControl(value)) return null;
   try {
     const url = new URL(value);
     return url.protocol === 'https:' && !url.username && !url.password ? url.href : null;

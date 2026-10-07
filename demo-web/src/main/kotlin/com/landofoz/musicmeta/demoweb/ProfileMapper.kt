@@ -17,6 +17,9 @@ import com.landofoz.musicmeta.PopularitySignalKind
 import com.landofoz.musicmeta.SearchCandidate
 import com.landofoz.musicmeta.TrackProfile
 import com.landofoz.musicmeta.engine.DEFAULT_SYNTHESIZER_DEPENDENCIES
+import java.nio.ByteBuffer
+import java.nio.charset.CharacterCodingException
+import java.nio.charset.CodingErrorAction
 
 /**
  * @param pending the enrichment types that have not settled yet, `requestedTypes - raw.keys` on a
@@ -367,7 +370,8 @@ fun TrackProfile.toDemoResponse(
             subtitleEnrich = artistEnrich(artist),
             imageUrl = r.albumArt()?.takeIf { r.isSafeArtwork(EnrichmentType.ALBUM_ART, it) }?.cardImageUrl(),
             imageCredit = r.artworkCredit(EnrichmentType.ALBUM_ART, r.albumArt(), r.albumArt().cardImageUrl(), linker),
-            imageAttribution = r.albumArt()?.takeIf { r.isSafeArtwork(EnrichmentType.ALBUM_ART, it) }?.attributionFor(r.albumArt().cardImageUrl())?.toDemoCredit(),
+            imageAttribution = r.albumArt()?.takeIf { r.isSafeArtwork(EnrichmentType.ALBUM_ART, it) }
+                ?.attributionFor(r.albumArt().cardImageUrl())?.toDemoCredit(),
             text = lyrics.readingText(),
             textSource = lyrics?.let { "lyrics" },
             textCredit = lyrics?.let { r.lyricsCredit(linker) },
@@ -736,14 +740,42 @@ private fun requiresFileCredit(provider: String?, url: String): Boolean {
 }
 
 private fun ContentAttribution?.hasFileRights(): Boolean {
-    if (this == null || !resourceId.startsWith("File:") || nonFree != false || restrictions != emptyList<String>()) return false
-    val safeSource = runCatching { java.net.URI(sourceUrl).let { it.scheme == "https" && it.host != null && it.userInfo == null } }.getOrDefault(false)
+    if (this == null || !resourceId.startsWith("File:") || nonFree != false ||
+        restrictions != emptyList<String>()) return false
+    val safeSource = sourceUrl.isSafeHttpsUrl()
     if (!safeSource || licenses.isEmpty()) return false
     if (licenses.size > 1 && licenseRelation == com.landofoz.musicmeta.LicenseRelation.UNKNOWN) return false
     val publicDomain = licenses.all { it.identifier == "Public domain" || it.identifier == "CC0" }
     if (copyrighted != !publicDomain || attributionRequired != !publicDomain) return false
     return publicDomain || !attributionText.isNullOrBlank() || !creator.isNullOrBlank()
 }
+
+private fun String.isSafeHttpsUrl(): Boolean {
+    if (any { it.isWhitespace() || Character.isISOControl(it) } || hasEncodedControl()) return false
+    val uri = runCatching { java.net.URI(this) }.getOrNull() ?: return false
+    return uri.scheme.equals("https", ignoreCase = true) && uri.host != null && uri.rawUserInfo == null
+}
+
+private fun String.hasEncodedControl(): Boolean {
+    val decodedPercent = replace(ENCODED_PERCENT, "%")
+    for (match in ENCODED_BYTES.findAll(decodedPercent)) {
+        val bytes = match.value.split('%').drop(1).map { it.toInt(16).toByte() }.toByteArray()
+        if (bytes.any { it.toInt() and 0xff <= 0x1f || it.toInt() and 0xff == 0x7f }) return true
+        if (bytes.any { it.toInt() and 0xff in 0x80..0x9f } && encodedC1ByteIsUnsafe(bytes)) return true
+    }
+    return false
+}
+
+private fun encodedC1ByteIsUnsafe(bytes: ByteArray): Boolean = try {
+    Charsets.UTF_8.newDecoder().onMalformedInput(CodingErrorAction.REPORT)
+        .onUnmappableCharacter(CodingErrorAction.REPORT).decode(ByteBuffer.wrap(bytes))
+        .any(Char::isISOControl)
+} catch (_: CharacterCodingException) {
+    true
+}
+
+private val ENCODED_PERCENT = Regex("(?i)%25")
+private val ENCODED_BYTES = Regex("(?i)(?:%[0-9a-f]{2})+")
 
 /** Suffix-matched hosts of CDNs fast enough to paint a card image without a visible delay. */
 private val FAST_ART_CDN_HOSTS = listOf("dzcdn.net", "mzstatic.com")
