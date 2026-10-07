@@ -67,7 +67,9 @@ object Formatter {
     private fun printArtistSummary(profile: ArtistProfile, term: Terminal) {
         term.heading("Profile")
         term.keyValue("Name:", profile.name)
-        profile.photo?.let { term.keyValue("Photo:", term.link(it.url, artworkLabel(it)) + creditSuffix(it.attribution)) }
+        profile.photo?.let {
+            term.keyValue("Photo:", term.link(it.url, artworkLabel(it)) + creditSuffix(it.attribution))
+        }
         profile.bio?.let { term.keyValue("Bio:", textSnippet(it.text) + creditSuffix(it.attribution)) }
         val genres = profile.genres.take(4).joinToString(", ") { it.name }
         if (genres.isNotEmpty()) term.keyValue("Genres:", genres)
@@ -84,9 +86,13 @@ object Formatter {
         term.heading("Profile")
         term.keyValue("Title:", profile.title)
         term.keyValue("Artist:", profile.artist)
-        profile.artwork?.let { term.keyValue("Artwork:", term.link(it.url, artworkLabel(it)) + creditSuffix(it.attribution)) }
+        profile.artwork?.let {
+            term.keyValue("Artwork:", term.link(it.url, artworkLabel(it)) + creditSuffix(it.attribution))
+        }
         // The Tier 2 named accessor; AlbumProfile.description reads the same value through Tier 1.
-        profile.results.albumDescription()?.let { term.keyValue("Description:", textSnippet(it.text) + creditSuffix(it.attribution)) }
+        profile.results.albumDescription()?.let {
+            term.keyValue("Description:", textSnippet(it.text) + creditSuffix(it.attribution))
+        }
         profile.label?.let { term.keyValue("Label:", it) }
         profile.releaseDate?.let { term.keyValue("Released:", it) }
         val genres = profile.genres.take(4).joinToString(", ") { it.name }
@@ -144,15 +150,17 @@ object Formatter {
         return dims ?: "image"
     }
 
-    internal fun attributionText(art: EnrichmentData.Artwork): String {
-        return attributionText(art.attribution)
-    }
+    internal fun attributionText(art: EnrichmentData.Artwork): String = attributionText(art.attribution)
 
     private fun attributionText(attribution: ContentAttribution?): String {
         if (attribution == null) return ""
         fun safeLink(value: String?): String? = value?.takeIf {
             !it.any { char -> char <= ' ' || char == '\u007f' } &&
-                runCatching { java.net.URI(it).let { uri -> uri.scheme == "https" && uri.host != null && uri.userInfo == null } }.getOrDefault(false)
+                runCatching {
+                    java.net.URI(it).let { uri ->
+                        uri.scheme == "https" && uri.host != null && uri.userInfo == null
+                    }
+                }.getOrDefault(false)
         }
         val relation = if (attribution.licenses.size > 1) when (attribution.licenseRelation) {
             LicenseRelation.ALL_OF -> "All licences apply"
@@ -160,7 +168,8 @@ object Formatter {
             LicenseRelation.UNKNOWN -> "Licence relationship unknown"
         } else null
         return listOfNotNull(
-            attribution.attributionText ?: listOfNotNull(attribution.creator, attribution.credit).joinToString(" · ").ifBlank { null },
+            attribution.attributionText
+                ?: listOfNotNull(attribution.creator, attribution.credit).joinToString(" · ").ifBlank { null },
             safeLink(attribution.sourceUrl),
             attribution.licenses.joinToString(", ") { license ->
                 license.identifier + (safeLink(license.url)?.let { " ($it)" } ?: "")
