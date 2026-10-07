@@ -1,23 +1,23 @@
 package com.landofoz.musicmeta.engine
 
+import com.landofoz.musicmeta.EnrichmentConfig
+import com.landofoz.musicmeta.EnrichmentData
+import com.landofoz.musicmeta.EnrichmentProvider
 import com.landofoz.musicmeta.EnrichmentRequest
 import com.landofoz.musicmeta.EnrichmentResult
 import com.landofoz.musicmeta.EnrichmentType
 import com.landofoz.musicmeta.ProviderCapability
-import com.landofoz.musicmeta.EnrichmentConfig
-import com.landofoz.musicmeta.EnrichmentData
-import com.landofoz.musicmeta.EnrichmentProvider
 import com.landofoz.musicmeta.SimilarArtist
 import com.landofoz.musicmeta.cache.InMemoryEnrichmentCache
 import com.landofoz.musicmeta.http.CircuitBreaker
 import com.landofoz.musicmeta.http.RateLimiter
 import com.landofoz.musicmeta.provider.musicbrainz.MusicBrainzProvider
-import com.landofoz.musicmeta.testutil.FakeProvider
 import com.landofoz.musicmeta.testutil.FakeHttpClient
+import com.landofoz.musicmeta.testutil.FakeProvider
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertTrue
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.util.concurrent.atomic.AtomicLong
 
