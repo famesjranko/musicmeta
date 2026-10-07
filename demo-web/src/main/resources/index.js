@@ -641,7 +641,7 @@ function render(data, wasForceRefresh, stream) {
     : '';
   const imageCredit = contentCreditHtml(summary.imageAttribution);
   const img = summary.imageUrl
-    ? `<div class="credited-image"><img src="${esc(summary.imageUrl)}" alt="" onerror="this.closest('.credited-image').remove()" />${imageCredit ? `<button class="image-credit" type="button" aria-label="Image credit">i</button><div class="image-credit-popover" hidden>${imageCredit}</div>` : ''}</div>`
+    ? `<div class="credited-image"><img src="${esc(summary.imageUrl)}" alt="" onerror="this.closest('.credited-image').remove()" />${imageCredit ? `<button class="image-credit" type="button" aria-label="Image credit">i</button><div class="image-credit-popover" hidden>${imageCredit}<button type="button" class="image-credit-close" aria-label="Close image credit">×</button></div>` : ''}</div>`
     : pendingSlots.includes('image')
       ? '<div class="skeleton skeleton-img" aria-hidden="true"></div>'
       : '';
@@ -712,7 +712,7 @@ function render(data, wasForceRefresh, stream) {
   const gallery = (data.gallery && data.gallery.length)
     ? `<div class="card gallery${unverified ? ' unverified' : ''}">${data.gallery.map((g) => `
       <figure>
-        <div class="credited-image"><img src="${esc(g.url)}" alt="${esc(g.label || '')}" onerror="this.closest('figure').remove()" />${contentCreditHtml(g.attribution) ? `<button class="image-credit" type="button" aria-label="Image credit">i</button><div class="image-credit-popover" hidden>${contentCreditHtml(g.attribution)}</div>` : ''}</div>
+        <div class="credited-image"><img src="${esc(g.url)}" alt="${esc(g.label || '')}" onerror="this.closest('figure').remove()" />${contentCreditHtml(g.attribution) ? `<button class="image-credit" type="button" aria-label="Image credit">i</button><div class="image-credit-popover" hidden>${contentCreditHtml(g.attribution)}<button type="button" class="image-credit-close" aria-label="Close image credit">×</button></div>` : ''}</div>
         ${galleryCaption(g)}
       </figure>`).join('')}</div>`
     : '';
@@ -802,10 +802,17 @@ function render(data, wasForceRefresh, stream) {
   setupTextToggle();
   setupSectionToggles();
   resultEl.querySelectorAll('.image-credit').forEach((button) => {
-    const popover = button.parentElement.querySelector('.image-credit-popover');
-    button.addEventListener('click', () => { popover.hidden = !popover.hidden; });
+    const wrap = button.parentElement;
+    const popover = wrap.querySelector('.image-credit-popover');
+    let pinned = false;
+    const close = () => { pinned = false; popover.hidden = true; button.focus(); };
+    button.addEventListener('click', () => { pinned = !pinned; popover.hidden = false; });
     button.addEventListener('focus', () => { popover.hidden = false; });
-    button.addEventListener('keydown', (event) => { if (event.key === 'Escape') { popover.hidden = true; button.focus(); } });
+    wrap.addEventListener('pointerenter', () => { popover.hidden = false; });
+    wrap.addEventListener('pointerleave', () => { if (!pinned) popover.hidden = true; });
+    button.addEventListener('keydown', (event) => { if (event.key === 'Escape') close(); });
+    wrap.querySelector('.image-credit-close').addEventListener('click', close);
+    document.addEventListener('pointerdown', (event) => { if (!wrap.contains(event.target) && !popover.hidden) close(); });
   });
 }
 

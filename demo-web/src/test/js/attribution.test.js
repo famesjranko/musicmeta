@@ -118,6 +118,22 @@ test('file credit uses the selected file payload, escapes text, and rejects unsa
   assert.doesNotMatch(html, /javascript:|<b>/);
 });
 
+test('file credit retains public-domain, custom, restricted, and multiple licence details', () => {
+  const html = contentCreditHtml({
+    credit: 'Museum collection', sourceUrl: 'https://example.test/file',
+    licenses: [{ identifier: 'Public domain' }, { identifier: 'CC0', url: 'https://creativecommons.org/publicdomain/zero/1.0/' }],
+    modificationNote: 'Restricted: editorial use only',
+  });
+  assert.match(html, /Museum collection/);
+  assert.match(html, /Public domain/);
+  assert.match(html, /CC0/);
+  assert.match(html, /Restricted: editorial use only/);
+});
+
+test('missing content facts render no empty image credit', () => {
+  assert.equal(contentCreditHtml({ sourceUrl: 'ftp://example.test/file' }), '');
+});
+
 // --- Standing notices ----------------------------------------------------------------------
 // Some notices are owed by the page as a whole rather than by one rendered item, and musicmeta's
 // own policy snapshot does not carry them. Deezer's terms of use IV obliges the developer to

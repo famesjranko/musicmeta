@@ -115,8 +115,8 @@ fun ArtistProfile.toDemoResponse(elapsedMs: Long, pending: Set<EnrichmentType> =
         }
     }
 
-    val photo = r.artistPhoto()
-    val primaryImage = photo?.url ?: bio?.thumbnailUrl
+    val photo = r.artistPhoto()?.takeIf { r.isSafeArtwork(EnrichmentType.ARTIST_PHOTO, it) }
+    val primaryImage = photo?.url ?: bio?.thumbnailUrl?.takeIf { r.isSafeBiography(EnrichmentType.ARTIST_BIO, bio) }
     val gallery = buildList {
         val seen = mutableSetOf<String>().apply { primaryImage?.let { add(it) } }
         addArtwork(seen, r, EnrichmentType.ARTIST_LOGO, "Logo", linker)
@@ -243,7 +243,7 @@ fun AlbumProfile.toDemoResponse(
         artistRadio?.takeIf { r.identityResolved }?.let { add(it) }
     }
 
-    val albumArt = r.albumArt()
+    val albumArt = r.albumArt()?.takeIf { r.isSafeArtwork(EnrichmentType.ALBUM_ART, it) }
     val cardImage = albumArt.cardImageUrl()
     val gallery = buildList {
         val seen = mutableSetOf<String>().apply { albumArt?.url?.let { add(it) } }
@@ -361,9 +361,9 @@ fun TrackProfile.toDemoResponse(
             title = title,
             subtitle = artist,
             subtitleEnrich = artistEnrich(artist),
-            imageUrl = r.albumArt().cardImageUrl(),
+            imageUrl = r.albumArt()?.takeIf { r.isSafeArtwork(EnrichmentType.ALBUM_ART, it) }?.cardImageUrl(),
             imageCredit = r.artworkCredit(EnrichmentType.ALBUM_ART, r.albumArt(), r.albumArt().cardImageUrl(), linker),
-            imageAttribution = r.albumArt().attributionFor(r.albumArt().cardImageUrl())?.toDemoCredit(),
+            imageAttribution = r.albumArt()?.takeIf { r.isSafeArtwork(EnrichmentType.ALBUM_ART, it) }?.attributionFor(r.albumArt().cardImageUrl())?.toDemoCredit(),
             text = lyrics.readingText(),
             textSource = lyrics?.let { "lyrics" },
             textCredit = lyrics?.let { r.lyricsCredit(linker) },
@@ -675,6 +675,7 @@ private fun MutableList<GalleryImage>.addArtwork(
 ) {
     val url = results.get<EnrichmentData.Artwork>(type)?.url ?: return
     val artwork = results.get<EnrichmentData.Artwork>(type) ?: return
+    if (!results.isSafeArtwork(type, artwork)) return
     if (seen.add(url)) add(GalleryImage(url, label, results.credit(type, linker), artwork.attribution.toDemoCredit()))
 }
 
@@ -713,10 +714,18 @@ private fun MutableList<GalleryImage>.addAlternatives(
 ) {
     artwork?.alternatives?.forEach { alt ->
         if (alt.url.isNotBlank() && seen.add(alt.url)) {
+            if (alt.provider == "wikipedia" && alt.attribution == null) return@forEach
             add(GalleryImage(alt.url, alt.provider, linker.credit(alt.provider), alt.attribution.toDemoCredit()))
         }
     }
 }
+
+/** Old Wikimedia cache payloads do not establish file rights, so never paint them in the demo. */
+private fun EnrichmentResults.isSafeArtwork(type: EnrichmentType, artwork: EnrichmentData.Artwork): Boolean =
+    (raw[type] as? EnrichmentResult.Success)?.let { it.provider != "wikipedia" || artwork.attribution != null } ?: false
+
+private fun EnrichmentResults.isSafeBiography(type: EnrichmentType, biography: EnrichmentData.Biography): Boolean =
+    (raw[type] as? EnrichmentResult.Success)?.let { it.provider != "wikipedia" || biography.attribution != null } ?: false
 
 /** Suffix-matched hosts of CDNs fast enough to paint a card image without a visible delay. */
 private val FAST_ART_CDN_HOSTS = listOf("dzcdn.net", "mzstatic.com")

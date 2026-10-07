@@ -190,6 +190,21 @@ class AttributionMappingTest {
     }
 
     @Test
+    fun `an old Wikimedia image without file attribution is withheld`() {
+        // Given - an old cached Wikipedia artwork payload with no file attribution
+        val results = resultsWith(entries = arrayOf(
+            Triple(EnrichmentType.ALBUM_ART, "wikipedia", EnrichmentData.Artwork("https://example.com/legacy.jpg")),
+        ))
+
+        // When - mapping to a demo response
+        val response = AlbumProfile("Master of Puppets", "Metallica", results).toDemoResponse(0)
+
+        // Then - the unsafe legacy image has no rendered URL or provider fallback credit
+        assertNull(response.summary.imageUrl)
+        assertNull(response.summary.imageAttribution)
+    }
+
+    @Test
     fun `summary text credits the provider that supplied it, linked to the article it came from`() {
         // Given - an artist bio from Wikipedia, with the article title resolution settled on
         val results = resultsWith(

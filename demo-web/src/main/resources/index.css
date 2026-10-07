@@ -56,6 +56,7 @@ button, select { -webkit-tap-highlight-color: transparent; }
 .image-credit:hover, .image-credit:focus { opacity: 1; }
 .image-credit-popover { position: absolute; right: 7px; bottom: 36px; z-index: 3; width: min(300px, calc(100vw - 28px)); padding: .65rem; border: 1px solid var(--panel-border); border-radius: var(--radius-sm); background: var(--panel); color: var(--text-soft); font-size: .78rem; box-shadow: var(--shadow); }
 .image-credit-popover[hidden] { display: none; }
+.image-credit-close { float: right; min-height: 22px; padding: 0 .35rem; color: var(--text-soft); background: transparent; }
 
 :focus-visible {
   outline: 3px solid rgba(146, 169, 255, 0.46);
