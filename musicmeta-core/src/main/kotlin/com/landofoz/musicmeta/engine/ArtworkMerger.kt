@@ -21,38 +21,55 @@ internal class ArtworkMerger(override val type: EnrichmentType) : ResultMerger {
         val artworkResults = results.filter { it.data is EnrichmentData.Artwork }
         if (artworkResults.isEmpty()) return EnrichmentResult.NotFound(type, "all_providers")
 
-        // Primary = highest confidence; ties broken by provider order (first in chain).
-        // A URL group with contradictory file facts is unsafe to represent as one image.
-        val sorted = artworkResults.sortedByDescending { it.confidence }
-        val distinctImages = sorted
-            .flatMap { result ->
-                val artwork = result.data as EnrichmentData.Artwork
-                listOf(result) + artwork.alternatives.orEmpty().map { alternative ->
-                    result.copy(
-                        provider = alternative.provider,
-                        data = EnrichmentData.Artwork(
-                            url = alternative.url,
-                            thumbnailUrl = alternative.thumbnailUrl,
-                            sizes = alternative.sizes,
-                            attribution = alternative.attribution,
-                        ),
-                    )
-                }
-            }
-            .groupBy { (it.data as EnrichmentData.Artwork).url }
-            .values
-            .filter { candidates ->
-                candidates
-                    .mapNotNull { (it.data as EnrichmentData.Artwork).attribution }
-                    .distinct()
-                    .size <= 1
-            }
-            .map { candidates ->
-                candidates.firstOrNull { (it.data as EnrichmentData.Artwork).attribution != null }
-                    ?: candidates.first()
-            }
+        val distinctImages = distinctArtworkImages(artworkResults)
         if (distinctImages.isEmpty()) return EnrichmentResult.NotFound(type, "all_providers")
 
+        return mergedArtworkResult(distinctImages, artworkResults)
+    }
+
+    private fun distinctArtworkImages(
+        artworkResults: List<EnrichmentResult.Success>,
+    ): List<EnrichmentResult.Success> = expandedArtworkResults(artworkResults)
+        .groupBy { (it.data as EnrichmentData.Artwork).url }
+        .values
+        .filter(::hasConsistentAttribution)
+        .map(::representativeImage)
+
+    private fun expandedArtworkResults(
+        artworkResults: List<EnrichmentResult.Success>,
+    ): List<EnrichmentResult.Success> = artworkResults
+        // Primary = highest confidence; ties broken by provider order (first in chain).
+        .sortedByDescending { it.confidence }
+        .flatMap(::withArtworkAlternatives)
+
+    private fun withArtworkAlternatives(result: EnrichmentResult.Success): List<EnrichmentResult.Success> {
+        val artwork = result.data as EnrichmentData.Artwork
+        return listOf(result) + artwork.alternatives.orEmpty().map { alternative ->
+            result.copy(
+                provider = alternative.provider,
+                data = EnrichmentData.Artwork(
+                    url = alternative.url,
+                    thumbnailUrl = alternative.thumbnailUrl,
+                    sizes = alternative.sizes,
+                    attribution = alternative.attribution,
+                ),
+            )
+        }
+    }
+
+    // A URL group with contradictory file facts is unsafe to represent as one image.
+    private fun hasConsistentAttribution(candidates: List<EnrichmentResult.Success>): Boolean = candidates
+        .mapNotNull { (it.data as EnrichmentData.Artwork).attribution }
+        .distinct()
+        .size <= 1
+
+    private fun representativeImage(candidates: List<EnrichmentResult.Success>): EnrichmentResult.Success =
+        candidates.firstOrNull { (it.data as EnrichmentData.Artwork).attribution != null } ?: candidates.first()
+
+    private fun mergedArtworkResult(
+        distinctImages: List<EnrichmentResult.Success>,
+        artworkResults: List<EnrichmentResult.Success>,
+    ): EnrichmentResult.Success {
         val primary = distinctImages.first()
         val primaryArtwork = primary.data as EnrichmentData.Artwork
 

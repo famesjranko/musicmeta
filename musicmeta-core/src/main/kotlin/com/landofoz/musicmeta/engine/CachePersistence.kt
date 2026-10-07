@@ -238,19 +238,35 @@ internal class CachePersistence(
     /** A Wikipedia file is reusable only when its complete source facts establish one safe licence. */
     private fun ContentAttribution?.isReusableWikipediaFile(): Boolean {
         val attribution = this ?: return false
-        if (!attribution.resourceId.startsWith("File:") || !attribution.sourceUrl.isSafeHttpsUrl()) return false
-        if (attribution.nonFree != false || attribution.restrictions != emptyList<String>()) return false
-        val licenses = attribution.licenses
-        if (licenses.isEmpty() || attribution.licenseRelation == LicenseRelation.UNKNOWN) return false
-        if (licenses.any { !it.isSupportedWikipediaLicense() }) return false
-        val publicDomain = licenses.all { it.isPublicDomainLicense() }
-        if (attribution.copyrighted != !publicDomain || attribution.attributionRequired != !publicDomain) return false
-        if (
-            !publicDomain &&
-            attribution.attributionText.isNullOrBlank() && attribution.creator.isNullOrBlank()
-        ) return false
-        return attribution.usageTerms == null || licenses.any { it.matchesWikipediaUsageTerms(attribution.usageTerms) }
+        return attribution.hasSafeWikipediaFileSource() &&
+            attribution.hasReusableWikipediaRights() &&
+            attribution.hasConsistentWikipediaRights() &&
+            attribution.hasRequiredWikipediaCredit() &&
+            attribution.hasCompatibleWikipediaUsageTerms()
     }
+
+    private fun ContentAttribution.hasSafeWikipediaFileSource(): Boolean =
+        resourceId.startsWith("File:") && sourceUrl.isSafeHttpsUrl()
+
+    private fun ContentAttribution.hasReusableWikipediaRights(): Boolean =
+        nonFree == false &&
+            restrictions == emptyList<String>() &&
+            licenses.isNotEmpty() &&
+            licenseRelation != LicenseRelation.UNKNOWN &&
+            licenses.all { it.isSupportedWikipediaLicense() }
+
+    private fun ContentAttribution.hasConsistentWikipediaRights(): Boolean {
+        val publicDomain = licenses.all { it.isPublicDomainLicense() }
+        return copyrighted == !publicDomain && attributionRequired == !publicDomain
+    }
+
+    private fun ContentAttribution.hasRequiredWikipediaCredit(): Boolean =
+        licenses.all { it.isPublicDomainLicense() } ||
+            !attributionText.isNullOrBlank() ||
+            !creator.isNullOrBlank()
+
+    private fun ContentAttribution.hasCompatibleWikipediaUsageTerms(): Boolean =
+        usageTerms == null || licenses.any { it.matchesWikipediaUsageTerms(usageTerms) }
 
     private fun String.isSafeHttpsUrl(): Boolean {
         if (any { it.isWhitespace() || Character.isISOControl(it) } || hasFormatCharacter()) return false
