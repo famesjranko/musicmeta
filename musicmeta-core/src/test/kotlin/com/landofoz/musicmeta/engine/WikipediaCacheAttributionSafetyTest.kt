@@ -44,6 +44,12 @@ class WikipediaCacheAttributionSafetyTest {
             attribution(sourceUrl = "https:///wiki/File:unsafe.jpg"),
             attribution(sourceUrl = "https://commons.wikimedia.org/wiki/File:unsafe image.jpg"),
             attribution(sourceUrl = "https://commons.wikimedia.org/wiki/File:unsafe\nimage.jpg"),
+            attribution(sourceUrl = "https://commons.wikimedia.org:65536/wiki/File:unsafe.jpg"),
+            attribution(sourceUrl = "https://commons.wikimedia.org:99999/wiki/File:unsafe.jpg"),
+            attribution(sourceUrl = "https://commons.wikimedia.org/wiki/File:unsafe\u200b.jpg"),
+            attribution(sourceUrl = "https://commons.wikimedia.org/wiki/File:unsafe\u2060.jpg"),
+            attribution(licenses = listOf(ContentLicense("CC BY 4.0", "https://creativecommons.org:65536/licenses/by/4.0/"))),
+            attribution(licenses = listOf(ContentLicense("CC BY 4.0", "https://creativecommons.org/licenses/by/4.0/\u200b"))),
             attribution(creator = null, credit = null, attributionText = null),
         ) + unsafeControlSourceUrls.map(::attribution)
         for ((route, claim) in listOf("full", "partial", "stale", "pinned", "fresh").flatMap { route -> unsafe.map { route to it } }) {

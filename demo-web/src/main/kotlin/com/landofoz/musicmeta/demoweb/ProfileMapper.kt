@@ -762,7 +762,8 @@ private fun ContentLicense.isSupportedWikipediaLicense(): Boolean {
             "https://creativecommons.org/licenses/${match.groupValues[1].lowercase()}/${match.groupValues[2]}"
         }
     }
-    return url?.trimEnd('/') == expectedUrl
+    val licenseUrl = url ?: return false
+    return licenseUrl.isSafeHttpsUrl() && licenseUrl.trimEnd('/') == expectedUrl
 }
 
 private fun ContentLicense.isPublicDomainLicense(): Boolean = identifier == "Public domain" || identifier == "CC0"
@@ -781,10 +782,20 @@ private fun ContentLicense.matchesWikipediaUsageTerms(terms: String): Boolean {
 }
 
 private fun String.isSafeHttpsUrl(): Boolean {
-    if (any { it.isWhitespace() || Character.isISOControl(it) } || hasEncodedControl()) return false
+    if (
+        any { it.isWhitespace() || Character.isISOControl(it) } ||
+        hasFormatCharacter() ||
+        hasEncodedControl()
+    ) return false
     val uri = runCatching { java.net.URI(this) }.getOrNull() ?: return false
-    return uri.scheme.equals("https", ignoreCase = true) && uri.host != null && uri.rawUserInfo == null
+    return uri.scheme.equals("https", ignoreCase = true) &&
+        uri.host != null &&
+        uri.rawUserInfo == null &&
+        uri.port in -1..65535
 }
+
+private fun String.hasFormatCharacter(): Boolean =
+    codePoints().anyMatch { Character.getType(it) == Character.FORMAT.toInt() }
 
 private fun String.hasEncodedControl(): Boolean {
     val decodedPercent = replace(ENCODED_PERCENT, "%")

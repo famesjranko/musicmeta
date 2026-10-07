@@ -253,15 +253,21 @@ internal class CachePersistence(
     }
 
     private fun String.isSafeHttpsUrl(): Boolean {
-        if (any { it.isWhitespace() || Character.isISOControl(it) }) return false
+        if (any { it.isWhitespace() || Character.isISOControl(it) } || hasFormatCharacter()) return false
         if (hasEncodedControl()) return false
         val uri = try {
             URI(this)
         } catch (_: Exception) {
             return false
         }
-        return uri.scheme.equals("https", ignoreCase = true) && uri.host != null && uri.rawUserInfo == null
+        return uri.scheme.equals("https", ignoreCase = true) &&
+            uri.host != null &&
+            uri.rawUserInfo == null &&
+            uri.port in -1..65535
     }
+
+    private fun String.hasFormatCharacter(): Boolean =
+        codePoints().anyMatch { Character.getType(it) == Character.FORMAT.toInt() }
 
     private fun String.hasEncodedControl(): Boolean {
         val decodedPercent = ENCODED_PERCENT.replace(this, "%")
@@ -309,7 +315,7 @@ internal class CachePersistence(
                 "https://creativecommons.org/licenses/${match.groupValues[1].lowercase()}/${match.groupValues[2]}"
             }
         }
-        return url?.trimEnd('/') == expectedUrl
+        return url?.isSafeHttpsUrl() == true && url.trimEnd('/') == expectedUrl
     }
 
     private fun ContentLicense.isPublicDomainLicense(): Boolean = identifier == "Public domain" || identifier == "CC0"

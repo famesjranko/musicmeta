@@ -197,6 +197,26 @@ test('file credit retains ordinary HTTPS links and safe encoded paths', () => {
   assert.match(html, /href="https:\/\/example\.test\/licence%20terms\/%E6%9D%B1%E4%BA%AC%2Fpart"/);
 });
 
+test('file credit rejects out-of-range ports and format characters in source and licence URLs', () => {
+  // Given - source and licence URLs with invalid ports or literal Unicode format characters.
+  const unsafeUrls = [
+    'https://example.test:65536/file',
+    'https://example.test/file\u200b',
+  ];
+
+  // When - rendering each URL as both a source and licence link.
+  const rendered = unsafeUrls.map((url) => contentCreditHtml({
+    sourceUrl: url,
+    licenses: [{ identifier: 'Unsafe', url }],
+  }));
+
+  // Then - neither unsafe URL becomes an active link.
+  for (const html of rendered) {
+    assert.match(html, /<span>Unsafe<\/span>/);
+    assert.doesNotMatch(html, /href=/);
+  }
+});
+
 test('file credit retains public-domain, custom, restricted, and multiple licence details', () => {
   // Given - file metadata with public domain and custom restrictions.
   const credit = {

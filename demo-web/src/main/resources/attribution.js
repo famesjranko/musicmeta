@@ -29,10 +29,11 @@ function hasEncodedControl(value) {
 }
 
 function safeUrl(value) {
-  if (typeof value !== 'string' || /[\u0000-\u0020\u007f-\u009f]/.test(value) || hasEncodedControl(value)) return null;
+  if (typeof value !== 'string' || /[\u0000-\u0020\u007f-\u009f]/.test(value) || /\p{Cf}/u.test(value) || hasEncodedControl(value)) return null;
   try {
     const url = new URL(value);
-    return url.protocol === 'https:' && !url.username && !url.password ? url.href : null;
+    const port = url.port === '' ? -1 : Number(url.port);
+    return url.protocol === 'https:' && !url.username && !url.password && port >= -1 && port <= 65535 ? url.href : null;
   } catch (_) { return null; }
 }
 
