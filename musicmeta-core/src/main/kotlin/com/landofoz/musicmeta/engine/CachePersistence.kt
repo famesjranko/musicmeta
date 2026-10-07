@@ -1,6 +1,8 @@
 package com.landofoz.musicmeta.engine
 
 import com.landofoz.musicmeta.CanonicalStatus
+import com.landofoz.musicmeta.ContentAttribution
+import com.landofoz.musicmeta.ContentLicense
 import com.landofoz.musicmeta.EnrichmentCache
 import com.landofoz.musicmeta.EnrichmentConfig
 import com.landofoz.musicmeta.EnrichmentData
@@ -10,6 +12,7 @@ import com.landofoz.musicmeta.EnrichmentResult
 import com.landofoz.musicmeta.EnrichmentType
 import com.landofoz.musicmeta.ErrorKind
 import com.landofoz.musicmeta.LookupProvenance
+import com.landofoz.musicmeta.LicenseRelation
 import com.landofoz.musicmeta.cache.CacheMode
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
@@ -207,9 +210,9 @@ internal class CachePersistence(
         }
         is EnrichmentData.Artwork -> {
             val safeAlternatives = data.alternatives.orEmpty().filter {
-                it.provider != WIKIPEDIA || it.attribution != null
+                it.provider != WIKIPEDIA || it.attribution.isReusableWikipediaFile()
             }
-            if (result.provider != WIKIPEDIA || data.attribution != null) {
+            if (result.provider != WIKIPEDIA || data.attribution.isReusableWikipediaFile()) {
                 result.copy(data = data.copy(alternatives = safeAlternatives.takeIf { it.isNotEmpty() }))
             } else {
                 val replacement = safeAlternatives.firstOrNull()
@@ -226,6 +229,46 @@ internal class CachePersistence(
             }
         }
         else -> result
+    }
+
+    /** A Wikipedia file is reusable only when its complete source facts establish one safe licence. */
+    private fun ContentAttribution?.isReusableWikipediaFile(): Boolean {
+        val attribution = this ?: return false
+        if (attribution.resourceId.isBlank() || !attribution.sourceUrl.startsWith("https://")) return false
+        if (attribution.nonFree != false || attribution.restrictions != emptyList<String>()) return false
+        val licenses = attribution.licenses
+        if (licenses.isEmpty() || attribution.licenseRelation == LicenseRelation.UNKNOWN) return false
+        if (licenses.any { !it.isSupportedWikipediaLicense() }) return false
+        val publicDomain = licenses.all { it.isPublicDomainLicense() }
+        if (attribution.copyrighted != !publicDomain || attribution.attributionRequired != !publicDomain) return false
+        if (!publicDomain && attribution.attributionText.isNullOrBlank() && attribution.creator.isNullOrBlank()) return false
+        return attribution.usageTerms == null || licenses.any { it.matchesWikipediaUsageTerms(attribution.usageTerms) }
+    }
+
+    private fun ContentLicense.isSupportedWikipediaLicense(): Boolean {
+        val expectedUrl = when {
+            identifier == "Public domain" -> return url == null
+            identifier == "CC0" -> "https://creativecommons.org/publicdomain/zero/1.0"
+            else -> {
+                val match = Regex("CC (BY|BY-SA) (1.0|2.0|2.5|3.0|4.0)").matchEntire(identifier) ?: return false
+                "https://creativecommons.org/licenses/${match.groupValues[1].lowercase()}/${match.groupValues[2]}"
+            }
+        }
+        return url?.trimEnd('/') == expectedUrl
+    }
+
+    private fun ContentLicense.isPublicDomainLicense(): Boolean = identifier == "Public domain" || identifier == "CC0"
+
+    private fun ContentLicense.matchesWikipediaUsageTerms(terms: String): Boolean {
+        if (identifier == terms) return true
+        val longName = when {
+            identifier == "CC0" -> "Creative Commons CC0 1.0 Universal"
+            identifier.startsWith("CC BY-SA ") -> "Creative Commons Attribution Share Alike ${identifier.substringAfterLast(' ')}"
+            identifier.startsWith("CC BY ") -> "Creative Commons Attribution ${identifier.substringAfterLast(' ')}"
+            else -> return false
+        }
+        fun normalized(value: String) = value.lowercase().replace(Regex("[-\\s]"), "")
+        return normalized(terms) == normalized(longName)
     }
 
     private suspend fun writeNegative(
