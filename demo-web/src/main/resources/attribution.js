@@ -12,6 +12,28 @@ export function escapeHtml(s) {
   }[c]));
 }
 
+function safeUrl(value) {
+  try {
+    const url = new URL(value);
+    return url.protocol === 'https:' ? url.href : null;
+  } catch (_) { return null; }
+}
+
+/** Renders payload-specific file/article attribution; all external text and URLs are untrusted. */
+export function contentCreditHtml(credit) {
+  if (!credit) return '';
+  const text = credit.attributionText || [credit.creator, credit.credit].filter(Boolean).join(' · ');
+  const source = safeUrl(credit.sourceUrl);
+  const sourceHtml = source ? linkHtml(source, 'Source') : '';
+  const licences = (credit.licenses || []).map((license) => {
+    const href = safeUrl(license.url);
+    return href ? linkHtml(href, license.identifier) : `<span>${escapeHtml(license.identifier)}</span>`;
+  }).filter(Boolean);
+  const parts = [text ? `<span>${escapeHtml(text)}</span>` : '', sourceHtml, ...licences,
+    credit.modificationNote ? `<span>${escapeHtml(credit.modificationNote)}</span>` : ''].filter(Boolean);
+  return parts.length ? `<span class="content-credit">${parts.join('<span class="credit-sep"> · </span>')}</span>` : '';
+}
+
 // Reserved by the engine for a result it merged from several upstreams. Such a result names no
 // upstream, so it can never be a credit: the merged items carry the sources instead.
 const MERGER_SUFFIX = '_merger';

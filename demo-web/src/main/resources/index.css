@@ -51,6 +51,12 @@ body::before {
 button, input, select { font: inherit; }
 button, select { -webkit-tap-highlight-color: transparent; }
 
+.credited-image { position: relative; }
+.image-credit { position: absolute; right: 7px; bottom: 7px; width: 22px; min-height: 22px; height: 22px; padding: 0; border-radius: 50%; opacity: .42; color: var(--text); background: rgba(0,0,0,.65); font: 700 13px/22px serif; }
+.image-credit:hover, .image-credit:focus { opacity: 1; }
+.image-credit-popover { position: absolute; right: 7px; bottom: 36px; z-index: 3; width: min(300px, calc(100vw - 28px)); padding: .65rem; border: 1px solid var(--panel-border); border-radius: var(--radius-sm); background: var(--panel); color: var(--text-soft); font-size: .78rem; box-shadow: var(--shadow); }
+.image-credit-popover[hidden] { display: none; }
+
 :focus-visible {
   outline: 3px solid rgba(146, 169, 255, 0.46);
   outline-offset: 3px;

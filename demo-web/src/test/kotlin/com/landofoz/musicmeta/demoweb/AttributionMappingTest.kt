@@ -4,6 +4,8 @@ import com.landofoz.musicmeta.AlbumProfile
 import com.landofoz.musicmeta.ArtistProfile
 import com.landofoz.musicmeta.ArtworkSource
 import com.landofoz.musicmeta.CanonicalStatus
+import com.landofoz.musicmeta.ContentAttribution
+import com.landofoz.musicmeta.ContentLicense
 import com.landofoz.musicmeta.DiscographyAlbum
 import com.landofoz.musicmeta.EnrichmentData
 import com.landofoz.musicmeta.EnrichmentIdentifiers
@@ -163,6 +165,28 @@ class AttributionMappingTest {
 
         // Then - the credit names Deezer, the provider of the image actually on the card
         assertEquals("deezer", response.summary.imageCredit?.provider)
+    }
+
+    @Test
+    fun `the summary image carries its selected file credit rather than a provider label`() {
+        // Given - a selected artwork file with creator, description page, and licence metadata
+        val attribution = ContentAttribution(
+            resourceId = "File:Master of Puppets.jpg",
+            sourceUrl = "https://commons.wikimedia.org/wiki/File:Master_of_Puppets.jpg",
+            creator = "<Metallica>",
+            licenses = listOf(ContentLicense("CC BY-SA 4.0", "https://creativecommons.org/licenses/by-sa/4.0/")),
+        )
+        val results = resultsWith(entries = arrayOf(
+            Triple(EnrichmentType.ALBUM_ART, "wikipedia", EnrichmentData.Artwork("https://example.com/a.jpg", attribution = attribution)),
+        ))
+
+        // When - mapping to a demo response
+        val response = AlbumProfile("Master of Puppets", "Metallica", results).toDemoResponse(0)
+
+        // Then - the image exposes file-specific source facts for the watermark popover
+        assertEquals("<Metallica>", response.summary.imageAttribution?.creator)
+        assertEquals(attribution.sourceUrl, response.summary.imageAttribution?.sourceUrl)
+        assertEquals("CC BY-SA 4.0", response.summary.imageAttribution?.licenses?.single()?.identifier)
     }
 
     @Test

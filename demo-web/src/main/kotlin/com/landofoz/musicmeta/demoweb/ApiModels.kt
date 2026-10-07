@@ -53,6 +53,20 @@ data class SourceCredit(
     val url: String? = null,
 )
 
+/** File or article facts supplied with the rendered payload, never inferred from its provider. */
+@Serializable
+data class ContentCredit(
+    val creator: String? = null,
+    val credit: String? = null,
+    val attributionText: String? = null,
+    val sourceUrl: String,
+    val licenses: List<LicenseCredit> = emptyList(),
+    val modificationNote: String? = null,
+)
+
+@Serializable
+data class LicenseCredit(val identifier: String, val url: String? = null)
+
 @Serializable
 data class SummaryCard(
     val title: String,
@@ -62,12 +76,15 @@ data class SummaryCard(
     val imageUrl: String? = null,
     /** Who supplied [imageUrl] — the provider of the image actually painted, not of the ranked set. */
     val imageCredit: SourceCredit? = null,
+    /** File-specific facts for the exact image painted; absent for legacy or unverified payloads. */
+    val imageAttribution: ContentCredit? = null,
     /** Artist background artwork, rendered as a dimmed backdrop behind the summary card. */
     val backgroundImageUrl: String? = null,
     val text: String? = null,
     val textSource: String? = null,
     /** Who supplied [text], with the link-back its licence needs where the response identified one. */
     val textCredit: SourceCredit? = null,
+    val textAttribution: ContentCredit? = null,
     /** Who supplied [genres] — one per upstream named by the merged tags, in first-seen order. */
     val genreCredits: List<SourceCredit> = emptyList(),
     val previewTitle: String? = null,
@@ -103,6 +120,7 @@ data class GalleryImage(
     val url: String,
     val label: String? = null,
     val credit: SourceCredit? = null,
+    val attribution: ContentCredit? = null,
 )
 
 @Serializable

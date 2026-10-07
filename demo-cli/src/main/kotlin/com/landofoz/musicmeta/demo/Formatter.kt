@@ -142,6 +142,15 @@ object Formatter {
         return dims ?: "image"
     }
 
+    internal fun attributionText(art: EnrichmentData.Artwork): String {
+        val attribution = art.attribution ?: return ""
+        return listOfNotNull(
+            attribution.attributionText ?: listOfNotNull(attribution.creator, attribution.credit).joinToString(" · ").ifBlank { null },
+            attribution.sourceUrl,
+            attribution.licenses.joinToString(", ") { it.identifier }.ifBlank { null },
+        ).joinToString(" · ")
+    }
+
     // --- Results display (Tier 2/3) ---
 
     fun printResults(
@@ -278,9 +287,10 @@ object Formatter {
         val label = artworkLabel(data).let { if (it != "image") "$provider $it" else provider }
         val primary = term.link(data.url, label)
         val alts = data.alternatives
-        if (alts.isNullOrEmpty()) return primary
+        val attribution = attributionText(data).takeIf { it.isNotBlank() }?.let { " [$it]" }.orEmpty()
+        if (alts.isNullOrEmpty()) return primary + attribution
         val altLinks = alts.joinToString(", ") { term.link(it.url, it.provider) }
-        return "$primary (+${alts.size} alt: $altLinks)"
+        return "$primary (+${alts.size} alt: $altLinks)$attribution"
     }
 
     /** One Metadata/Lyrics payload answers several types; each row shows only the field it names. */

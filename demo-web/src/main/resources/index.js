@@ -10,6 +10,7 @@ import {
 import {
   escapeHtml as esc,
   creditLineHtml,
+  contentCreditHtml,
   standingNotices,
 } from '/attribution.js';
 
@@ -638,14 +639,17 @@ function render(data, wasForceRefresh, stream) {
   const backdrop = summary.backgroundImageUrl
     ? `<div class="backdrop" style="background-image:url('${esc(summary.backgroundImageUrl)}')"></div>`
     : '';
+  const imageCredit = contentCreditHtml(summary.imageAttribution);
   const img = summary.imageUrl
-    ? `<img src="${esc(summary.imageUrl)}" alt="" onerror="this.remove()" />`
+    ? `<div class="credited-image"><img src="${esc(summary.imageUrl)}" alt="" onerror="this.closest('.credited-image').remove()" />${imageCredit ? `<button class="image-credit" type="button" aria-label="Image credit">i</button><div class="image-credit-popover" hidden>${imageCredit}</div>` : ''}</div>`
     : pendingSlots.includes('image')
       ? '<div class="skeleton skeleton-img" aria-hidden="true"></div>'
       : '';
   // The text's own credit replaces the bare source line when the response said who supplied it:
   // Wikipedia's licence is owed beside the text it licenses, not in a page footer.
-  const textSource = summary.textCredit
+  const textSource = summary.textAttribution
+    ? `<div class="source">${contentCreditHtml(summary.textAttribution)}</div>`
+    : summary.textCredit
     ? `<div class="source">${creditLineHtml([summary.textCredit])}</div>`
     : summary.textSource ? `<div class="source">source: ${esc(summary.textSource)}</div>` : '';
   const text = summary.text
@@ -701,14 +705,14 @@ function render(data, wasForceRefresh, stream) {
   // A gallery entry's label is often the provider's own id (an artwork alternative is labelled by
   // whoever supplied it), so the credit replaces the caption there rather than repeating it.
   const galleryCaption = (g) => {
-    const credit = g.credit ? creditLineHtml([g.credit]) : '';
+    const credit = contentCreditHtml(g.attribution);
     const label = g.label && !(g.credit && g.credit.provider === g.label) ? esc(g.label) : '';
-    return label || credit ? `<figcaption>${label}${credit}</figcaption>` : '';
+    return label ? `<figcaption>${label}</figcaption>` : '';
   };
   const gallery = (data.gallery && data.gallery.length)
     ? `<div class="card gallery${unverified ? ' unverified' : ''}">${data.gallery.map((g) => `
       <figure>
-        <img src="${esc(g.url)}" alt="${esc(g.label || '')}" onerror="this.closest('figure').remove()" />
+        <div class="credited-image"><img src="${esc(g.url)}" alt="${esc(g.label || '')}" onerror="this.closest('figure').remove()" />${contentCreditHtml(g.attribution) ? `<button class="image-credit" type="button" aria-label="Image credit">i</button><div class="image-credit-popover" hidden>${contentCreditHtml(g.attribution)}</div>` : ''}</div>
         ${galleryCaption(g)}
       </figure>`).join('')}</div>`
     : '';
@@ -777,7 +781,6 @@ function render(data, wasForceRefresh, stream) {
         ${subtitle}
         ${genres}
         ${text}
-        ${creditLineHtml([summary.imageCredit], 'Photo')}
         ${creditLineHtml(summary.genreCredits, 'Genres')}
       </div>
     </div>
@@ -798,6 +801,12 @@ function render(data, wasForceRefresh, stream) {
 
   setupTextToggle();
   setupSectionToggles();
+  resultEl.querySelectorAll('.image-credit').forEach((button) => {
+    const popover = button.parentElement.querySelector('.image-credit-popover');
+    button.addEventListener('click', () => { popover.hidden = !popover.hidden; });
+    button.addEventListener('focus', () => { popover.hidden = false; });
+    button.addEventListener('keydown', (event) => { if (event.key === 'Escape') { popover.hidden = true; button.focus(); } });
+  });
 }
 
 // Shows the summary text's "Show all" toggle only when the collapsed block actually clips

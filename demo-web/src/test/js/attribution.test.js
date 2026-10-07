@@ -6,6 +6,7 @@ import {
   creditLineHtml,
   standingNotices,
 } from '../../main/resources/attribution.js';
+import { contentCreditHtml } from '../../main/resources/attribution.js';
 
 // --- Credit lines --------------------------------------------------------------------------
 // Every chip is built from the provenance the response carried, so a provider that answered
@@ -102,6 +103,19 @@ test('a hostile provider id and url cannot inject markup', () => {
 
 test('escapeHtml escapes every character that can break out of markup', () => {
   assert.equal(escapeHtml(`<&">'`), '&lt;&amp;&quot;&gt;&#39;');
+});
+
+test('file credit uses the selected file payload, escapes text, and rejects unsafe links', () => {
+  const html = contentCreditHtml({
+    attributionText: '<b>Photo & credit</b>',
+    sourceUrl: 'javascript:alert(1)',
+    licenses: [{ identifier: 'CC BY-SA <4>', url: 'https://creativecommons.org/licenses/by-sa/4.0/' }],
+    modificationNote: 'cropped & adjusted',
+  });
+  assert.match(html, /Photo &amp; credit/);
+  assert.match(html, /CC BY-SA &lt;4&gt;/);
+  assert.match(html, /cropped &amp; adjusted/);
+  assert.doesNotMatch(html, /javascript:|<b>/);
 });
 
 // --- Standing notices ----------------------------------------------------------------------

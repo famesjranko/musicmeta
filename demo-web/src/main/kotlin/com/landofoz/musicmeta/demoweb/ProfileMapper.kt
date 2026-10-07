@@ -3,6 +3,7 @@ package com.landofoz.musicmeta.demoweb
 import com.landofoz.musicmeta.AlbumProfile
 import com.landofoz.musicmeta.ArtistProfile
 import com.landofoz.musicmeta.CanonicalStatus
+import com.landofoz.musicmeta.ContentAttribution
 import com.landofoz.musicmeta.EnrichmentData
 import com.landofoz.musicmeta.EnrichmentIdentifiers
 import com.landofoz.musicmeta.EnrichmentResult
@@ -136,12 +137,14 @@ fun ArtistProfile.toDemoResponse(elapsedMs: Long, pending: Set<EnrichmentType> =
             title = name,
             imageUrl = primaryImage?.fanartTvPreviewUrl(),
             imageCredit = imageCredit,
+            imageAttribution = photo?.attribution?.toDemoCredit() ?: bio?.attribution?.toDemoCredit(),
             backgroundImageUrl = r.get<EnrichmentData.Artwork>(EnrichmentType.ARTIST_BACKGROUND)
                 ?.url
                 ?.fanartTvPreviewUrl(),
             text = bio?.text,
             textSource = bio?.source,
             textCredit = bio?.let { r.credit(EnrichmentType.ARTIST_BIO, linker) },
+            textAttribution = bio?.attribution?.toDemoCredit(),
             genreCredits = linker.genreCredits(genreChips, r),
             identityResolved = r.identityResolved,
             identityVerdict = r.identityVerdict,
@@ -261,9 +264,11 @@ fun AlbumProfile.toDemoResponse(
             subtitleEnrich = artistEnrich(artist),
             imageUrl = cardImage,
             imageCredit = r.artworkCredit(EnrichmentType.ALBUM_ART, albumArt, cardImage, linker),
+            imageAttribution = albumArt.attributionFor(cardImage)?.toDemoCredit(),
             text = description?.text,
             textSource = description?.source,
             textCredit = description?.let { r.credit(EnrichmentType.ALBUM_DESCRIPTION, linker) },
+            textAttribution = description?.attribution?.toDemoCredit(),
             genreCredits = linker.genreCredits(genreChips, r),
             identityResolved = r.identityResolved,
             identityVerdict = r.identityVerdict,
@@ -358,6 +363,7 @@ fun TrackProfile.toDemoResponse(
             subtitleEnrich = artistEnrich(artist),
             imageUrl = r.albumArt().cardImageUrl(),
             imageCredit = r.artworkCredit(EnrichmentType.ALBUM_ART, r.albumArt(), r.albumArt().cardImageUrl(), linker),
+            imageAttribution = r.albumArt().attributionFor(r.albumArt().cardImageUrl())?.toDemoCredit(),
             text = lyrics.readingText(),
             textSource = lyrics?.let { "lyrics" },
             textCredit = lyrics?.let { r.lyricsCredit(linker) },
@@ -668,7 +674,8 @@ private fun MutableList<GalleryImage>.addArtwork(
     linker: CreditLinker,
 ) {
     val url = results.get<EnrichmentData.Artwork>(type)?.url ?: return
-    if (seen.add(url)) add(GalleryImage(url, label, results.credit(type, linker)))
+    val artwork = results.get<EnrichmentData.Artwork>(type) ?: return
+    if (seen.add(url)) add(GalleryImage(url, label, results.credit(type, linker), artwork.attribution.toDemoCredit()))
 }
 
 /** The credit for whichever provider answered [type], or null when nothing did. */
@@ -706,7 +713,7 @@ private fun MutableList<GalleryImage>.addAlternatives(
 ) {
     artwork?.alternatives?.forEach { alt ->
         if (alt.url.isNotBlank() && seen.add(alt.url)) {
-            add(GalleryImage(alt.url, alt.provider, linker.credit(alt.provider)))
+            add(GalleryImage(alt.url, alt.provider, linker.credit(alt.provider), alt.attribution.toDemoCredit()))
         }
     }
 }
@@ -729,6 +736,23 @@ private fun EnrichmentData.Artwork?.cardImageUrl(): String? {
     if (this == null) return null
     if (url.hasFastCdnHost()) return url
     return alternatives?.firstOrNull { it.url.hasFastCdnHost() }?.url ?: url
+}
+
+private fun EnrichmentData.Artwork?.attributionFor(url: String?): ContentAttribution? = when {
+    this == null || url == null -> null
+    this.url == url -> attribution
+    else -> alternatives?.firstOrNull { it.url == url }?.attribution
+}
+
+private fun ContentAttribution?.toDemoCredit(): ContentCredit? = this?.let {
+    ContentCredit(
+        creator = creator,
+        credit = credit,
+        attributionText = attributionText,
+        sourceUrl = sourceUrl,
+        licenses = licenses.map { license -> LicenseCredit(license.identifier, license.url) },
+        modificationNote = modificationNote,
+    )
 }
 
 private const val FANART_TV_HOST = "assets.fanart.tv"
