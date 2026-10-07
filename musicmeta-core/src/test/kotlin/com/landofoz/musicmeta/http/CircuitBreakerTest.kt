@@ -72,6 +72,22 @@ class CircuitBreakerTest {
         assertTrue(breaker.allowRequest())
     }
 
+    @Test fun `admits only one request while half-open`() {
+        // Given - an open breaker whose cooldown has expired
+        val time = AtomicLong(0L)
+        val breaker = CircuitBreaker(failureThreshold = 1, cooldownMs = 100, clock = { time.get() })
+        breaker.recordFailure()
+        time.set(100L)
+
+        // When - two callers ask for admission before either records its outcome
+        val first = breaker.allowRequest()
+        val second = breaker.allowRequest()
+
+        // Then - only the first caller owns the recovery probe
+        assertTrue(first)
+        assertFalse(second)
+    }
+
     @Test fun `success in half-open closes circuit`() {
         // Given - circuit in half-open state (past cooldown)
         val time = AtomicLong(0L)
@@ -84,6 +100,51 @@ class CircuitBreakerTest {
         breaker.recordSuccess()
 
         // Then - circuit fully closed
+        assertEquals(CircuitBreaker.State.CLOSED, breaker.state)
+    }
+
+    @Test fun `failed half-open permit restarts the cooldown`() {
+        // Given - a breaker that has reached half-open after its first cooldown
+        val time = AtomicLong(0L)
+        val breaker = CircuitBreaker(failureThreshold = 1, cooldownMs = 100, clock = time::get)
+        breaker.recordFailure()
+        time.set(100L)
+        val probe = requireNotNull(breaker.acquire())
+
+        // When - the admitted recovery probe fails
+        probe.recordFailure()
+
+        // Then - a new full cooldown starts instead of admitting another probe immediately
+        assertEquals(CircuitBreaker.State.OPEN, breaker.state)
+        assertFalse(breaker.allowRequest())
+    }
+
+    @Test fun `obsolete closed permit cannot close a newer open circuit`() {
+        // Given - a closed attempt is in flight when later failures open the breaker
+        val breaker = CircuitBreaker(failureThreshold = 1)
+        val oldAttempt = requireNotNull(breaker.acquire())
+        breaker.recordFailure()
+
+        // When - the old attempt reports success after the circuit opened
+        oldAttempt.recordSuccess()
+
+        // Then - its obsolete completion cannot erase the newer failure
+        assertEquals(CircuitBreaker.State.OPEN, breaker.state)
+    }
+
+    @Test fun `reset invalidates an obsolete half-open permit`() {
+        // Given - a half-open permit exists before an explicit reset
+        val time = AtomicLong(0L)
+        val breaker = CircuitBreaker(failureThreshold = 1, cooldownMs = 100, clock = time::get)
+        breaker.recordFailure()
+        time.set(100L)
+        val obsoleteProbe = requireNotNull(breaker.acquire())
+
+        // When - reset closes the breaker and the old probe later fails
+        breaker.reset()
+        obsoleteProbe.recordFailure()
+
+        // Then - reset remains closed because the old permit no longer owns this generation
         assertEquals(CircuitBreaker.State.CLOSED, breaker.state)
     }
 

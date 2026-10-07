@@ -99,48 +99,25 @@ internal class ProviderChain(
         val missing = gated.mapNotNull { (provider, gate) ->
             (gate as? Gate.MissingIdentifier)?.let { provider.id to it.requirement }
         }.toMap()
-        val tripped = gated.filter { (_, gate) -> gate == Gate.BreakerOpen }.map { (provider, _) -> provider }
         val eligible = gated.filter { (_, gate) -> gate == Gate.Attempt }.map { (provider, _) -> provider }
 
         val outcomes = eligible.map { provider ->
             async {
-                val breaker = circuitBreakers[provider.id]
-                val result = try {
-                    provider.enrich(request, type)
-                } catch (e: Exception) {
-                    EnrichmentResult.Error(type, provider.id, e.message ?: "Unknown error", e)
-                }.asRateLimitedIfThrottled()
-                // The one guard, and it is deliberately not a `catch (CancellationException)`.
-                // ensureActive() throws only when *this* job is cancelled, so a cancelled caller
-                // never records a breaker failure — while a CancellationException raised elsewhere
-                // (a provider's own withTimeout expiring) stays a failure of that provider instead
-                // of escaping to be misreported as the engine's deadline. It also covers a
-                // consumer's provider that swallows the cancellation and returns an Error, which
-                // no rethrow of ours could intercept. (#53)
-                currentCoroutineContext().ensureActive()
-                when (result) {
-                    is EnrichmentResult.Success -> { breaker?.recordSuccess(); result }
-                    is EnrichmentResult.NotFound -> { breaker?.recordSuccess(); null }
-                    is EnrichmentResult.RateLimited -> {
-                        // A failure, not a no-op: a throttled provider that records neither is a
-                        // breaker that never opens under load, which is the collapse
-                        // `bodyOrThrowTransient` throws to avoid (`docs/pitfalls.md` §4).
-                        breaker?.recordFailure()
-                        logger.debug(TAG, "${type.name}: ${provider.id} rate limited, skipping"); result
-                    }
-                    is EnrichmentResult.Error -> {
-                        breaker?.recordFailure()
-                        logger.debug(TAG, "${type.name}: ${provider.id} error: ${result.message}"); result
-                    }
-                }
+                provider to recordAttempt(provider, request)
             }
-        }.awaitAll().filterNotNull()
+        }.awaitAll()
 
-        val successes = outcomes.filterIsInstance<EnrichmentResult.Success>()
+        val tripped = outcomes.filter { (_, result) -> result == null }.map { (provider, _) -> provider }
+        val attemptedOutcomes = outcomes.mapNotNull { (_, result) -> result }
+        val attemptedProviderIds = outcomes.mapNotNull { (provider, result) -> result?.let { provider.id } }
+
+        val successes = attemptedOutcomes.filterIsInstance<EnrichmentResult.Success>()
         // The last failure, matching what `resolve` keeps: both walk the chain in priority order.
-        val failure = outcomes.lastOrNull { it !is EnrichmentResult.Success }
-        val results = ChainResults(successes, failure ?: outageOrNull(eligible.isNotEmpty(), tripped))
-        val execution = ChainExecution(eligible.map { it.id }, missing, tripped.map { it.id })
+        val failure = attemptedOutcomes.lastOrNull {
+            it !is EnrichmentResult.Success && it !is EnrichmentResult.NotFound
+        }
+        val results = ChainResults(successes, failure ?: outageOrNull(attemptedOutcomes.isNotEmpty(), tripped))
+        val execution = ChainExecution(attemptedProviderIds, missing, tripped.map { it.id })
         results to execution
     }
 
@@ -158,7 +135,6 @@ internal class ProviderChain(
     private sealed class Gate {
         object Ineligible : Gate()
         data class MissingIdentifier(val requirement: IdentifierRequirement) : Gate()
-        object BreakerOpen : Gate()
         object Attempt : Gate()
     }
 
@@ -170,34 +146,45 @@ internal class ProviderChain(
         !provider.isAvailable -> Gate.Ineligible
         !hasRequiredIdentifiers(provider, identifiers) -> Gate.MissingIdentifier(requirementFor(provider))
         identifierOnly && !requiresIdentifier(provider) -> Gate.Ineligible
-        isTripped(provider) -> Gate.BreakerOpen
         else -> Gate.Attempt
     }
 
     /**
-     * Calls [provider], records the outcome against its breaker, and marks it attempted — the part
-     * of [resolveWithExecution]'s walk that is the same regardless of what the caller does with the
-     * result.
+     * Acquires the breaker permit immediately before calling [provider]. A cancelled caller abandons
+     * an unrecorded probe so another caller can retry without waiting through a fresh cooldown.
      */
     private suspend fun recordAttempt(
         provider: EnrichmentProvider,
         request: EnrichmentRequest,
-        attempted: MutableList<String>,
-    ): EnrichmentResult {
+    ): EnrichmentResult? {
         val breaker = circuitBreakers[provider.id]
-        val result = try {
-            provider.enrich(request, type)
-        } catch (e: Exception) {
-            EnrichmentResult.Error(type, provider.id, e.message ?: "Unknown error", e)
-        }.asRateLimitedIfThrottled()
-        currentCoroutineContext().ensureActive() // see resolveAllWithExecution — the same single guard
-        attempted.add(provider.id)
-        if (result is EnrichmentResult.Success || result is EnrichmentResult.NotFound) {
-            breaker?.recordSuccess()
-        } else {
-            breaker?.recordFailure()
+        val permit = breaker?.acquire()
+        if (breaker != null && permit == null) return null
+        var recorded = false
+        try {
+            val result = try {
+                provider.enrich(request, type)
+            } catch (e: Exception) {
+                EnrichmentResult.Error(type, provider.id, e.message ?: "Unknown error", e)
+            }.asRateLimitedIfThrottled()
+            // See docs/pitfalls.md §2: only our cancelled job escapes without becoming a provider failure.
+            currentCoroutineContext().ensureActive()
+            when (result) {
+                is EnrichmentResult.Success, is EnrichmentResult.NotFound -> permit?.recordSuccess()
+                is EnrichmentResult.RateLimited -> {
+                    permit?.recordFailure()
+                    logger.debug(TAG, "${type.name}: ${provider.id} rate limited, skipping")
+                }
+                is EnrichmentResult.Error -> {
+                    permit?.recordFailure()
+                    logger.debug(TAG, "${type.name}: ${provider.id} error: ${result.message}")
+                }
+            }
+            recorded = true
+            return result
+        } finally {
+            if (!recorded) permit?.abandon()
         }
-        return result
     }
 
     /** One provider's contribution to a [resolveWithExecution] walk: a `Success`, a failure, or neither. */
@@ -223,11 +210,16 @@ internal class ProviderChain(
     ): WalkStep = when (val gate = gateFor(provider, request.identifiers, identifierOnly)) {
         Gate.Ineligible -> WalkStep(null, null)
         is Gate.MissingIdentifier -> { ledger.missing[provider.id] = gate.requirement; WalkStep(null, null) }
-        Gate.BreakerOpen -> { ledger.tripped.add(provider); WalkStep(null, null) }
-        Gate.Attempt -> when (val result = recordAttempt(provider, request, ledger.attempted)) {
-            is EnrichmentResult.Success -> WalkStep(result, null)
-            is EnrichmentResult.NotFound -> WalkStep(null, null)
-            is EnrichmentResult.RateLimited, is EnrichmentResult.Error -> WalkStep(null, result)
+        Gate.Attempt -> when (val result = recordAttempt(provider, request)) {
+            null -> { ledger.tripped.add(provider); WalkStep(null, null) }
+            else -> {
+                ledger.attempted.add(provider.id)
+                when (result) {
+                    is EnrichmentResult.Success -> WalkStep(result, null)
+                    is EnrichmentResult.NotFound -> WalkStep(null, null)
+                    is EnrichmentResult.RateLimited, is EnrichmentResult.Error -> WalkStep(null, result)
+                }
+            }
         }
     }
 
@@ -311,10 +303,6 @@ internal class ProviderChain(
      */
     internal fun requirementForProviderId(providerId: String): IdentifierRequirement =
         providers.firstOrNull { it.id == providerId }?.let { requirementFor(it) } ?: IdentifierRequirement.NONE
-
-    /** Whether [provider]'s breaker is open. A provider with no breaker is never skipped. */
-    private fun isTripped(provider: EnrichmentProvider): Boolean =
-        circuitBreakers[provider.id]?.allowRequest() == false
 
     private fun hasRequiredIdentifiers(
         provider: EnrichmentProvider,

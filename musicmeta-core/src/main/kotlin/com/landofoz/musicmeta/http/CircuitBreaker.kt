@@ -1,21 +1,6 @@
 package com.landofoz.musicmeta.http
 
-/**
- * Tracks consecutive failures for a provider and short-circuits calls
- * when the failure threshold is reached.
- *
- * States:
- * - CLOSED: normal operation, requests pass through
- * - OPEN: too many failures, requests are rejected immediately
- * - HALF_OPEN: after cooldown, one request is allowed through to test recovery
- *
- * Thread-safe via synchronized blocks. Designed to be paired 1:1 with
- * a provider instance, same as [RateLimiter].
- *
- * @param failureThreshold Consecutive failures before opening the circuit
- * @param cooldownMs How long the circuit stays open before allowing a test request
- * @param clock Time source (injectable for testing)
- */
+/** Tracks provider failures and owns the one recovery probe allowed after cooldown. */
 internal class CircuitBreaker(
     private val failureThreshold: Int = DEFAULT_FAILURE_THRESHOLD,
     private val cooldownMs: Long = DEFAULT_COOLDOWN_MS,
@@ -23,6 +8,9 @@ internal class CircuitBreaker(
 ) {
     private var consecutiveFailures = 0
     private var openedAt = 0L
+    private var generation = 0L
+    private var nextPermitId = 0L
+    private var halfOpenPermitId: Long? = null
 
     val state: State
         @Synchronized get() = when {
@@ -31,34 +19,105 @@ internal class CircuitBreaker(
             else -> State.OPEN
         }
 
-    /** Returns true if a request should be allowed through. */
+    /** Acquires an attempt permit, refusing a second caller while a half-open probe is live. */
     @Synchronized
-    fun allowRequest(): Boolean = when (state) {
-        State.CLOSED -> true
-        State.HALF_OPEN -> true
-        State.OPEN -> false
-    }
-
-    /** Record a successful call. Resets the failure counter. */
-    @Synchronized
-    fun recordSuccess() {
-        consecutiveFailures = 0
-    }
-
-    /** Record a failed call. Opens the circuit if threshold is reached. */
-    @Synchronized
-    fun recordFailure() {
-        consecutiveFailures++
-        if (consecutiveFailures >= failureThreshold) {
-            openedAt = clock()
+    fun acquire(): Permit? = when (currentState()) {
+        State.CLOSED -> Permit(generation, null)
+        State.OPEN -> null
+        State.HALF_OPEN -> {
+            if (halfOpenPermitId != null) null else {
+                val id = ++nextPermitId
+                halfOpenPermitId = id
+                Permit(generation, id)
+            }
         }
     }
 
-    /** Force-reset to closed state. */
+    /** Compatibility boundary for callers that only need an admission decision. */
     @Synchronized
-    fun reset() {
+    fun allowRequest(): Boolean = acquire() != null
+
+    /** Records a successful un-tokened call, such as test setup. */
+    @Synchronized
+    fun recordSuccess() = closeCircuit()
+
+    /** Records a failed un-tokened call, such as test setup. */
+    @Synchronized
+    fun recordFailure() {
+        consecutiveFailures++
+        if (consecutiveFailures >= failureThreshold) openCircuit()
+    }
+
+    /** Invalidates all outstanding permits and returns the breaker to normal operation. */
+    @Synchronized
+    fun reset() = closeCircuit()
+
+    /** A permit can settle one provider outcome or be abandoned by cancellation. */
+    internal inner class Permit internal constructor(
+        private val permitGeneration: Long,
+        private val halfOpenId: Long?,
+    ) {
+        private var settled = false
+
+        fun recordSuccess() = settle(success = true)
+
+        fun recordFailure() = settle(success = false)
+
+        fun abandon() {
+            synchronized(this) {
+                if (settled) return
+                settled = true
+                abandonPermit(permitGeneration, halfOpenId)
+            }
+        }
+
+        private fun settle(success: Boolean) {
+            synchronized(this) {
+                if (settled) return
+                settled = true
+                settlePermit(permitGeneration, halfOpenId, success)
+            }
+        }
+    }
+
+    @Synchronized
+    private fun settlePermit(permitGeneration: Long, halfOpenId: Long?, success: Boolean) {
+        if (permitGeneration != generation || (halfOpenId != null && halfOpenId != halfOpenPermitId)) return
+        if (success) {
+            closeCircuit()
+        } else if (halfOpenId != null) {
+            consecutiveFailures = failureThreshold
+            openCircuit()
+        } else {
+            consecutiveFailures++
+            if (consecutiveFailures >= failureThreshold) openCircuit()
+        }
+    }
+
+    @Synchronized
+    private fun abandonPermit(permitGeneration: Long, halfOpenId: Long?) {
+        if (permitGeneration == generation && halfOpenId != null && halfOpenId == halfOpenPermitId) {
+            halfOpenPermitId = null
+        }
+    }
+
+    private fun currentState(): State = when {
+        consecutiveFailures < failureThreshold -> State.CLOSED
+        clock() - openedAt >= cooldownMs -> State.HALF_OPEN
+        else -> State.OPEN
+    }
+
+    private fun closeCircuit() {
         consecutiveFailures = 0
         openedAt = 0L
+        halfOpenPermitId = null
+        generation++
+    }
+
+    private fun openCircuit() {
+        openedAt = clock()
+        halfOpenPermitId = null
+        generation++
     }
 
     enum class State { CLOSED, HALF_OPEN, OPEN }
