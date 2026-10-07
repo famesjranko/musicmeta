@@ -12,8 +12,10 @@ export function escapeHtml(s) {
   }[c]));
 }
 
+const ENCODED_CONTROL = /%(?:[0189][0-9a-f]|7f|25(?:[0189][0-9a-f]|7f))/i;
+
 function safeUrl(value) {
-  if (typeof value !== 'string' || /[\u0000-\u0020\u007f]/.test(value)) return null;
+  if (typeof value !== 'string' || /[\u0000-\u0020\u007f-\u009f]/.test(value) || ENCODED_CONTROL.test(value)) return null;
   try {
     const url = new URL(value);
     return url.protocol === 'https:' && !url.username && !url.password ? url.href : null;

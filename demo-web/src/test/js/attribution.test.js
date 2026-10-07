@@ -127,6 +127,66 @@ test('file credit uses the selected file payload, escapes text, and rejects unsa
   assert.doesNotMatch(html, /javascript:|<b>/);
 });
 
+test('file credit rejects literal and encoded controls in its source URL', () => {
+  // Given - untrusted source URLs containing literal C0/C1/DEL values or encoded control bytes.
+  const unsafeUrls = [
+    'https://example.test/%0A',
+    'https://example.test/%0D',
+    'https://example.test/%7F',
+    'https://example.test/%250A',
+    'https://example.test/%0a',
+    'https://example.test/%80',
+    'https://example.test/literal\u0001',
+    'https://example.test/literal\u0080',
+    'https://example.test/literal\u007f',
+  ];
+
+  // When - rendering each attribution source.
+  const rendered = unsafeUrls.map((sourceUrl) => contentCreditHtml({ sourceUrl }));
+
+  // Then - no control-bearing source becomes a link.
+  for (const html of rendered) assert.doesNotMatch(html, /href=/);
+});
+
+test('file credit rejects literal and encoded controls in every licence URL', () => {
+  // Given - untrusted licence URLs containing literal C0/C1/DEL values or encoded control bytes.
+  const unsafeUrls = [
+    'https://example.test/%0A',
+    'https://example.test/%0D',
+    'https://example.test/%7F',
+    'https://example.test/%250A',
+    'https://example.test/%0a',
+    'https://example.test/%80',
+    'https://example.test/literal\u0001',
+    'https://example.test/literal\u0080',
+    'https://example.test/literal\u007f',
+  ];
+
+  // When - rendering each licence URL.
+  const rendered = unsafeUrls.map((url) => contentCreditHtml({ licenses: [{ identifier: 'Control', url }] }));
+
+  // Then - every unsafe licence remains text rather than an active link.
+  for (const html of rendered) {
+    assert.match(html, /<span>Control<\/span>/);
+    assert.doesNotMatch(html, /href=/);
+  }
+});
+
+test('file credit retains ordinary HTTPS links and safe encoded paths', () => {
+  // Given - an ordinary HTTPS source and a licence path with ordinary URL encoding.
+  const credit = {
+    sourceUrl: 'https://example.test/source',
+    licenses: [{ identifier: 'Encoded licence', url: 'https://example.test/licence%20terms/path%2Fpart' }],
+  };
+
+  // When - rendering the attribution.
+  const html = contentCreditHtml(credit);
+
+  // Then - both safe HTTPS links render unchanged.
+  assert.match(html, /href="https:\/\/example\.test\/source"/);
+  assert.match(html, /href="https:\/\/example\.test\/licence%20terms\/path%2Fpart"/);
+});
+
 test('file credit retains public-domain, custom, restricted, and multiple licence details', () => {
   // Given - file metadata with public domain and custom restrictions.
   const credit = {
