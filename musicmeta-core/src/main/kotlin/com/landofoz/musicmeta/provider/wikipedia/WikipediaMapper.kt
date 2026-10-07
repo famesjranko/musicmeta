@@ -4,6 +4,7 @@ import com.landofoz.musicmeta.ArtworkSize
 import com.landofoz.musicmeta.ContentAttribution
 import com.landofoz.musicmeta.ContentLicense
 import com.landofoz.musicmeta.EnrichmentData
+import com.landofoz.musicmeta.provider.encodePathSegment
 
 /** Maps Wikipedia responses to EnrichmentData subclasses. */
 internal object WikipediaMapper {
@@ -39,5 +40,27 @@ internal object WikipediaMapper {
                 .takeIf { it.isNotEmpty() },
         )
 
-    private fun encodeArticleTitle(title: String): String = title.replace(" ", "_")
+    /**
+     * Represents only source-reported file facts. A caller must still fail closed before serving
+     * artwork when required facts are absent, restricted, non-free or multi-licence ambiguous.
+     */
+    fun toFileAttribution(metadata: WikipediaFileMetadata): ContentAttribution? {
+        val sourceUrl = metadata.descriptionPageUrl ?: return null
+        val license = metadata.licenseShortName ?: return null
+        return ContentAttribution(
+            resourceId = metadata.title,
+            sourceUrl = sourceUrl,
+            creator = metadata.artist,
+            credit = metadata.credit,
+            attributionText = metadata.attribution,
+            licenses = listOf(ContentLicense(license, metadata.licenseUrl)),
+            copyrighted = metadata.copyrighted,
+            attributionRequired = metadata.attribution != null,
+            nonFree = metadata.nonFree,
+            usageTerms = metadata.usageTerms,
+            restrictions = metadata.restrictions,
+        )
+    }
+
+    private fun encodeArticleTitle(title: String): String = encodePathSegment(title).replace("%20", "_")
 }
