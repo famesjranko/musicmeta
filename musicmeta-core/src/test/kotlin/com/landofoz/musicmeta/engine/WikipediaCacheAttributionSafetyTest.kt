@@ -45,7 +45,7 @@ class WikipediaCacheAttributionSafetyTest {
             attribution(sourceUrl = "https://commons.wikimedia.org/wiki/File:unsafe image.jpg"),
             attribution(sourceUrl = "https://commons.wikimedia.org/wiki/File:unsafe\nimage.jpg"),
             attribution(creator = null, credit = null, attributionText = null),
-        )
+        ) + unsafeControlSourceUrls.map(::attribution)
         for ((route, claim) in listOf("full", "partial", "stale", "pinned", "fresh").flatMap { route -> unsafe.map { route to it } }) {
             val cache = IndependentCache()
             val key = entityKeyFor(request, type)
@@ -70,28 +70,43 @@ class WikipediaCacheAttributionSafetyTest {
         }
     }
 
-    @Test fun `unsafe Wikipedia alternatives are removed while reusable and public-domain controls remain`() = runTest {
-        // Given - a safe primary with unsafe Wikipedia alternatives and two valid controls
+    @Test fun `unsafe Wikipedia alternatives are removed on every cache route while reusable controls remain`() = runTest {
+        // Given - safe primaries with unsafe Wikipedia alternatives and valid URL encodings
         val unsafeAlternatives = listOf(
             ArtworkSource("wikipedia", "https://images.test/non-free.jpg", attribution = attribution(nonFree = true)),
             ArtworkSource("wikipedia", "https://images.test/restricted.jpg", attribution = attribution(restrictions = listOf("restricted"))),
             ArtworkSource("wikipedia", "https://images.test/ambiguous.jpg", attribution = attribution(licenses = listOf(ccBy, ccBySa), relation = LicenseRelation.UNKNOWN)),
-        )
-        for (alternative in unsafeAlternatives) {
+        ) + unsafeControlSourceUrls.mapIndexed { index, sourceUrl ->
+            ArtworkSource("wikipedia", "https://images.test/unsafe-$index.jpg", attribution = attribution(sourceUrl = sourceUrl))
+        }
+        for ((route, alternative) in listOf("full", "partial", "stale", "pinned").flatMap { route -> unsafeAlternatives.map { route to it } }) {
             val cache = IndependentCache()
-            cache.put(entityKeyFor(request, type), type, otherArtwork(alternatives = listOf(alternative)), CanonicalStatus.RESOLVED)
-            val engine = engine(cache, FakeProvider("unused", capabilities = listOf(ProviderCapability(type, 100))))
+            val key = entityKeyFor(request, type)
+            cache.put(key, type, otherArtwork(alternatives = listOf(alternative)), CanonicalStatus.RESOLVED, 1)
+            if (route == "stale" || route == "pinned") cache.now = 2
+            if (route == "pinned") cache.markManuallySelected(key, type)
+            val provider = FakeProvider("fresh", capabilities = listOf(ProviderCapability(type, 100)))
+                .also { it.givenResult(type, EnrichmentResult.Error(type, "fresh", "offline")) }
+            val engine = DefaultEnrichmentEngine(
+                ProviderRegistry(listOf(provider)),
+                cache,
+                EnrichmentConfig(enableIdentityResolution = false, cacheMode = CacheMode.STALE_IF_ERROR),
+            )
 
-            // When - a fresh cache hit contains a Wikipedia alternative
-            val served = engine.enrich(request, setOf(type)).raw.getValue(type) as EnrichmentResult.Success
+            // When - the engine serves the cached result through each cache route
+            val types = if (route == "partial") setOf(type, EnrichmentType.LABEL) else setOf(type)
+            val served = engine.enrichProgressive(request, types).toList().last().raw.getValue(type) as EnrichmentResult.Success
 
-            // Then - the unsafe alternative is absent from the served result
+            // Then - the unsafe alternative is absent and a selected entry remains selected
             assertNull((served.data as EnrichmentData.Artwork).alternatives)
+            assertEquals(route == "pinned", cache.isManuallySelected(key, type))
             engine.close()
         }
         for (control in listOf(
             attribution(),
             attribution(resourceId = "File:OK%20Computer.jpg", sourceUrl = "https://commons.wikimedia.org/wiki/File:OK%20Computer.jpg"),
+            attribution(resourceId = "File:OK%2FComputer.jpg", sourceUrl = "https://commons.wikimedia.org/wiki/File:OK%2FComputer.jpg"),
+            attribution(resourceId = "File:%E6%9D%B1%E4%BA%AC.jpg", sourceUrl = "https://commons.wikimedia.org/wiki/File:%E6%9D%B1%E4%BA%AC.jpg"),
             attribution(licenses = listOf(publicDomain), copyrighted = false, attributionRequired = false, usageTerms = null),
         )) {
             val cache = IndependentCache()
@@ -151,5 +166,22 @@ class WikipediaCacheAttributionSafetyTest {
         val ccBySa = ContentLicense("CC BY-SA 4.0", "https://creativecommons.org/licenses/by-sa/4.0/")
         val publicDomain = ContentLicense("Public domain")
         val safeAlternative = ArtworkSource("other", "https://images.test/other.jpg", attribution = ContentAttribution("File:other.jpg", "https://images.test/other.jpg"))
+        val unsafeControlSourceUrls = listOf(
+            "https://commons.wikimedia.org/wiki/File:unsafe\u0000.jpg",
+            "https://commons.wikimedia.org/wiki/File:unsafe\u001f.jpg",
+            "https://commons.wikimedia.org/wiki/File:unsafe\u007f.jpg",
+            "https://commons.wikimedia.org/wiki/File:unsafe\u0080.jpg",
+            "https://commons.wikimedia.org/wiki/File:unsafe\u009f.jpg",
+            "https://commons.wikimedia.org/wiki/File:unsafe%2500.jpg",
+            "https://commons.wikimedia.org/wiki/File:unsafe%251F.jpg",
+            "https://commons.wikimedia.org/wiki/File:unsafe%257F.jpg",
+            "https://commons.wikimedia.org/wiki/File:unsafe%2580.jpg",
+            "https://commons.wikimedia.org/wiki/File:unsafe%259F.jpg",
+            "https://commons.wikimedia.org/wiki/File:unsafe%00.jpg",
+            "https://commons.wikimedia.org/wiki/File:unsafe%1F.jpg",
+            "https://commons.wikimedia.org/wiki/File:unsafe%7F.jpg",
+            "https://commons.wikimedia.org/wiki/File:unsafe%80.jpg",
+            "https://commons.wikimedia.org/wiki/File:unsafe%9F.jpg",
+        )
     }
 }

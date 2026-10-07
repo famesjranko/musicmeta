@@ -17,6 +17,9 @@ import com.landofoz.musicmeta.cache.CacheMode
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
 import java.net.URI
+import java.nio.ByteBuffer
+import java.nio.charset.CharacterCodingException
+import java.nio.charset.CodingErrorAction
 
 /**
  * Every read from and write to the [EnrichmentCache] a call makes, and the rules that decide which
@@ -251,6 +254,7 @@ internal class CachePersistence(
 
     private fun String.isSafeHttpsUrl(): Boolean {
         if (any { it.isWhitespace() || Character.isISOControl(it) }) return false
+        if (hasEncodedControl()) return false
         val uri = try {
             URI(this)
         } catch (_: Exception) {
@@ -258,6 +262,43 @@ internal class CachePersistence(
         }
         return uri.scheme.equals("https", ignoreCase = true) && uri.host != null && uri.rawUserInfo == null
     }
+
+    private fun String.hasEncodedControl(): Boolean {
+        val decodedPercent = ENCODED_PERCENT.replace(this, "%")
+        for (match in ENCODED_CONTROL.findAll(decodedPercent)) {
+            val byte = match.value.substring(1, 3).toInt(16)
+            if (byte <= 0x1F || byte == 0x7F || decodedC1ByteIsUnsafe(decodedPercent, match.range.first)) {
+                return true
+            }
+        }
+        return false
+    }
+
+    private fun decodedC1ByteIsUnsafe(value: String, percentIndex: Int): Boolean {
+        val byte = value.substring(percentIndex + 1, percentIndex + 3).toInt(16)
+        if (byte !in 0x80..0x9F) return false
+
+        var start = percentIndex
+        while (start >= 3 && value[start - 3] == '%' && value.substring(start - 2, start).all(::isHexDigit)) {
+            start -= 3
+        }
+        var end = percentIndex + 3
+        while (end + 2 < value.length && value[end] == '%' && value.substring(end + 1, end + 3).all(::isHexDigit)) {
+            end += 3
+        }
+        val bytes = (start until end step 3).map {
+            value.substring(it + 1, it + 3).toInt(16).toByte()
+        }.toByteArray()
+        return try {
+            Charsets.UTF_8.newDecoder().onMalformedInput(CodingErrorAction.REPORT)
+                .onUnmappableCharacter(CodingErrorAction.REPORT).decode(ByteBuffer.wrap(bytes))
+                .any(Char::isISOControl)
+        } catch (_: CharacterCodingException) {
+            true
+        }
+    }
+
+    private fun isHexDigit(char: Char): Boolean = char in '0'..'9' || char.lowercaseChar() in 'a'..'f'
 
     private fun ContentLicense.isSupportedWikipediaLicense(): Boolean {
         val expectedUrl = when {
@@ -449,6 +490,11 @@ internal class CachePersistence(
 
     private companion object {
         private const val WIKIPEDIA = "wikipedia"
+        val ENCODED_PERCENT = Regex("(?i)%25")
+        val ENCODED_CONTROL = Regex(
+            "(?i)%(?:0[0-9a-f]|1[0-9a-f]|7f|[89][0-9a-f]|" +
+                "25(?:0[0-9a-f]|1[0-9a-f]|7f|[89][0-9a-f]))",
+        )
 
         // RESOLVING never actually reaches isCacheable(): writeBack only runs with the real,
         // settled session.identityResolution. Listed anyway so a future caller of isCacheable()
