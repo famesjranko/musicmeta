@@ -303,6 +303,14 @@ test('repository page preserves image credits across live, cached, refresh and a
         assert.equal(await popover.isVisible(), false, 'Hover leave closes preview');
         await button.focus();
         assert.equal(await popover.isVisible(), true, 'Focus previews credit');
+        await button.click();
+        await button.evaluate((element) => element.blur());
+        await page.keyboard.press('Escape');
+        assert.equal(await popover.isVisible(), false, 'Global Escape closes a pinned credit after focus leaves its wrapper');
+        assert.equal(await button.evaluate((element) => element === document.activeElement), true, 'Global Escape returns focus to its watermark');
+        assert.equal(await popover.isVisible(), false, 'Returned focus does not reopen the dismissed credit');
+        await button.evaluate((element) => element.blur());
+        await button.focus();
         await page.keyboard.press('Tab');
         assert.equal(await popover.locator('a').first().evaluate((element) => element === document.activeElement), true);
         await page.keyboard.press('Escape');
@@ -325,6 +333,10 @@ test('repository page preserves image credits across live, cached, refresh and a
         if (width === 390) await page.locator('h1').tap(); else await page.locator('h1').click();
         assert.equal(await popover.isVisible(), false, 'Outside pointer closes');
       }
+      await page.locator('.gallery img').first().click();
+      assert.equal(await page.locator('#lightbox').isHidden(), false, 'Image click opens the lightbox');
+      await page.keyboard.press('Escape');
+      assert.equal(await page.locator('#lightbox').isHidden(), true, 'Escape still closes the lightbox');
       // Then - credits stay image-specific and usable at both widths and after a cached refresh.
       assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);
       assert.equal(await page.locator('.summary .source a').first().getAttribute('href'), 'https://example.test/Contributors');

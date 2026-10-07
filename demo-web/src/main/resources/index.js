@@ -628,6 +628,7 @@ function genreChipsHtml(genres) {
 }
 
 let imageCreditListeners;
+let pinnedImageCredit;
 function imageCreditControl(attribution, provider) {
   const credit = contentCreditHtml(attribution) || (provider?.provider !== 'wikipedia' ? creditLineHtml(provider ? [provider] : []) : '');
   return credit ? `<button class="image-credit" type="button" aria-label="Image credit" aria-expanded="false">i</button><div class="image-credit-popover" hidden>${credit}<button type="button" class="image-credit-close" aria-label="Close image credit">×</button></div>` : '';
@@ -637,6 +638,7 @@ function imageCreditControl(attribution, provider) {
 function render(data, wasForceRefresh, stream) {
   imageCreditListeners?.abort();
   imageCreditListeners = new AbortController();
+  pinnedImageCredit = null;
   const summary = data.summary;
   const pendingTypes = (stream && stream.pending) || [];
   const stillLoading = pendingTypes.length > 0;
@@ -803,6 +805,7 @@ function render(data, wasForceRefresh, stream) {
     const popover = wrap.querySelector('.image-credit-popover');
     let pinned = false;
     let returningFocus = false;
+    const creditState = {};
     const position = () => {
       const control = button.getBoundingClientRect();
       const aboveSpace = Math.max(0, control.top - 14);
@@ -816,6 +819,7 @@ function render(data, wasForceRefresh, stream) {
     const show = () => { popover.hidden = false; button.setAttribute('aria-expanded', 'true'); position(); };
     const close = (restoreFocus = false) => {
       pinned = false;
+      if (pinnedImageCredit === creditState) pinnedImageCredit = null;
       popover.hidden = true;
       button.setAttribute('aria-expanded', 'false');
       if (restoreFocus) {
@@ -824,7 +828,16 @@ function render(data, wasForceRefresh, stream) {
         returningFocus = false;
       }
     };
-    button.addEventListener('click', () => { if (pinned) close(); else { pinned = true; show(); } });
+    creditState.close = close;
+    button.addEventListener('click', () => {
+      if (pinned) close();
+      else {
+        pinnedImageCredit?.close();
+        pinned = true;
+        pinnedImageCredit = creditState;
+        show();
+      }
+    });
     button.addEventListener('focus', () => { if (!returningFocus) show(); });
     button.addEventListener('pointerenter', show);
     wrap.addEventListener('pointerleave', () => { if (!pinned && !wrap.contains(document.activeElement)) close(); });
@@ -838,6 +851,12 @@ function render(data, wasForceRefresh, stream) {
     window.addEventListener('resize', () => { if (!popover.hidden) position(); }, options);
     window.addEventListener('scroll', () => { if (!popover.hidden) position(); }, { ...options, capture: true });
   });
+  document.addEventListener('keydown', (event) => {
+    if (event.key !== 'Escape' || !pinnedImageCredit) return;
+    event.preventDefault();
+    event.stopPropagation();
+    pinnedImageCredit.close(true);
+  }, { signal: imageCreditListeners.signal });
 }
 
 // Shows the summary text's "Show all" toggle only when the collapsed block actually clips
