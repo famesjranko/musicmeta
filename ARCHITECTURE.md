@@ -103,12 +103,12 @@ flowchart TD
     cacheread --> anyleft{"any type still<br/>uncached?"}
     anyleft -->|no| results
     anyleft -->|yes| ident{"identity resolution<br/>enabled and needed?"}
-    ident -->|no| regular
+    ident -->|no| fanout
     ident -->|yes| resolve["resolveIdentity:<br/>canonical ids + names,<br/>may answer types itself"]
-    resolve --> regular
+    resolve --> fanout
 
     fanout["fan-out under one deadline:<br/>one coroutine per type"]
-    regular["regular: first successful chain result"]
+    regular["standard: first successful chain result"]
     mergeable["mergeable: collect eligible providers,<br/>then merge"]
     composite["composite: await only its dependencies<br/>on the settlement board"]
     fanout --> regular

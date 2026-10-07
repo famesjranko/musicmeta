@@ -32,12 +32,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Breaking Changes
 - `ArtistProfile.similarAlbums` is removed; use `AlbumProfile.similarAlbums` only for album recommendations, then recompile consumers (#385)
 - `Artwork`, `ArtworkSource`, and `Biography` gain trailing `attribution`; constructor and `copy` JVM descriptors change, so recompile consumers even when Kotlin source needs no edit (#386)
+- `EnrichmentCacheDao` gains abstract pin-preserving insert methods; custom DAO implementations must add them and recompile or regenerate with Room; no schema migration is required (#381)
 
 ### Added
 - Text and media payloads can carry source-specific `ContentAttribution`, including credit, licence, restrictions, and modification facts; old cached JSON remains readable (#386)
 
 ### Changed
 - Wikipedia biographies without article attribution refetch; unsafe Wikimedia images are suppressed and remain pinned until invalidated or refreshed (#386)
+- Pinned cache values now resist positive and negative replacement until invalidated or force-refreshed (#381)
+- HALF_OPEN recovery allows one provider attempt; cancellation abandons its probe for immediate retry without extending cooldown (#382)
 
 ## [0.13.0] - 2026-09-07
 

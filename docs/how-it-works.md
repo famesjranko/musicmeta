@@ -61,13 +61,14 @@ enrich(request, types, forceRefresh)
 │ confidence and answer gate → normalize/catalog filter │
 │ → provenance → STALE_IF_ERROR → normalize again       │
 └─────────────┬────────────────────────────────────────┘
-              │ all types settled, or deadline fills the rest with TIMEOUT
-              ▼
-┌──────────────────────────────────────────────────────┐
-│ 6. One call-level cache write-back                    │── positive/negative + eligible canonical alias
-└─────────────┬────────────────────────────────────────┘
-              ▼
-  return EnrichmentResults(requestedTypes, identity)
+              │ all types settled?
+              ├── yes ──→ ┌──────────────────────────────────────────────────────┐
+              │          │ 6. One call-level cache write-back                    │── positive/negative + eligible canonical alias
+              │          └─────────────┬────────────────────────────────────────┘
+              │                        ▼
+              └── timeout ──→ retain settled results; fill unresolved types with TIMEOUT
+                                  │
+                                  └── bypass write-back ──→ return EnrichmentResults(requestedTypes, identity)
 ```
 
 ### Step 1: Force Refresh Invalidation
@@ -382,6 +383,10 @@ Migrating from the removed `IdentityMatch`:
 | `Success.identityMatch` (per-result) | `Success.provenance: LookupProvenance` |
 
 ### Step 8: Cache Store
+
+Write-back runs only after the fan-out completes within `enrichTimeoutMs`. On timeout, the returned
+map keeps every result that already settled and fills only unresolved types with
+`ErrorKind.TIMEOUT`; it bypasses write-back, so no result from that call is persisted.
 
 No fresh result — success or `NotFound` — is cached for a call whose canonical status is
 `AMBIGUOUS`, `UNRESOLVED`, or `FAILED`: the entry would read back as a cache hit indistinguishable

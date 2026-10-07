@@ -14,6 +14,13 @@ The full per-release list, additions and fixes included, is [CHANGELOG.md](../..
 
 ## Unreleased
 
+### `EnrichmentCacheDao` gains pin-preserving insert methods
+
+`EnrichmentCacheDao` now has abstract `insertUnlessPinned` and `insertNegativeUnlessPinned` methods.
+If you implement this DAO yourself, add both methods and recompile. If Room generates your DAO,
+rebuild so it generates the new implementation. This changes neither the database schema nor the
+required Room migration set.
+
 ### `ArtistProfile.similarAlbums` is removed
 
 Album recommendations belong to an album. Remove artist-profile accesses. Use the retained
