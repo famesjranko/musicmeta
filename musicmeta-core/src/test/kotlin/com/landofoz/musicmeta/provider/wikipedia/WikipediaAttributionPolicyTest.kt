@@ -292,6 +292,29 @@ class WikipediaAttributionPolicyTest {
     }
 
     @Test
+    fun `file metadata rejects literal encoded and double encoded C1 URLs`() = runTest {
+        // Given - captured file metadata with C1 bytes represented directly and at either encoded depth
+        val unsafeUrls = listOf(
+            "https://example.test/\u0080file", "https://example.test/\u009Ffile",
+            "https://example.test/%80file", "https://example.test/%9Ffile",
+            "https://example.test/%8afile", "https://example.test/%9ffile",
+            "https://example.test/%2580file", "https://example.test/%259Ffile",
+        )
+        val safeUrl = "https://example.test/path%20with%2Fencoded"
+
+        // When - parsing both Wikipedia source and licence URLs through file metadata
+        val rejected = unsafeUrls.map { url ->
+            requireNotNull(read(variant("LicenseUrl" to url, descriptionUrl = url)))
+        }
+        val retained = requireNotNull(read(variant("LicenseUrl" to safeUrl, descriptionUrl = safeUrl)))
+
+        // Then - C1 data is cleared while ordinary path encodings remain available
+        assertTrue(rejected.all { it.licenseUrl == null && it.descriptionPageUrl == null })
+        assertEquals(safeUrl, retained.licenseUrl)
+        assertEquals(safeUrl, retained.descriptionPageUrl)
+    }
+
+    @Test
     fun `local repository redirects and multilingual canonical titles retain selected identity`() = runTest {
         // Given - synthetic local-file metadata whose requested title redirects to a Unicode canonical title
         val json = variant(descriptionUrl = "https://en.wikipedia.org/wiki/File:%E6%9D%B1%E4%BA%AC.jpg")

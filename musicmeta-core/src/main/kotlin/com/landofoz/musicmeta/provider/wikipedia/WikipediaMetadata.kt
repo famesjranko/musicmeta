@@ -2,6 +2,9 @@ package com.landofoz.musicmeta.provider.wikipedia
 
 import java.net.URI
 import java.net.URISyntaxException
+import java.nio.ByteBuffer
+import java.nio.charset.CharacterCodingException
+import java.nio.charset.CodingErrorAction
 
 /** Normalizes untrusted HTML metadata into bounded plain text and separately validates links. */
 internal object WikipediaMetadata {
@@ -40,7 +43,7 @@ internal object WikipediaMetadata {
         if (value.any(::unsafeCharacter)) {
             return false
         }
-        if (ENCODED_CONTROL.containsMatchIn(value)) return false
+        if (hasEncodedControl(value)) return false
         return try {
             val uri = URI(value)
             uri.scheme.equals("https", ignoreCase = true) && uri.host != null &&
@@ -73,6 +76,48 @@ internal object WikipediaMetadata {
     private fun unsafeCharacter(char: Char): Boolean =
         char.isISOControl() || char.isWhitespace() || Character.getType(char) == Character.FORMAT.toInt()
 
+    private fun isHexDigit(char: Char): Boolean =
+        char in '0'..'9' || char.lowercaseChar() in 'a'..'f'
+
+    private fun hasEncodedControl(value: String): Boolean {
+        val decodedPercent = ENCODED_PERCENT.replace(value, "%")
+        for (match in ENCODED_CONTROL.findAll(decodedPercent)) {
+            val byte = match.value.substring(1, 3).toInt(16)
+            if (byte <= 0x1F || byte == 0x7F || encodedC1ByteIsUnsafe(decodedPercent, match.range.first)) {
+                return true
+            }
+        }
+        return false
+    }
+
+    private fun encodedC1ByteIsUnsafe(value: String, percentIndex: Int): Boolean {
+        val byte = value.substring(percentIndex + 1, percentIndex + 3).toInt(16)
+        if (byte !in 0x80..0x9F) return false
+
+        var start = percentIndex
+        while (start >= 3 && value[start - 3] == '%' &&
+            value.substring(start - 2, start).all(::isHexDigit)
+        ) {
+            start -= 3
+        }
+        var end = percentIndex + 3
+        while (end + 2 < value.length && value[end] == '%' &&
+            value.substring(end + 1, end + 3).all(::isHexDigit)
+        ) {
+            end += 3
+        }
+        val bytes = (start until end step 3).map {
+            value.substring(it + 1, it + 3).toInt(16).toByte()
+        }.toByteArray()
+        return try {
+            Charsets.UTF_8.newDecoder().onMalformedInput(CodingErrorAction.REPORT)
+                .onUnmappableCharacter(CodingErrorAction.REPORT).decode(ByteBuffer.wrap(bytes))
+                .any(Char::isISOControl)
+        } catch (_: CharacterCodingException) {
+            true
+        }
+    }
+
     private val HTML_ENTITIES = mapOf(
         "amp" to "&", "quot" to "\"", "apos" to "'", "nbsp" to " ", "lt" to " ", "gt" to " ",
         "copy" to "©", "ndash" to "–", "mdash" to "—",
@@ -81,5 +126,8 @@ internal object WikipediaMetadata {
     private val ACTIVE_CONTENT = Regex("(?is)<(script|style)\\b[^>]*>.*?(</\\1\\s*>|$)")
     private val COMMENTS = Regex("(?s)<!--.*?(-->|$)")
     private val ENTITY = Regex("&(#x[0-9a-fA-F]+|#[0-9]+|[a-zA-Z]+);")
-    private val ENCODED_CONTROL = Regex("(?i)%(?:0[0-9a-f]|1[0-9a-f]|7f|25(?:0[0-9a-f]|1[0-9a-f]|7f))")
+    private val ENCODED_PERCENT = Regex("(?i)%25")
+    private val ENCODED_CONTROL = Regex(
+        "(?i)%(?:0[0-9a-f]|1[0-9a-f]|7f|[89][0-9a-f]|25(?:0[0-9a-f]|1[0-9a-f]|7f|[89][0-9a-f]))",
+    )
 }
