@@ -44,10 +44,21 @@ internal data class WikipediaMediaItem(
 )
 
 /** File-specific facts from `imageinfo.extmetadata`; never inferred from an article's text licence. */
+internal enum class WikipediaAttributionState {
+    ABSENT,
+    PRESENT_VALID,
+    PRESENT_REJECTED,
+}
+
 internal data class WikipediaFileMetadata(
     val title: String,
     val descriptionPageUrl: String?,
     val attribution: String?,
+    val attributionState: WikipediaAttributionState = if (attribution == null) {
+        WikipediaAttributionState.ABSENT
+    } else {
+        WikipediaAttributionState.PRESENT_VALID
+    },
     val artist: String?,
     val credit: String?,
     val licenseShortName: String?,

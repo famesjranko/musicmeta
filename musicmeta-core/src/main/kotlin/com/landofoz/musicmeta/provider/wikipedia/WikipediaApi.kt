@@ -95,6 +95,12 @@ internal class WikipediaApi(
         val metadata = info.optJSONObject("extmetadata") ?: return null
         fun rawValue(name: String): String? = metadata.optJSONObject(name)?.opt("value") as? String
         fun value(name: String): String? = rawValue(name)?.let(WikipediaMetadata::plainText)
+        fun attribution(): Pair<String?, WikipediaAttributionState> {
+            if (!metadata.has("Attribution")) return null to WikipediaAttributionState.ABSENT
+            val value = rawValue("Attribution")?.let(WikipediaMetadata::plainText)
+            return if (value == null) null to WikipediaAttributionState.PRESENT_REJECTED
+            else value to WikipediaAttributionState.PRESENT_VALID
+        }
         fun url(name: String): String? = rawValue(name)?.takeIf(WikipediaMetadata::httpsUrl)
         val canonicalTitle = page.optString("title").takeIf(::validFileTitle)
             ?: throw IOException("Wikipedia file-information response has no canonical file title")
@@ -103,10 +109,12 @@ internal class WikipediaApi(
                 if (raw.isBlank()) emptyList()
                 else WikipediaMetadata.plainText(raw)?.split("|")?.map(String::trim)?.filter(String::isNotBlank)
             }
+        val (attribution, attributionState) = attribution()
         return WikipediaFileMetadata(
             title = canonicalTitle,
             descriptionPageUrl = info.optString("descriptionurl").takeIf(WikipediaMetadata::httpsUrl),
-            attribution = value("Attribution"),
+            attribution = attribution,
+            attributionState = attributionState,
             artist = value("Artist"),
             credit = value("Credit"),
             licenseShortName = value("LicenseShortName"),

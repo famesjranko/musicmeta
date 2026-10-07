@@ -183,6 +183,49 @@ class WikipediaAttributionPolicyTest {
     }
 
     @Test
+    fun `rejected present custom attribution suppresses otherwise reusable fallback credit`() = runTest {
+        // Given - captured reusable metadata with only its present custom credit corrupted
+        val cases = listOf(
+            variant("Attribution" to "x".repeat(32_769), "Artist" to "Fallback artist"),
+            variant("Attribution" to "", "Artist" to "Fallback artist"),
+            variant("Attribution" to "<script>hidden</script>", "Artist" to "Fallback artist"),
+            variant("Attribution" to "\u0000", "Artist" to "Fallback artist"),
+            variant("Artist" to "Fallback artist").also { json ->
+                page(json).getJSONArray("imageinfo").getJSONObject(0).getJSONObject("extmetadata")
+                    .put("Attribution", JSONObject().put("value", JSONObject()))
+            },
+        )
+
+        // When - parsing the corrupt custom credit before applying file reuse policy
+        val metadata = cases.map { requireNotNull(read(it)) }
+        val attributions = metadata.map(WikipediaMapper::toFileAttribution)
+
+        // Then - rejected custom credit cannot become an absent value that falls back to Artist
+        assertTrue(metadata.all { it.attributionState == WikipediaAttributionState.PRESENT_REJECTED })
+        assertTrue(attributions.all { it == null })
+    }
+
+    @Test
+    fun `absent custom attribution permits artist fallback while valid custom credit overrides it`() = runTest {
+        // Given - captured reusable metadata with custom credit absent or present and valid
+        val absent = variant("Attribution" to null, "Artist" to "Fallback artist")
+        val custom = variant("Attribution" to "Chosen credit", "Artist" to "Fallback artist")
+
+        // When - applying file reuse policy to each source representation
+        val absentMetadata = requireNotNull(read(absent))
+        val customMetadata = requireNotNull(read(custom))
+        val absentAttribution = WikipediaMapper.toFileAttribution(absentMetadata)
+        val customAttribution = WikipediaMapper.toFileAttribution(customMetadata)
+
+        // Then - absence uses Artist while a valid custom value remains the overriding credit
+        assertEquals(WikipediaAttributionState.ABSENT, absentMetadata.attributionState)
+        assertEquals(WikipediaAttributionState.PRESENT_VALID, customMetadata.attributionState)
+        assertEquals("Fallback artist", requireNotNull(absentAttribution).creator)
+        assertNull(absentAttribution.attributionText)
+        assertEquals("Chosen credit", requireNotNull(customAttribution).attributionText)
+    }
+
+    @Test
     fun `restricted nonfree and unknown records cannot become reusable attribution`() = runTest {
         // Given - synthetic restricted, non-free and unreported flags
         val cases = listOf(variant("Restrictions" to "trademark|personality"),

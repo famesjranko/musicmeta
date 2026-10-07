@@ -46,6 +46,7 @@ internal object WikipediaMapper {
      * Commons extmetadata can hide multi-licensing, so this is not sufficient to lift photo quarantine.
      */
     fun toFileAttribution(metadata: WikipediaFileMetadata): ContentAttribution? {
+        if (metadata.attributionState == WikipediaAttributionState.PRESENT_REJECTED) return null
         val sourceUrl = metadata.descriptionPageUrl ?: return null
         val license = metadata.licenseShortName ?: return null
         if (!WikipediaMetadata.httpsUrl(sourceUrl)) return null
