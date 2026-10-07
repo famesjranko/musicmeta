@@ -161,6 +161,28 @@ class ProfileTest {
         assertEquals("Airbag", profile.tracks[0].title)
     }
 
+    @Test fun `album profile exposes similar albums`() {
+        // Given - an EnrichmentResults with album recommendations
+        val results = EnrichmentResults(
+            raw = mapOf(
+                EnrichmentType.SIMILAR_ALBUMS to success(
+                    EnrichmentType.SIMILAR_ALBUMS,
+                    EnrichmentData.SimilarAlbums(
+                        listOf(SimilarAlbum("Amnesiac", "Radiohead", artistMatchScore = 1.0f)),
+                    ),
+                ),
+            ),
+            requestedTypes = setOf(EnrichmentType.SIMILAR_ALBUMS),
+            identity = NOT_REQUIRED_IDENTITY,
+        )
+
+        // When - building an AlbumProfile from the results
+        val profile = AlbumProfile("OK Computer", "Radiohead", results)
+
+        // Then - album recommendations remain available on the album profile
+        assertEquals("Amnesiac", profile.similarAlbums?.albums?.single()?.title)
+    }
+
     // --- TrackProfile ---
 
     @Test fun `track profile exposes lyrics and credits`() {

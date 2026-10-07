@@ -88,7 +88,6 @@ public final class com/landofoz/musicmeta/ArtistProfile {
 	public final fun getRadio ()Lcom/landofoz/musicmeta/EnrichmentData$RadioPlaylist;
 	public final fun getRadioDiscovery ()Lcom/landofoz/musicmeta/EnrichmentData$RadioPlaylist;
 	public final fun getResults ()Lcom/landofoz/musicmeta/EnrichmentResults;
-	public final fun getSimilarAlbums ()Lcom/landofoz/musicmeta/EnrichmentData$SimilarAlbums;
 	public final fun getSimilarArtists ()Lcom/landofoz/musicmeta/EnrichmentData$SimilarArtists;
 	public final fun getSuggestions ()Ljava/util/List;
 	public final fun getTimeline ()Ljava/util/List;
@@ -133,15 +132,17 @@ public final class com/landofoz/musicmeta/ArtworkSize$Companion {
 
 public final class com/landofoz/musicmeta/ArtworkSource {
 	public static final field Companion Lcom/landofoz/musicmeta/ArtworkSource$Companion;
-	public fun <init> (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/util/List;)V
-	public synthetic fun <init> (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/util/List;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun <init> (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/util/List;Lcom/landofoz/musicmeta/ContentAttribution;)V
+	public synthetic fun <init> (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/util/List;Lcom/landofoz/musicmeta/ContentAttribution;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public final fun component1 ()Ljava/lang/String;
 	public final fun component2 ()Ljava/lang/String;
 	public final fun component3 ()Ljava/lang/String;
 	public final fun component4 ()Ljava/util/List;
-	public final fun copy (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/util/List;)Lcom/landofoz/musicmeta/ArtworkSource;
-	public static synthetic fun copy$default (Lcom/landofoz/musicmeta/ArtworkSource;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/util/List;ILjava/lang/Object;)Lcom/landofoz/musicmeta/ArtworkSource;
+	public final fun component5 ()Lcom/landofoz/musicmeta/ContentAttribution;
+	public final fun copy (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/util/List;Lcom/landofoz/musicmeta/ContentAttribution;)Lcom/landofoz/musicmeta/ArtworkSource;
+	public static synthetic fun copy$default (Lcom/landofoz/musicmeta/ArtworkSource;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/util/List;Lcom/landofoz/musicmeta/ContentAttribution;ILjava/lang/Object;)Lcom/landofoz/musicmeta/ArtworkSource;
 	public fun equals (Ljava/lang/Object;)Z
+	public final fun getAttribution ()Lcom/landofoz/musicmeta/ContentAttribution;
 	public final fun getProvider ()Ljava/lang/String;
 	public final fun getSizes ()Ljava/util/List;
 	public final fun getThumbnailUrl ()Ljava/lang/String;
@@ -297,6 +298,90 @@ public final class com/landofoz/musicmeta/CommercialUse : java/lang/Enum {
 	public static fun getEntries ()Lkotlin/enums/EnumEntries;
 	public static fun valueOf (Ljava/lang/String;)Lcom/landofoz/musicmeta/CommercialUse;
 	public static fun values ()[Lcom/landofoz/musicmeta/CommercialUse;
+}
+
+public final class com/landofoz/musicmeta/ContentAttribution {
+	public static final field Companion Lcom/landofoz/musicmeta/ContentAttribution$Companion;
+	public fun <init> (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/util/List;Lcom/landofoz/musicmeta/LicenseRelation;Ljava/lang/Boolean;Ljava/lang/Boolean;Ljava/lang/Boolean;Ljava/lang/String;Ljava/util/List;Ljava/lang/Boolean;Ljava/lang/String;)V
+	public synthetic fun <init> (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/util/List;Lcom/landofoz/musicmeta/LicenseRelation;Ljava/lang/Boolean;Ljava/lang/Boolean;Ljava/lang/Boolean;Ljava/lang/String;Ljava/util/List;Ljava/lang/Boolean;Ljava/lang/String;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1 ()Ljava/lang/String;
+	public final fun component10 ()Ljava/lang/Boolean;
+	public final fun component11 ()Ljava/lang/String;
+	public final fun component12 ()Ljava/util/List;
+	public final fun component13 ()Ljava/lang/Boolean;
+	public final fun component14 ()Ljava/lang/String;
+	public final fun component2 ()Ljava/lang/String;
+	public final fun component3 ()Ljava/lang/String;
+	public final fun component4 ()Ljava/lang/String;
+	public final fun component5 ()Ljava/lang/String;
+	public final fun component6 ()Ljava/util/List;
+	public final fun component7 ()Lcom/landofoz/musicmeta/LicenseRelation;
+	public final fun component8 ()Ljava/lang/Boolean;
+	public final fun component9 ()Ljava/lang/Boolean;
+	public final fun copy (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/util/List;Lcom/landofoz/musicmeta/LicenseRelation;Ljava/lang/Boolean;Ljava/lang/Boolean;Ljava/lang/Boolean;Ljava/lang/String;Ljava/util/List;Ljava/lang/Boolean;Ljava/lang/String;)Lcom/landofoz/musicmeta/ContentAttribution;
+	public static synthetic fun copy$default (Lcom/landofoz/musicmeta/ContentAttribution;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/util/List;Lcom/landofoz/musicmeta/LicenseRelation;Ljava/lang/Boolean;Ljava/lang/Boolean;Ljava/lang/Boolean;Ljava/lang/String;Ljava/util/List;Ljava/lang/Boolean;Ljava/lang/String;ILjava/lang/Object;)Lcom/landofoz/musicmeta/ContentAttribution;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getAttributionRequired ()Ljava/lang/Boolean;
+	public final fun getAttributionText ()Ljava/lang/String;
+	public final fun getCopyrighted ()Ljava/lang/Boolean;
+	public final fun getCreator ()Ljava/lang/String;
+	public final fun getCredit ()Ljava/lang/String;
+	public final fun getLicenseRelation ()Lcom/landofoz/musicmeta/LicenseRelation;
+	public final fun getLicenses ()Ljava/util/List;
+	public final fun getModificationNote ()Ljava/lang/String;
+	public final fun getNonFree ()Ljava/lang/Boolean;
+	public final fun getResourceId ()Ljava/lang/String;
+	public final fun getRestrictions ()Ljava/util/List;
+	public final fun getSourceUrl ()Ljava/lang/String;
+	public final fun getUsageTerms ()Ljava/lang/String;
+	public fun hashCode ()I
+	public final fun isModified ()Ljava/lang/Boolean;
+	public fun toString ()Ljava/lang/String;
+}
+
+public synthetic class com/landofoz/musicmeta/ContentAttribution$$serializer : kotlinx/serialization/internal/GeneratedSerializer {
+	public static final field INSTANCE Lcom/landofoz/musicmeta/ContentAttribution$$serializer;
+	public final fun childSerializers ()[Lkotlinx/serialization/KSerializer;
+	public final fun deserialize (Lkotlinx/serialization/encoding/Decoder;)Lcom/landofoz/musicmeta/ContentAttribution;
+	public synthetic fun deserialize (Lkotlinx/serialization/encoding/Decoder;)Ljava/lang/Object;
+	public final fun getDescriptor ()Lkotlinx/serialization/descriptors/SerialDescriptor;
+	public final fun serialize (Lkotlinx/serialization/encoding/Encoder;Lcom/landofoz/musicmeta/ContentAttribution;)V
+	public synthetic fun serialize (Lkotlinx/serialization/encoding/Encoder;Ljava/lang/Object;)V
+	public fun typeParametersSerializers ()[Lkotlinx/serialization/KSerializer;
+}
+
+public final class com/landofoz/musicmeta/ContentAttribution$Companion {
+	public final fun serializer ()Lkotlinx/serialization/KSerializer;
+}
+
+public final class com/landofoz/musicmeta/ContentLicense {
+	public static final field Companion Lcom/landofoz/musicmeta/ContentLicense$Companion;
+	public fun <init> (Ljava/lang/String;Ljava/lang/String;)V
+	public synthetic fun <init> (Ljava/lang/String;Ljava/lang/String;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1 ()Ljava/lang/String;
+	public final fun component2 ()Ljava/lang/String;
+	public final fun copy (Ljava/lang/String;Ljava/lang/String;)Lcom/landofoz/musicmeta/ContentLicense;
+	public static synthetic fun copy$default (Lcom/landofoz/musicmeta/ContentLicense;Ljava/lang/String;Ljava/lang/String;ILjava/lang/Object;)Lcom/landofoz/musicmeta/ContentLicense;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getIdentifier ()Ljava/lang/String;
+	public final fun getUrl ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public synthetic class com/landofoz/musicmeta/ContentLicense$$serializer : kotlinx/serialization/internal/GeneratedSerializer {
+	public static final field INSTANCE Lcom/landofoz/musicmeta/ContentLicense$$serializer;
+	public final fun childSerializers ()[Lkotlinx/serialization/KSerializer;
+	public final fun deserialize (Lkotlinx/serialization/encoding/Decoder;)Lcom/landofoz/musicmeta/ContentLicense;
+	public synthetic fun deserialize (Lkotlinx/serialization/encoding/Decoder;)Ljava/lang/Object;
+	public final fun getDescriptor ()Lkotlinx/serialization/descriptors/SerialDescriptor;
+	public final fun serialize (Lkotlinx/serialization/encoding/Encoder;Lcom/landofoz/musicmeta/ContentLicense;)V
+	public synthetic fun serialize (Lkotlinx/serialization/encoding/Encoder;Ljava/lang/Object;)V
+	public fun typeParametersSerializers ()[Lkotlinx/serialization/KSerializer;
+}
+
+public final class com/landofoz/musicmeta/ContentLicense$Companion {
+	public final fun serializer ()Lkotlinx/serialization/KSerializer;
 }
 
 public final class com/landofoz/musicmeta/Credit {
@@ -501,18 +586,20 @@ public final class com/landofoz/musicmeta/EnrichmentData$ArtistTimeline$Companio
 
 public final class com/landofoz/musicmeta/EnrichmentData$Artwork : com/landofoz/musicmeta/EnrichmentData {
 	public static final field Companion Lcom/landofoz/musicmeta/EnrichmentData$Artwork$Companion;
-	public fun <init> (Ljava/lang/String;Ljava/lang/Integer;Ljava/lang/Integer;Ljava/lang/String;Ljava/util/List;Ljava/util/List;)V
-	public synthetic fun <init> (Ljava/lang/String;Ljava/lang/Integer;Ljava/lang/Integer;Ljava/lang/String;Ljava/util/List;Ljava/util/List;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun <init> (Ljava/lang/String;Ljava/lang/Integer;Ljava/lang/Integer;Ljava/lang/String;Ljava/util/List;Ljava/util/List;Lcom/landofoz/musicmeta/ContentAttribution;)V
+	public synthetic fun <init> (Ljava/lang/String;Ljava/lang/Integer;Ljava/lang/Integer;Ljava/lang/String;Ljava/util/List;Ljava/util/List;Lcom/landofoz/musicmeta/ContentAttribution;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public final fun component1 ()Ljava/lang/String;
 	public final fun component2 ()Ljava/lang/Integer;
 	public final fun component3 ()Ljava/lang/Integer;
 	public final fun component4 ()Ljava/lang/String;
 	public final fun component5 ()Ljava/util/List;
 	public final fun component6 ()Ljava/util/List;
-	public final fun copy (Ljava/lang/String;Ljava/lang/Integer;Ljava/lang/Integer;Ljava/lang/String;Ljava/util/List;Ljava/util/List;)Lcom/landofoz/musicmeta/EnrichmentData$Artwork;
-	public static synthetic fun copy$default (Lcom/landofoz/musicmeta/EnrichmentData$Artwork;Ljava/lang/String;Ljava/lang/Integer;Ljava/lang/Integer;Ljava/lang/String;Ljava/util/List;Ljava/util/List;ILjava/lang/Object;)Lcom/landofoz/musicmeta/EnrichmentData$Artwork;
+	public final fun component7 ()Lcom/landofoz/musicmeta/ContentAttribution;
+	public final fun copy (Ljava/lang/String;Ljava/lang/Integer;Ljava/lang/Integer;Ljava/lang/String;Ljava/util/List;Ljava/util/List;Lcom/landofoz/musicmeta/ContentAttribution;)Lcom/landofoz/musicmeta/EnrichmentData$Artwork;
+	public static synthetic fun copy$default (Lcom/landofoz/musicmeta/EnrichmentData$Artwork;Ljava/lang/String;Ljava/lang/Integer;Ljava/lang/Integer;Ljava/lang/String;Ljava/util/List;Ljava/util/List;Lcom/landofoz/musicmeta/ContentAttribution;ILjava/lang/Object;)Lcom/landofoz/musicmeta/EnrichmentData$Artwork;
 	public fun equals (Ljava/lang/Object;)Z
 	public final fun getAlternatives ()Ljava/util/List;
+	public final fun getAttribution ()Lcom/landofoz/musicmeta/ContentAttribution;
 	public final fun getHeight ()Ljava/lang/Integer;
 	public final fun getSizes ()Ljava/util/List;
 	public final fun getThumbnailUrl ()Ljava/lang/String;
@@ -566,15 +653,17 @@ public final class com/landofoz/musicmeta/EnrichmentData$BandMembers$Companion {
 
 public final class com/landofoz/musicmeta/EnrichmentData$Biography : com/landofoz/musicmeta/EnrichmentData {
 	public static final field Companion Lcom/landofoz/musicmeta/EnrichmentData$Biography$Companion;
-	public fun <init> (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)V
-	public synthetic fun <init> (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun <init> (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Lcom/landofoz/musicmeta/ContentAttribution;)V
+	public synthetic fun <init> (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Lcom/landofoz/musicmeta/ContentAttribution;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public final fun component1 ()Ljava/lang/String;
 	public final fun component2 ()Ljava/lang/String;
 	public final fun component3 ()Ljava/lang/String;
 	public final fun component4 ()Ljava/lang/String;
-	public final fun copy (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)Lcom/landofoz/musicmeta/EnrichmentData$Biography;
-	public static synthetic fun copy$default (Lcom/landofoz/musicmeta/EnrichmentData$Biography;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;ILjava/lang/Object;)Lcom/landofoz/musicmeta/EnrichmentData$Biography;
+	public final fun component5 ()Lcom/landofoz/musicmeta/ContentAttribution;
+	public final fun copy (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Lcom/landofoz/musicmeta/ContentAttribution;)Lcom/landofoz/musicmeta/EnrichmentData$Biography;
+	public static synthetic fun copy$default (Lcom/landofoz/musicmeta/EnrichmentData$Biography;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Lcom/landofoz/musicmeta/ContentAttribution;ILjava/lang/Object;)Lcom/landofoz/musicmeta/EnrichmentData$Biography;
 	public fun equals (Ljava/lang/Object;)Z
+	public final fun getAttribution ()Lcom/landofoz/musicmeta/ContentAttribution;
 	public final fun getLanguage ()Ljava/lang/String;
 	public final fun getSource ()Ljava/lang/String;
 	public final fun getText ()Ljava/lang/String;
@@ -1642,6 +1731,20 @@ public final class com/landofoz/musicmeta/KeyRequirement$Required : com/landofoz
 	public final fun getKey ()Lcom/landofoz/musicmeta/ApiKey;
 	public fun hashCode ()I
 	public fun toString ()Ljava/lang/String;
+}
+
+public final class com/landofoz/musicmeta/LicenseRelation : java/lang/Enum {
+	public static final field ALL_OF Lcom/landofoz/musicmeta/LicenseRelation;
+	public static final field ANY_OF Lcom/landofoz/musicmeta/LicenseRelation;
+	public static final field Companion Lcom/landofoz/musicmeta/LicenseRelation$Companion;
+	public static final field UNKNOWN Lcom/landofoz/musicmeta/LicenseRelation;
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
+	public static fun valueOf (Ljava/lang/String;)Lcom/landofoz/musicmeta/LicenseRelation;
+	public static fun values ()[Lcom/landofoz/musicmeta/LicenseRelation;
+}
+
+public final class com/landofoz/musicmeta/LicenseRelation$Companion {
+	public final fun serializer ()Lkotlinx/serialization/KSerializer;
 }
 
 public final class com/landofoz/musicmeta/LookupProvenance : java/lang/Enum {

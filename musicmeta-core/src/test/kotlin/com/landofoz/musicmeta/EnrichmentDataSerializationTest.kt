@@ -4,11 +4,97 @@ import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Test
 
 class EnrichmentDataSerializationTest {
 
     private val json = Json { encodeDefaults = true }
+
+    // Independent saved payloads captured before attribution was added.
+    private val preAttributionArtworkJson =
+        """{"url":"https://example.com/art.jpg","width":500,"height":500,"thumbnailUrl":"https://example.com/art-thumb.jpg","sizes":null,"alternatives":null}"""
+    private val preAttributionArtworkSourceJson =
+        """{"provider":"coverartarchive","url":"https://example.com/art.jpg","thumbnailUrl":null,"sizes":null}"""
+    private val preAttributionBiographyJson =
+        """{"text":"A band from Oxford","source":"wikipedia","language":"en","thumbnailUrl":null}"""
+
+    @Test
+    fun `attribution-free cached payloads decode with an unknown attribution`() {
+        // Given - independent Artwork, ArtworkSource, and Biography JSON written before attribution existed
+        val artwork = json.decodeFromString<EnrichmentData.Artwork>(preAttributionArtworkJson)
+        val artworkSource = json.decodeFromString<ArtworkSource>(preAttributionArtworkSourceJson)
+        val biography = json.decodeFromString<EnrichmentData.Biography>(preAttributionBiographyJson)
+
+        // When - the current public payload classes read those saved values
+        val artworkAttribution = artwork.javaClass.getMethod("getAttribution").invoke(artwork)
+        val artworkSourceAttribution = artworkSource.javaClass.getMethod("getAttribution").invoke(artworkSource)
+        val biographyAttribution = biography.javaClass.getMethod("getAttribution").invoke(biography)
+
+        // Then - each omitted field remains unknown rather than asserting a licence or reuse state
+        assertNull(artworkAttribution)
+        assertNull(artworkSourceAttribution)
+        assertNull(biographyAttribution)
+    }
+
+    @Test
+    fun `public attribution model exposes identity licence and unknown relation`() {
+        // Given - the provider-neutral attribution classes required on serialized public payloads
+        val attributionClass = Class.forName("com.landofoz.musicmeta.ContentAttribution")
+        val licenseClass = Class.forName("com.landofoz.musicmeta.ContentLicense")
+        val relationClass = Class.forName("com.landofoz.musicmeta.LicenseRelation")
+
+        // When - their public properties and licence relation values are inspected
+        val attributionGetters = attributionClass.methods.map { it.name }.toSet()
+        val licenseGetters = licenseClass.methods.map { it.name }.toSet()
+        val relations = relationClass.enumConstants.map { it.toString() }.toSet()
+
+        // Then - callers can preserve source identity, licence variants, restrictions, and unknown states
+        assertEquals(
+            setOf(
+                "getResourceId", "getSourceUrl", "getCreator", "getCredit", "getAttributionText",
+                "getLicenses", "getLicenseRelation", "getCopyrighted", "getAttributionRequired",
+                "getNonFree", "getUsageTerms", "getRestrictions", "isModified", "getModificationNote",
+            ),
+            attributionGetters.filter { (it.startsWith("get") && it != "getClass") || it == "isModified" }.toSet(),
+        )
+        assertEquals(
+            setOf("getIdentifier", "getUrl"),
+            licenseGetters.filter { it.startsWith("get") && it != "getClass" }.toSet(),
+        )
+        assertEquals(setOf("UNKNOWN", "ANY_OF", "ALL_OF"), relations)
+    }
+
+    @Test
+    fun `attribution preserves reported licence facts and unknown defaults`() {
+        // Given - attribution with source-reported licence, restrictions, and modification facts
+        val original = ContentAttribution(
+            resourceId = "File:Radiohead.jpg",
+            sourceUrl = "https://commons.wikimedia.org/wiki/File:Radiohead.jpg",
+            creator = "Photographer",
+            credit = "Photographer / Commons",
+            attributionText = "Photo by Photographer",
+            licenses = listOf(ContentLicense("CC BY-SA 4.0", "https://creativecommons.org/licenses/by-sa/4.0/")),
+            licenseRelation = LicenseRelation.ALL_OF,
+            copyrighted = true,
+            attributionRequired = true,
+            nonFree = false,
+            usageTerms = "Attribute the photographer",
+            restrictions = listOf("personality rights"),
+            isModified = true,
+            modificationNote = "Cropped for display",
+        )
+
+        // When - encoding then decoding the public attribution value
+        val decoded = json.decodeFromString<ContentAttribution>(json.encodeToString(original))
+        val unknown = ContentAttribution("Radiohead", "https://en.wikipedia.org/wiki/Radiohead")
+
+        // Then - complete facts survive and omitted licence facts remain unknown
+        assertEquals(original, decoded)
+        assertEquals(LicenseRelation.UNKNOWN, unknown.licenseRelation)
+        assertNull(unknown.copyrighted)
+        assertNull(unknown.restrictions)
+    }
 
     @Test
     fun `BandMembers survives round-trip serialization`() {

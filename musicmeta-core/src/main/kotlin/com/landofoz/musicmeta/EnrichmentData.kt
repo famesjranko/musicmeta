@@ -19,6 +19,8 @@ public sealed class EnrichmentData {
         val sizes: List<ArtworkSize>? = null,
         /** Images from other providers, available when artwork is merged from multiple sources. */
         val alternatives: List<ArtworkSource>? = null,
+        /** Source facts for this file; `null` is an unknown or legacy attribution state. */
+        val attribution: ContentAttribution? = null,
     ) : EnrichmentData()
 
     @Serializable
@@ -74,6 +76,8 @@ public sealed class EnrichmentData {
         val source: String,
         val language: String = "en",
         val thumbnailUrl: String? = null,
+        /** Source facts for this article; `null` is an unknown or legacy attribution state. */
+        val attribution: ContentAttribution? = null,
     ) : EnrichmentData()
 
     @Serializable
@@ -179,6 +183,8 @@ public data class ArtworkSource(
     val url: String,
     val thumbnailUrl: String? = null,
     val sizes: List<ArtworkSize>? = null,
+    /** Source facts for this file; `null` is an unknown or legacy attribution state. */
+    val attribution: ContentAttribution? = null,
 )
 
 @Serializable
