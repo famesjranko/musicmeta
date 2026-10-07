@@ -122,6 +122,20 @@ engine.invalidate(request, EnrichmentType.GENRE)
 
 This is preferred over calling `engine.cache.invalidate(entityKey, ...)` directly because it handles key generation consistently.
 
+### Manually selected entries
+
+`markManuallySelected(entityKey, type)` pins an exact opaque `(entityKey, type)` pair. A selected
+positive remains readable after its TTL and automatic positive or negative writes must not replace
+it. A marker with no positive value remains a miss, so the first positive can fill it. `invalidate`,
+`forceRefresh`, and `clear` remove the marker as well as the cached data. The engine clears the
+addressed key and proven canonical aliases on refresh, even when the replacement fetch fails.
+
+Both shipped caches preserve this protection atomically. A custom cache must do the same, or state
+its concurrency limit: the engine's marker check cannot close a race with the cache write. Keep
+selection state separate from expiry cleanup and eviction. `maxEntries` is a soft limit because
+selected entries may exceed it. An unsafe Wikimedia image is withheld even if pinned; the pin is
+retained until the caller invalidates it or forces a refresh.
+
 ### Clearing after a library upgrade
 
 Release notes sometimes note that a fix only applies to freshly-fetched data — "clear your cache

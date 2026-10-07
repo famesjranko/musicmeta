@@ -49,41 +49,25 @@ enrich(request, types, forceRefresh)
               │   suggestions → kept at the top level; fan-out still runs (step 4)
               │   not needed → skip (MBID already provided)
               ▼
-┌────────────────────────────────────────────────────┐
-│ 4. Concurrent Type Resolution (fan-out)            │
-│                                                    │
-│  Standard  ──→ chain.resolve()   (first wins)      │
-│  Mergeable ──→ chain.resolveAll() (all win)        │
-│  Composite ──→ resolve deps → synthesize           │
-└─────────────┬──────────────────────────────────────┘
-              │
+┌──────────────────────────────────────────────────────┐
+│ 4. Concurrent type fan-out                            │
+│ standard: chain.resolve()      mergeable: resolveAll  │
+│ composite: await only its dependencies, then synthesize│
+└─────────────┬────────────────────────────────────────┘
+              │ each type settles independently
               ▼
-┌────────────────────────────┐
-│ 5. Confidence Filter       │── drop below threshold (default 0.5)
-└─────────────┬──────────────┘
-              │
+┌──────────────────────────────────────────────────────┐
+│ 5. Per-type finalization                              │
+│ confidence and answer gate → normalize/catalog filter │
+│ → provenance → STALE_IF_ERROR → normalize again       │
+└─────────────┬────────────────────────────────────────┘
+              │ all types settled, or deadline fills the rest with TIMEOUT
               ▼
-┌────────────────────────────┐
-│ 6. Catalog Filter          │── reorder/filter recommendations
-└─────────────┬──────────────┘
-              │
+┌──────────────────────────────────────────────────────┐
+│ 6. One call-level cache write-back                    │── positive/negative + eligible canonical alias
+└─────────────┬────────────────────────────────────────┘
               ▼
-┌────────────────────────────┐
-│ 7. Stale Fallback          │── STALE_IF_ERROR: serve expired cache on Error/RateLimited
-└─────────────┬──────────────┘
-              │
-              ▼
-┌────────────────────────────┐
-│ 8. Provenance Stamp        │── mark provider results with LookupProvenance
-└─────────────┬──────────────┘
-              │
-              ▼
-┌────────────────────────────┐
-│ 9. Cache Store + Alias     │── save with TTL + eligible canonical alias (skip stale results)
-└─────────────┬──────────────┘
-              │
-              ▼
-  return EnrichmentResults(raw, requestedTypes, identity)
+  return EnrichmentResults(requestedTypes, identity)
 ```
 
 ### Step 1: Force Refresh Invalidation
@@ -181,7 +165,8 @@ treat keys as opaque.
 
 ### Step 4: Concurrent Type Resolution
 
-All requested types resolve **concurrently** via `coroutineScope { async {} }`. Three resolution modes:
+All requested types resolve **concurrently** after identity resolution. Each has its own coroutine.
+There is no serial standard, mergeable, then composite phase. Three resolution modes:
 
 #### Standard (short-circuit)
 Most types. A `ProviderChain` tries providers in priority order:
@@ -217,7 +202,9 @@ Types that are synthesized from other resolved types rather than fetched from a 
 | `TimelineSynthesizer` | ARTIST_TIMELINE | ARTIST_DISCOGRAPHY + BAND_MEMBERS | Extracts chronological events (formed, albums, member changes) from identity metadata + sub-type results |
 | `GenreAffinityMatcher` | GENRE_DISCOVERY | GENRE | Looks up each input genre tag in a static taxonomy (189 relationships across 12 genre families), scores neighbors by `inputConfidence * relationshipWeight` |
 
-The engine resolves dependencies first (standard rules), then passes results + identity metadata to the synthesizer. Sub-types are excluded from returned results unless the caller explicitly requested them.
+Each composite waits only for its dependencies, then receives their settled results and identity
+metadata. It does not wait for unrelated types. Sub-types are excluded from returned results unless
+the caller explicitly requested them.
 
 Dependencies are part of the same fan-out, with no barrier in front of it: each composite is driven
 by one coroutine that waits on its own dependencies and settles as soon as they land, so a composite
@@ -235,6 +222,13 @@ from, for a caller building its own attribution: a synthesized result names a sy
 nobody a reader can be sent to and nothing an upstream's terms cover, so credit the providers that
 answered its sources instead. It covers the built-ins only — a synthesizer registered through
 `Builder.addSynthesizer` is not in it.
+
+Text and media have their own `ContentAttribution` on `Biography`, `Artwork`, and each
+`ArtworkSource`; an image must never inherit a biography's article credit. Render a supplied
+`attributionText` as the required credit, otherwise use the available creator, credit, source URL,
+licences, restrictions, and modification facts. A compact image control may show that image's facts
+on hover, focus, click, or tap; keep biography attribution visible as text. Missing attribution is
+unknown, not permission to reuse the resource.
 
 `Builder.build()` refuses two graphs outright, with `IllegalArgumentException`: synthesizers whose
 dependencies form a cycle (one depending on its own type included — the message names every type on

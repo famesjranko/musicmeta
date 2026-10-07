@@ -12,6 +12,30 @@ Two kinds of break appear here and they cost you different things:
 
 The full per-release list, additions and fixes included, is [CHANGELOG.md](../../CHANGELOG.md).
 
+## Unreleased
+
+### `ArtistProfile.similarAlbums` is removed
+
+Album recommendations belong to an album. Remove artist-profile accesses. Use the retained
+`AlbumProfile.similarAlbums` only when the request is for an album, then recompile your consumer.
+
+### Payload attribution changes constructor and `copy` descriptors
+
+`Artwork`, `ArtworkSource`, and `Biography` now have a trailing nullable `attribution` field. Named
+Kotlin calls can omit it, but code compiled against an earlier artifact must be recompiled because
+the JVM constructors and `copy` methods changed. `ContentAttribution` describes one text or media
+resource: use `attributionText` when present; otherwise render the available creator, credit,
+source URL, licences, restrictions, and modification facts. Unknown values do not establish a
+reuse right.
+
+Old JSON for these payloads remains decodable because the new field defaults to null. There is no
+Room schema or cache-envelope change and no blanket cache wipe. Refetch old Wikipedia biographies
+that lack article attribution. Suppress old Wikipedia image candidates that lack file attribution,
+including stale, pinned, and alternative values; retain eligible alternatives from other providers.
+If a suppressed image is pinned, call `invalidate(request, type)` or use `forceRefresh = true` to
+clear that exact pin. A custom cache that cannot select affected entries should selectively clear
+Wikipedia biography and image entries, or clear the cache as its fallback.
+
 ## 0.13.0
 
 ### Six provider constants leave the published surface

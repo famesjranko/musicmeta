@@ -323,6 +323,12 @@ class RedisEnrichmentCache(private val redis: RedisClient) : EnrichmentCache {
 
 See [cache-management.md](cache-management.md) for cache key structure and TTL details.
 
+Custom caches must retain unknown JSON keys and every `ContentAttribution` field when they serialize
+payloads. Old payloads decode with null attribution. Preserve a selected `(entityKey, type)` marker
+even when no positive entry exists, reject automatic positive and negative replacement atomically,
+and retain selected entries through expiry cleanup and capacity eviction. If atomic storage is not
+available, document the concurrency limitation. Treat `maxEntries` as a soft bound for selections.
+
 ---
 
 ## Custom mergers

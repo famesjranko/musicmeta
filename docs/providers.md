@@ -30,7 +30,7 @@ Auth keys and how to supply them are in [README.md](../README.md).
 | iTunes | `itunes` | none | [docs](https://performance-partners.apple.com/search-api) | No-key album search with artwork at any size; `lookup?upc=` resolves a known barcode as an identity match, replacing the search |
 | LRCLIB | `lrclib` | none | [docs](https://lrclib.net/docs) | Only lyrics source |
 | Wikidata | `wikidata` | none | [docs](https://www.wikidata.org/wiki/Wikidata:Data_access) | Structured claims keyed on a Q-id; our route to Commons imagery at any width |
-| Wikipedia | `wikipedia` | none | [docs](https://www.mediawiki.org/wiki/API:Main_page) | Highest-confidence bio; English only |
+| Wikipedia | `wikipedia` | none | [docs](https://www.mediawiki.org/wiki/API:Main_page) | Highest-confidence attributed bio; English only |
 | ListenBrainz | `listenbrainz` | optional token | [docs](https://listenbrainz.readthedocs.io/en/latest/users/api/) | MBID-keyed listen counts that cannot mismatch the artist; only source of `ARTIST_RADIO_DISCOVERY`, which is what the token gates; the only `SIMILAR_ARTISTS` source whose every answer carries an MBID |
 | Last.fm | `lastfm` | API key | [docs](https://www.last.fm/api) | Widest capability set of any single provider; only source of tags-as-genre and artist similarity |
 | Fanart.tv | `fanarttv` | project key | [docs](https://fanarttv.docs.apiary.io/) | Only source of artist backgrounds, logos and banners |
@@ -282,8 +282,10 @@ reading Last.fm's response headers; a consumer relying on the cache to stay unde
 nothing in musicmeta enforcing it.
 
 **Wikipedia's text is CC BY-SA and asks for a licence notice plus a link, a stable copy, or an
-author list per reuse.** musicmeta caches and serves the text with no such notice, article URL, or
-author list retained anywhere a consumer could render it.
+author list per reuse.** Biography attribution now identifies the article, Wikipedia contributors,
+and CC BY-SA 4.0. Image attribution is separate and comes from the selected file's description
+page and metadata; an article attribution never establishes image rights. Consumers must render
+the payload-specific credit and still assess their own use.
 
 **Cover Art Archive images are copyrighted per image by their respective rights holders**, and the
 API carries no licence field to propagate even if musicmeta wanted to surface one.

@@ -301,6 +301,12 @@ height** — only rendered thumbnails — so `Artwork.url` is the largest scale 
 lists every scale, and `Artwork.height` is always null. Scales are chosen by each entry's own
 `scale` field, not by array position. Where no item is flagged `leadImage`, the first surviving
 image in article order wins. `utm_*` tracking parameters are stripped from every URL we ship.
+The article and file paths carry different attribution. The Action response identifies the article
+and its contributors for biography text. Each candidate image needs a separate file-information
+lookup for its description page, credit, licence, restrictions, and modification facts. An article
+link does not license an image. The mapper withholds a Wikimedia image when those file facts are
+incomplete, contradictory, non-free, restricted, or ambiguous across licences; a biography's old
+thumbnail route is withheld for the same reason.
 Never called: `/page/html/{title}` and
 `action=parse`, where the infobox lives — origin, years active, labels, members, which we take from
 Wikidata instead. Both hosts are hardcoded `en.wikipedia.org`, so no other language is ever queried.

@@ -107,37 +107,50 @@ flowchart TD
     ident -->|yes| resolve["resolveIdentity:<br/>canonical ids + names,<br/>may answer types itself"]
     resolve --> regular
 
-    regular["fan-out, under one deadline:<br/>regular + composite subs<br/>concurrent, one chain each"]
-    regular --> mergeable["then mergeable types<br/>all providers, merged"]
-    mergeable --> composite["then composite types<br/>from the settlement board"]
-
-    composite --> settle["settle, per type as it lands:<br/>catalog filter, provenance,<br/>STALE_IF_ERROR substitution"]
+    fanout["fan-out under one deadline:<br/>one coroutine per type"]
+    regular["regular: first successful chain result"]
+    mergeable["mergeable: collect eligible providers,<br/>then merge"]
+    composite["composite: await only its dependencies<br/>on the settlement board"]
+    fanout --> regular
+    fanout --> mergeable
+    fanout --> composite
+    regular --> settle["settle each type as it lands:<br/>normalize, provenance, stale substitution"]
+    mergeable --> settle
+    composite --> settle
     settle --> deadline{"deadline held?"}
-    deadline -->|"no"| timedout["unresolved becomes<br/>Error TIMEOUT,<br/>same per-type settle,<br/>nothing cached"]
-    deadline -->|yes| writeback["writeBack:<br/>positive or negative,<br/>canonical-name aliased"]
+    deadline -->|"no"| timedout["unresolved becomes Error TIMEOUT;<br/>settled results remain returned,<br/>no write-back"]
+    deadline -->|yes| writeback["one call-level writeBack:<br/>positive or negative,<br/>canonical-name alias where eligible"]
     timedout --> results
     writeback --> results["EnrichmentResults"]
 ```
 
-Every result is gated as it is produced — `filterByConfidence`, then `demoteUnanswered`, then catalog
-filtering, provenance stamping and `STALE_IF_ERROR` substitution — inside whichever stage produced
-it, rather than in one pass over the finished set. Confidence runs first because it scores the
+Every result is gated as it is produced — `filterByConfidence`, then `demoteUnanswered`, then
+normalization, provenance stamping and `STALE_IF_ERROR` substitution — inside its settling
+coroutine, rather than in one pass over the finished set. Normalization includes catalog filtering
+and runs again after a stale substitution, so a stale result is served under this call's catalog
+configuration. Confidence runs first because it scores the
 identification, not the payload (`docs/pitfalls.md` §8): a perfect identity match can still carry a
 payload that answers nothing.
 
 Three things this ordering is load-bearing about. **The cache is read before identity resolution**,
 so a fully cached call never touches an upstream — unless `forceRefresh` skips both reads, which is
-the only way to make one. **Composites are last because they read the settlement board the earlier
-stages have already written into** — they depend on resolved types, so the stages are ordered, not
-merely parallel. And **a timed-out run returns what it has but persists none of it**, because the
-deadline can fire part-way through a step that rewrites entries, so what survives is a mix of
-finished and unfinished work.
+the only way to make one. **Composites do not wait for unrelated types**: each waits only for its
+own dependencies on the settlement board, then settles in its own coroutine. **Write-back happens
+once after the fan-out completes**. A deadline returns every type that settled and fills the rest
+with `ErrorKind.TIMEOUT`, but writes none of that call's results.
 
 Two engine-level invariants constrain every provider rather than any one of them, which is what
 makes them architectural: **confidence and provenance may understate the evidence, never overstate
 it**, and **an absence must never be reported where a failure occurred**. Both are one-directional
 on purpose, because consumers branch on the distinction. What each cost to learn is
 `docs/pitfalls.md` §4 and §8.
+
+Circuit recovery is also a shared contract. When a provider leaves its cooldown, exactly one
+token-owned HALF_OPEN attempt may cross the provider-attempt boundary. A cancelled attempt abandons
+its token for an immediate retry and records neither success nor failure. A genuine `Success` or
+`NotFound` closes the breaker; `Error` and `RateLimited` reopen it for a full cooldown. Generation
+tokens discard completions from an earlier circuit state, so a late attempt cannot change a reset
+breaker.
 
 ## `enrichProgressive()` and the engine's own lifecycle
 

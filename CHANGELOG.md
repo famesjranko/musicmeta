@@ -29,6 +29,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Breaking Changes
+- `ArtistProfile.similarAlbums` is removed; use `AlbumProfile.similarAlbums` only for album recommendations, then recompile consumers (#385)
+- `Artwork`, `ArtworkSource`, and `Biography` gain trailing `attribution`; constructor and `copy` JVM descriptors change, so recompile consumers even when Kotlin source needs no edit (#386)
+
+### Added
+- Text and media payloads can carry source-specific `ContentAttribution`, including credit, licence, restrictions, and modification facts; old cached JSON remains readable (#386)
+
+### Changed
+- Wikipedia biographies without article attribution refetch; unsafe Wikimedia images are suppressed and remain pinned until invalidated or refreshed (#386)
+
 ## [0.13.0] - 2026-09-07
 
 ### Breaking Changes
