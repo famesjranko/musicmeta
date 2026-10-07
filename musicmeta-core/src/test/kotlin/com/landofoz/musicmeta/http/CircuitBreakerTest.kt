@@ -67,9 +67,10 @@ class CircuitBreakerTest {
         // When - advancing clock past cooldown (t=7000, 6s since opening)
         time.set(7000L)
 
-        // Then - half-open, allows one test request
+        // Then - half-open, but Boolean checks fail closed until an actual attempt acquires
         assertEquals(CircuitBreaker.State.HALF_OPEN, breaker.state)
-        assertTrue(breaker.allowRequest())
+        assertFalse(breaker.allowRequest())
+        requireNotNull(breaker.acquire()).abandon()
     }
 
     @Test fun `admits only one request while half-open`() {
@@ -97,7 +98,7 @@ class CircuitBreakerTest {
         time.set(100L)
 
         // When - callers only observe eligibility before an actual attempt
-        repeat(3) { assertTrue(breaker.allowRequest()) }
+        repeat(3) { assertFalse(breaker.allowRequest()) }
         val permit = breaker.acquire()
 
         // Then - the actual attempt still owns the one recovery permit
@@ -232,7 +233,8 @@ class CircuitBreakerTest {
 
         // When - clock advances to exactly 5s (cooldown expired)
         time.set(6000L)
-        // Then - allowed
-        assertTrue(breaker.allowRequest())
+        // Then - Boolean checks still fail closed, but an actual probe can acquire
+        assertFalse(breaker.allowRequest())
+        requireNotNull(breaker.acquire()).abandon()
     }
 }

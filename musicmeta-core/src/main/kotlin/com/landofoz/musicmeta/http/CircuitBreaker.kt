@@ -37,8 +37,7 @@ internal class CircuitBreaker(
     @Synchronized
     fun allowRequest(): Boolean = when (currentState()) {
         State.CLOSED -> true
-        State.OPEN -> false
-        State.HALF_OPEN -> halfOpenPermitId == null
+        State.OPEN, State.HALF_OPEN -> false
     }
 
     /** Records a successful un-tokened call, such as test setup. */

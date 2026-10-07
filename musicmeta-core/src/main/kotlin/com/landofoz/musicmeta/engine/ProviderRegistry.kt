@@ -44,7 +44,7 @@ internal class ProviderRegistry(
     providers: List<EnrichmentProvider>,
     private val priorityOverrides: Map<String, Map<EnrichmentType, Int>> = emptyMap(),
     private val logger: EnrichmentLogger = EnrichmentLogger.NoOp,
-    private val circuitBreakerFactory: () -> CircuitBreaker = { CircuitBreaker() },
+    private val circuitBreakerFactory: (String) -> CircuitBreaker = { CircuitBreaker() },
 ) {
 
     private val allProviders: List<EnrichmentProvider> = providers.toList()
@@ -55,7 +55,7 @@ internal class ProviderRegistry(
 
     /** One circuit breaker per provider, shared across all chains. */
     private val circuitBreakers: Map<String, CircuitBreaker> =
-        allProviders.associate { it.id to circuitBreakerFactory() }
+        allProviders.associate { it.id to circuitBreakerFactory(it.id) }
 
     private val chains: Map<EnrichmentType, ProviderChain> = buildChains(allProviders)
 
