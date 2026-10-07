@@ -627,21 +627,26 @@ function genreChipsHtml(genres) {
   return `<div class="genre-chips">${chips}</div>${legend}`;
 }
 
-// `stream`, when given, is the StreamSnapshot this paint came from — what has not settled yet, and
-// whether the header is still provisional. Absent for the single-shot path, where every absence is
-// a finished answer rather than a wait.
+let imageCreditListeners;
+function imageCreditControl(attribution, provider) {
+  const credit = contentCreditHtml(attribution) || (provider?.provider !== 'wikipedia' ? creditLineHtml(provider ? [provider] : []) : '');
+  return credit ? `<button class="image-credit" type="button" aria-label="Image credit" aria-expanded="false">i</button><div class="image-credit-popover" hidden>${credit}<button type="button" class="image-credit-close" aria-label="Close image credit">×</button></div>` : '';
+}
+
+// `stream` identifies a provisional paint; absent values in a completed response are settled.
 function render(data, wasForceRefresh, stream) {
+  imageCreditListeners?.abort();
+  imageCreditListeners = new AbortController();
   const summary = data.summary;
   const pendingTypes = (stream && stream.pending) || [];
   const stillLoading = pendingTypes.length > 0;
   const identityPending = !!(stream && stream.identityPending);
   const pendingSlots = summary.pendingSlots || [];
   const backdrop = summary.backgroundImageUrl
-    ? `<div class="backdrop" style="background-image:url('${esc(summary.backgroundImageUrl)}')"></div>`
+    ? `<div class="backdrop" style="background-image:url('${esc(summary.backgroundImageUrl)}')"></div><div class="credited-image background-credit">${imageCreditControl(summary.backgroundAttribution, summary.backgroundCredit)}</div>`
     : '';
-  const imageCredit = contentCreditHtml(summary.imageAttribution);
   const img = summary.imageUrl
-    ? `<div class="credited-image"><img src="${esc(summary.imageUrl)}" alt="" onerror="this.closest('.credited-image').remove()" />${imageCredit ? `<button class="image-credit" type="button" aria-label="Image credit">i</button><div class="image-credit-popover" hidden>${imageCredit}<button type="button" class="image-credit-close" aria-label="Close image credit">×</button></div>` : ''}</div>`
+    ? `<div class="credited-image"><img src="${esc(summary.imageUrl)}" alt="" onerror="this.closest('.credited-image').remove()" />${imageCreditControl(summary.imageAttribution, summary.imageCredit)}</div>`
     : pendingSlots.includes('image')
       ? '<div class="skeleton skeleton-img" aria-hidden="true"></div>'
       : '';
@@ -649,7 +654,7 @@ function render(data, wasForceRefresh, stream) {
   // Wikipedia's licence is owed beside the text it licenses, not in a page footer.
   const textSource = summary.textAttribution
     ? `<div class="source">${contentCreditHtml(summary.textAttribution)}</div>`
-    : summary.textCredit
+    : summary.textCredit && summary.textCredit.provider !== 'wikipedia'
     ? `<div class="source">${creditLineHtml([summary.textCredit])}</div>`
     : summary.textSource ? `<div class="source">source: ${esc(summary.textSource)}</div>` : '';
   const text = summary.text
@@ -702,18 +707,10 @@ function render(data, wasForceRefresh, stream) {
   const sections = data.sections.map((s) => sectionHtml(s, unverified)).join('');
   const totalItems = data.sections.reduce((n, s) => n + s.items.length, 0);
 
-  // A gallery entry's label is often the provider's own id (an artwork alternative is labelled by
-  // whoever supplied it), so the credit replaces the caption there rather than repeating it.
-  const galleryCaption = (g) => {
-    const credit = contentCreditHtml(g.attribution);
-    const label = g.label && !(g.credit && g.credit.provider === g.label) ? esc(g.label) : '';
-    return label ? `<figcaption>${label}</figcaption>` : '';
-  };
   const gallery = (data.gallery && data.gallery.length)
     ? `<div class="card gallery${unverified ? ' unverified' : ''}">${data.gallery.map((g) => `
       <figure>
-        <div class="credited-image"><img src="${esc(g.url)}" alt="${esc(g.label || '')}" onerror="this.closest('figure').remove()" />${contentCreditHtml(g.attribution) ? `<button class="image-credit" type="button" aria-label="Image credit">i</button><div class="image-credit-popover" hidden>${contentCreditHtml(g.attribution)}<button type="button" class="image-credit-close" aria-label="Close image credit">×</button></div>` : ''}</div>
-        ${galleryCaption(g)}
+        <div class="credited-image"><img src="${esc(g.url)}" alt="${esc(g.label || '')}" onerror="this.closest('figure').remove()" />${imageCreditControl(g.attribution, g.credit)}</div>
       </figure>`).join('')}</div>`
     : '';
 
@@ -805,14 +802,41 @@ function render(data, wasForceRefresh, stream) {
     const wrap = button.parentElement;
     const popover = wrap.querySelector('.image-credit-popover');
     let pinned = false;
-    const close = () => { pinned = false; popover.hidden = true; button.focus(); };
-    button.addEventListener('click', () => { pinned = !pinned; popover.hidden = false; });
-    button.addEventListener('focus', () => { popover.hidden = false; });
-    wrap.addEventListener('pointerenter', () => { popover.hidden = false; });
-    wrap.addEventListener('pointerleave', () => { if (!pinned) popover.hidden = true; });
-    button.addEventListener('keydown', (event) => { if (event.key === 'Escape') close(); });
-    wrap.querySelector('.image-credit-close').addEventListener('click', close);
-    document.addEventListener('pointerdown', (event) => { if (!wrap.contains(event.target) && !popover.hidden) close(); });
+    let returningFocus = false;
+    const position = () => {
+      const control = button.getBoundingClientRect();
+      const aboveSpace = Math.max(0, control.top - 14);
+      const belowSpace = Math.max(0, innerHeight - control.bottom - 14);
+      popover.style.maxHeight = Math.max(aboveSpace, belowSpace) + 'px';
+      const box = popover.getBoundingClientRect();
+      popover.style.left = Math.max(7, Math.min(control.right - box.width, innerWidth - box.width - 7)) + 'px';
+      const above = control.top - box.height - 7;
+      popover.style.top = (above >= 7 ? above : control.bottom + 7) + 'px';
+    };
+    const show = () => { popover.hidden = false; button.setAttribute('aria-expanded', 'true'); position(); };
+    const close = (restoreFocus = false) => {
+      pinned = false;
+      popover.hidden = true;
+      button.setAttribute('aria-expanded', 'false');
+      if (restoreFocus) {
+        returningFocus = true;
+        button.focus();
+        returningFocus = false;
+      }
+    };
+    button.addEventListener('click', () => { if (pinned) close(); else { pinned = true; show(); } });
+    button.addEventListener('focus', () => { if (!returningFocus) show(); });
+    button.addEventListener('pointerenter', show);
+    wrap.addEventListener('pointerleave', () => { if (!pinned && !wrap.contains(document.activeElement)) close(); });
+    wrap.addEventListener('focusout', (event) => { if (!pinned && !wrap.contains(event.relatedTarget)) close(); });
+    wrap.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape') { event.preventDefault(); event.stopPropagation(); close(true); }
+    });
+    wrap.querySelector('.image-credit-close').addEventListener('click', () => close(true));
+    const options = { signal: imageCreditListeners.signal };
+    document.addEventListener('pointerdown', (event) => { if (!wrap.contains(event.target)) close(); }, options);
+    window.addEventListener('resize', () => { if (!popover.hidden) position(); }, options);
+    window.addEventListener('scroll', () => { if (!popover.hidden) position(); }, { ...options, capture: true });
   });
 }
 

@@ -4,11 +4,13 @@ import com.landofoz.musicmeta.AlbumProfile
 import com.landofoz.musicmeta.ArtistProfile
 import com.landofoz.musicmeta.BandMember
 import com.landofoz.musicmeta.CanonicalStatus
+import com.landofoz.musicmeta.ContentAttribution
 import com.landofoz.musicmeta.EnrichmentData
 import com.landofoz.musicmeta.EnrichmentResult
 import com.landofoz.musicmeta.EnrichmentResults
 import com.landofoz.musicmeta.EnrichmentType
 import com.landofoz.musicmeta.ErrorKind
+import com.landofoz.musicmeta.LicenseRelation
 import com.landofoz.musicmeta.SearchCandidate
 import com.landofoz.musicmeta.TrackProfile
 import com.landofoz.musicmeta.demo.ui.Terminal
@@ -65,8 +67,8 @@ object Formatter {
     private fun printArtistSummary(profile: ArtistProfile, term: Terminal) {
         term.heading("Profile")
         term.keyValue("Name:", profile.name)
-        profile.photo?.let { term.keyValue("Photo:", term.link(it.url, artworkLabel(it))) }
-        profile.bio?.let { term.keyValue("Bio:", textSnippet(it.text)) }
+        profile.photo?.let { term.keyValue("Photo:", term.link(it.url, artworkLabel(it)) + creditSuffix(it.attribution)) }
+        profile.bio?.let { term.keyValue("Bio:", textSnippet(it.text) + creditSuffix(it.attribution)) }
         val genres = profile.genres.take(4).joinToString(", ") { it.name }
         if (genres.isNotEmpty()) term.keyValue("Genres:", genres)
         profile.country?.let { term.keyValue("Country:", it) }
@@ -82,9 +84,9 @@ object Formatter {
         term.heading("Profile")
         term.keyValue("Title:", profile.title)
         term.keyValue("Artist:", profile.artist)
-        profile.artwork?.let { term.keyValue("Artwork:", term.link(it.url, artworkLabel(it))) }
+        profile.artwork?.let { term.keyValue("Artwork:", term.link(it.url, artworkLabel(it)) + creditSuffix(it.attribution)) }
         // The Tier 2 named accessor; AlbumProfile.description reads the same value through Tier 1.
-        profile.results.albumDescription()?.let { term.keyValue("Description:", textSnippet(it.text)) }
+        profile.results.albumDescription()?.let { term.keyValue("Description:", textSnippet(it.text) + creditSuffix(it.attribution)) }
         profile.label?.let { term.keyValue("Label:", it) }
         profile.releaseDate?.let { term.keyValue("Released:", it) }
         val genres = profile.genres.take(4).joinToString(", ") { it.name }
@@ -143,13 +145,37 @@ object Formatter {
     }
 
     internal fun attributionText(art: EnrichmentData.Artwork): String {
-        val attribution = art.attribution ?: return ""
+        return attributionText(art.attribution)
+    }
+
+    private fun attributionText(attribution: ContentAttribution?): String {
+        if (attribution == null) return ""
+        fun safeLink(value: String?): String? = value?.takeIf {
+            !it.any { char -> char <= ' ' || char == '\u007f' } &&
+                runCatching { java.net.URI(it).let { uri -> uri.scheme == "https" && uri.host != null && uri.userInfo == null } }.getOrDefault(false)
+        }
+        val relation = if (attribution.licenses.size > 1) when (attribution.licenseRelation) {
+            LicenseRelation.ALL_OF -> "All licences apply"
+            LicenseRelation.ANY_OF -> "Choose one licence"
+            LicenseRelation.UNKNOWN -> "Licence relationship unknown"
+        } else null
         return listOfNotNull(
             attribution.attributionText ?: listOfNotNull(attribution.creator, attribution.credit).joinToString(" · ").ifBlank { null },
-            attribution.sourceUrl,
-            attribution.licenses.joinToString(", ") { it.identifier }.ifBlank { null },
-        ).joinToString(" · ")
+            safeLink(attribution.sourceUrl),
+            attribution.licenses.joinToString(", ") { license ->
+                license.identifier + (safeLink(license.url)?.let { " ($it)" } ?: "")
+            }.ifBlank { null },
+            relation, attribution.usageTerms, attribution.restrictions?.joinToString(", ")?.ifBlank { null },
+            attribution.modificationNote ?: when (attribution.isModified) {
+                true -> "Modified; details not supplied"
+                false -> "No modifications reported"
+                null -> null
+            },
+        ).joinToString(" · ").replace(Regex("[\\p{Cc}]")) { "\\u%04x".format(it.value[0].code) }
     }
+
+    private fun creditSuffix(attribution: ContentAttribution?): String =
+        attributionText(attribution).takeIf { it.isNotBlank() }?.let { " [$it]" }.orEmpty()
 
     // --- Results display (Tier 2/3) ---
 
@@ -289,7 +315,7 @@ object Formatter {
         val alts = data.alternatives
         val attribution = attributionText(data).takeIf { it.isNotBlank() }?.let { " [$it]" }.orEmpty()
         if (alts.isNullOrEmpty()) return primary + attribution
-        val altLinks = alts.joinToString(", ") { term.link(it.url, it.provider) }
+        val altLinks = alts.joinToString(", ") { term.link(it.url, it.provider) + creditSuffix(it.attribution) }
         return "$primary (+${alts.size} alt: $altLinks)$attribution"
     }
 
@@ -318,7 +344,7 @@ object Formatter {
                 own ?: sibling?.let { "$it (fallback)" },
             ).joinToString(" ")
         }
-        is EnrichmentData.Biography -> textSnippet(data.text)
+        is EnrichmentData.Biography -> textSnippet(data.text) + creditSuffix(data.attribution)
         is EnrichmentData.SimilarArtists ->
             "${data.artists.size} artists: " +
                 data.artists.take(3).joinToString(", ") {

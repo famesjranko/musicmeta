@@ -62,6 +62,10 @@ data class ContentCredit(
     val sourceUrl: String,
     val licenses: List<LicenseCredit> = emptyList(),
     val modificationNote: String? = null,
+    val licenseRelation: String = "UNKNOWN",
+    val usageTerms: String? = null,
+    val restrictions: List<String> = emptyList(),
+    val isModified: Boolean? = null,
 )
 
 @Serializable
@@ -104,6 +108,8 @@ data class SummaryCard(
      * streaming snapshot sets it; on a completed response an empty slot means nothing was found.
      */
     val pendingSlots: List<String> = emptyList(),
+    val backgroundAttribution: ContentCredit? = null,
+    val backgroundCredit: SourceCredit? = null,
 )
 
 @Serializable

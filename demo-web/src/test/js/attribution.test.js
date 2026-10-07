@@ -1,5 +1,8 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { createServer } from 'node:http';
+import { readFile } from 'node:fs/promises';
+import { createRequire } from 'node:module';
 
 import {
   escapeHtml,
@@ -106,12 +109,18 @@ test('escapeHtml escapes every character that can break out of markup', () => {
 });
 
 test('file credit uses the selected file payload, escapes text, and rejects unsafe links', () => {
-  const html = contentCreditHtml({
+  // Given - file metadata containing external markup and an unsafe description link.
+  const credit = {
     attributionText: '<b>Photo & credit</b>',
     sourceUrl: 'javascript:alert(1)',
     licenses: [{ identifier: 'CC BY-SA <4>', url: 'https://creativecommons.org/licenses/by-sa/4.0/' }],
     modificationNote: 'cropped & adjusted',
-  });
+  };
+
+  // When - rendering its required credit.
+  const html = contentCreditHtml(credit);
+
+  // Then - text is escaped and unsafe links are absent.
   assert.match(html, /Photo &amp; credit/);
   assert.match(html, /CC BY-SA &lt;4&gt;/);
   assert.match(html, /cropped &amp; adjusted/);
@@ -119,11 +128,17 @@ test('file credit uses the selected file payload, escapes text, and rejects unsa
 });
 
 test('file credit retains public-domain, custom, restricted, and multiple licence details', () => {
-  const html = contentCreditHtml({
+  // Given - file metadata with public domain and custom restrictions.
+  const credit = {
     credit: 'Museum collection', sourceUrl: 'https://example.test/file',
     licenses: [{ identifier: 'Public domain' }, { identifier: 'CC0', url: 'https://creativecommons.org/publicdomain/zero/1.0/' }],
     modificationNote: 'Restricted: editorial use only',
-  });
+  };
+
+  // When - rendering all file credit facts.
+  const html = contentCreditHtml(credit);
+
+  // Then - every designation and restriction remains visible.
   assert.match(html, /Museum collection/);
   assert.match(html, /Public domain/);
   assert.match(html, /CC0/);
@@ -131,7 +146,51 @@ test('file credit retains public-domain, custom, restricted, and multiple licenc
 });
 
 test('missing content facts render no empty image credit', () => {
-  assert.equal(contentCreditHtml({ sourceUrl: 'ftp://example.test/file' }), '');
+  // Given - metadata containing no usable facts or safe source link.
+  const credit = { sourceUrl: 'ftp://example.test/file' };
+
+  // When - rendering an incomplete credit.
+  const html = contentCreditHtml(credit);
+
+  // Then - it contributes no empty control or credit block.
+  assert.equal(html, '');
+});
+
+test('public domain credit remains visible without a named creator', () => {
+  // Given - a public domain file with no required creator credit.
+  const credit = { sourceUrl: 'https://example.test/archive', licenses: [{ identifier: 'Public domain' }] };
+  // When - rendering its file attribution.
+  const html = contentCreditHtml(credit);
+  // Then - the licence and file source remain available.
+  assert.match(html, /Public domain/);
+  assert.match(html, /href="https:\/\/example.test\/archive"/);
+});
+
+test('multiple licences retain every designation and their required relation', () => {
+  // Given - two licences that must both be satisfied.
+  const credit = { creator: 'Archive', licenses: [{ identifier: 'CC BY 4.0' }, { identifier: 'Custom grant' }], licenseRelation: 'ALL_OF', isModified: false };
+  // When - rendering the required attribution.
+  const html = contentCreditHtml(credit);
+  // Then - both designations and the conjunction remain explicit.
+  assert.match(html, /CC BY 4\.0/);
+  assert.match(html, /Custom grant/);
+  assert.match(html, /All licences apply/);
+  assert.match(html, /No modifications reported/);
+});
+
+test('custom credit overrides constructed credit without truncation and rejects control-bearing links', () => {
+  // Given - externally supplied credit text and unsafe URL input.
+  const credit = { creator: 'Hidden creator', credit: 'Hidden credit', attributionText: '<Author>\u001b' + 'a'.repeat(5000),
+    sourceUrl: 'https://example.test/\nunsafe', licenses: [{ identifier: 'Custom', url: 'data:text/html,x' }],
+    usageTerms: 'Editorial use', restrictions: ['Permission required'] };
+  // When - rendering file credit.
+  const html = contentCreditHtml(credit);
+  // Then - the complete escaped custom credit is retained and unsafe links are absent.
+  assert.ok(html.includes('&lt;Author&gt;'), 'External markup is escaped');
+  assert.ok(html.includes('a'.repeat(5000)));
+  assert.ok(!/Hidden creator|Hidden credit|\u001b|href=/.test(html), 'No hidden credit, active control, or unsafe link');
+  assert.match(html, /Editorial use/);
+  assert.match(html, /Permission required/);
 });
 
 // --- Standing notices ----------------------------------------------------------------------
@@ -146,4 +205,178 @@ test('a page that can reach Deezer states the private-use notice for as long as 
 
 test('a page with no Deezer provider owes no Deezer notice', () => {
   assert.deepEqual(standingNotices(['musicbrainz', 'wikipedia']), []);
+});
+
+test('repository page preserves image credits across live, cached, refresh and alternative paths', {
+  skip: process.env.PLAYWRIGHT_MODULE ? false : 'Set PLAYWRIGHT_MODULE to run the Chrome integration check',
+}, async () => {
+  // Given - the actual repository resources and local API responses with distinct file credits.
+  const { chromium } = createRequire(import.meta.url)(process.env.PLAYWRIGHT_MODULE);
+  const image = 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="300" height="300"><rect width="300" height="300" fill="gray"/></svg>');
+  const credit = (creator) => ({ creator, sourceUrl: 'https://example.test/' + creator,
+    licenses: [{ identifier: 'CC0', url: 'https://creativecommons.org/publicdomain/zero/1.0/' }], modificationNote: 'Scaled for display' });
+  const payload = { kind: 'artist', name: 'Fixture', summary: { title: 'Fixture', genres: [],
+    imageUrl: image, imageAttribution: credit('Primary'), text: 'Local biography',
+    textAttribution: credit('Contributors'), identityVerdict: 'RESOLVED' },
+    gallery: ['Alternative', 'Portrait', 'Archive'].map((label) => ({ url: image, label, attribution: credit(label) })),
+    sections: [], meta: { elapsedMs: 1, providers: [], identifiers: [], requestedTypes: [] } };
+  const paths = [];
+  const server = createServer(async (request, response) => {
+    const url = new URL(request.url, 'http://localhost');
+    if (url.pathname.startsWith('/api/')) {
+      paths.push(request.url);
+      const data = structuredClone(payload);
+      if (url.searchParams.get('name') === 'Text only') {
+        delete data.summary.imageUrl;
+        data.gallery = [];
+      }
+      if (url.searchParams.get('name') === 'Old text') {
+        delete data.summary.textAttribution;
+        data.summary.textCredit = { provider: 'wikipedia' };
+      }
+      if (url.searchParams.get('name') === 'Background') {
+        data.summary.backgroundImageUrl = image;
+        data.summary.backgroundAttribution = credit('Background');
+      }
+      if (url.searchParams.get('name') === 'Provider image') {
+        delete data.summary.imageAttribution;
+        data.summary.imageCredit = { provider: 'deezer' };
+      }
+      if (url.searchParams.get('name') === 'Long credit') data.summary.imageAttribution.attributionText = 'Long ' + 'a'.repeat(5000);
+      if (url.pathname === '/api/enrich-stream') {
+        response.setHeader('Content-Type', 'text/event-stream');
+        response.end('event: snapshot\ndata: ' + JSON.stringify({ sequence: 1, response: data, pending: [], identityPending: false }) + '\n\nevent: complete\ndata: ' + JSON.stringify({ sequence: 2, response: data, pending: [], identityPending: false }) + '\n\n');
+      } else {
+        response.setHeader('Content-Type', 'application/json');
+        response.end(JSON.stringify(url.pathname === '/api/enrich' ? data : {}));
+      }
+      return;
+    }
+    try {
+      const resource = url.pathname === '/' ? 'index.html' : url.pathname.slice(1);
+      if (!/^[\w.-]+$/.test(resource)) throw new Error('Invalid resource');
+      response.setHeader('Content-Type', resource.endsWith('.js') ? 'text/javascript' : resource.endsWith('.css') ? 'text/css' : 'text/html');
+      response.end(await readFile(new URL('../../main/resources/' + resource, import.meta.url)));
+    } catch (_) { response.writeHead(404).end(); }
+  });
+  await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
+  const origin = 'http://127.0.0.1:' + server.address().port;
+  const browser = await chromium.launch({ executablePath: process.env.CHROME_PATH || '/usr/bin/google-chrome', headless: true, args: ['--no-sandbox'] });
+  try {
+    // When - querying through the normal form and interacting with each rendered watermark.
+    for (const width of [1440, 390]) {
+      const context = await browser.newContext({ viewport: { width, height: 1000 }, hasTouch: width === 390 });
+      const page = await context.newPage();
+      page.setDefaultTimeout(5000);
+      const errors = [];
+      page.on('pageerror', (error) => errors.push(error.message));
+      await page.route('**/*', (route) => route.request().url().startsWith(origin) || route.request().url().startsWith('data:') ? route.continue() : route.abort());
+      await page.goto(origin);
+      await page.locator('#name').fill('Fixture');
+      await page.locator('#submit').click();
+      const buttons = page.locator('.image-credit');
+      await buttons.first().waitFor();
+      assert.equal(await buttons.count(), 4);
+      assert.equal(await page.locator('.gallery figcaption').count(), 0, 'Image credit has no persistent caption');
+      assert.equal(await buttons.first().textContent(), 'i');
+      assert.deepEqual(await buttons.first().evaluate((element) => {
+        const style = getComputedStyle(element);
+        return [style.width, style.height, style.right, style.bottom, style.borderRadius];
+      }), ['22px', '22px', '7px', '7px', '50%']);
+      assert.deepEqual(await buttons.first().evaluate((element) => {
+        const control = element.getBoundingClientRect(), image = element.previousElementSibling.getBoundingClientRect();
+        return [Math.round(image.right - control.right), Math.round(image.bottom - control.bottom)];
+      }), [7, 7], 'Watermark is inset from the image itself');
+      for (let i = 0; i < 4; i++) {
+        const button = buttons.nth(i);
+        const popover = page.locator('.image-credit-popover').nth(i);
+        await button.scrollIntoViewIfNeeded();
+        assert.equal(await button.textContent(), 'i');
+        assert.equal(await button.evaluate((element) => getComputedStyle(element).opacity), '0.42');
+        await button.hover();
+        assert.equal(await popover.isVisible(), true);
+        assert.ok((await popover.textContent()).includes(['Primary', 'Alternative', 'Portrait', 'Archive'][i]));
+        assert.equal(await popover.locator('a').first().getAttribute('href'), 'https://example.test/' + ['Primary', 'Alternative', 'Portrait', 'Archive'][i]);
+        assert.ok((await popover.textContent()).includes('CC0'));
+        assert.ok((await popover.textContent()).includes('Scaled for display'));
+        await page.mouse.move(0, 0);
+        assert.equal(await popover.isVisible(), false, 'Hover leave closes preview');
+        await button.focus();
+        assert.equal(await popover.isVisible(), true, 'Focus previews credit');
+        await page.keyboard.press('Tab');
+        assert.equal(await popover.locator('a').first().evaluate((element) => element === document.activeElement), true);
+        await page.keyboard.press('Escape');
+        assert.equal(await popover.isVisible(), false, 'Escape from credit link closes');
+        assert.equal(await button.evaluate((element) => element === document.activeElement), true, 'Escape returns focus');
+        await button.click();
+        await button.evaluate((element) => element.blur());
+        await page.mouse.move(0, 0);
+        assert.equal(await popover.isVisible(), true, 'Click pins credit after focus and hover leave');
+        const geometry = await popover.evaluate((element) => {
+          const p = element.getBoundingClientRect(), b = element.previousElementSibling.getBoundingClientRect();
+          return { inside: p.left >= 0 && p.right <= innerWidth && p.top >= 0 && p.bottom <= innerHeight,
+            overlap: p.left < b.right && p.right > b.left && p.top < b.bottom && p.bottom > b.top };
+        });
+        assert.deepEqual(geometry, { inside: true, overlap: false });
+        await popover.locator('.image-credit-close').click();
+        assert.equal(await popover.isVisible(), false, 'Close remains closed after focus return');
+        assert.equal(await button.evaluate((element) => element === document.activeElement), true);
+        if (width === 390) await button.tap(); else await button.click();
+        if (width === 390) await page.locator('h1').tap(); else await page.locator('h1').click();
+        assert.equal(await popover.isVisible(), false, 'Outside pointer closes');
+      }
+      // Then - credits stay image-specific and usable at both widths and after a cached refresh.
+      assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);
+      assert.equal(await page.locator('.summary .source a').first().getAttribute('href'), 'https://example.test/Contributors');
+      await page.locator('#name').fill('Old text');
+      await page.locator('#submit').click();
+      await buttons.first().waitFor();
+      assert.equal(await page.locator('.summary .source').count(), 0, 'Old text receives no invented provider-wide licence');
+      await page.locator('#fetch-fresh-btn').click();
+      await buttons.first().waitFor();
+      assert.equal(await buttons.count(), 4);
+      await page.evaluate(() => localStorage.setItem('musicmeta.demo.streaming', 'off'));
+      await page.reload();
+      await page.locator('#name').fill('Fixture');
+      await page.locator('#submit').click();
+      await buttons.first().waitFor();
+      assert.equal(await buttons.count(), 4, 'Cached whole-response payload retains all credits');
+      await page.locator('#name').fill('Background');
+      await page.locator('#submit').click();
+      await page.waitForFunction(() => document.querySelectorAll('.image-credit').length === 5);
+      await page.locator('.background-credit .image-credit').click();
+      assert.ok((await page.locator('.background-credit .content-credit').textContent()).includes('Background'));
+      await page.keyboard.press('Escape');
+      await page.locator('#name').fill('Provider image');
+      await page.locator('#submit').click();
+      await buttons.first().waitFor();
+      await buttons.first().click();
+      assert.ok((await page.locator('.image-credit-popover').first().textContent()).includes('Deezer'));
+      await page.keyboard.press('Escape');
+      await page.locator('#name').fill('Long credit');
+      await page.locator('#submit').click();
+      await buttons.first().waitFor();
+      await buttons.first().click();
+      const longPopover = page.locator('.image-credit-popover').first();
+      assert.ok((await longPopover.textContent()).includes('a'.repeat(5000)), 'Long functional credit is complete');
+      assert.equal(await longPopover.evaluate((element) => {
+        const bounds = element.getBoundingClientRect();
+        return bounds.top >= 0 && bounds.bottom <= innerHeight;
+      }), true, 'Long credit stays within the viewport');
+      await page.keyboard.press('Escape');
+      await page.locator('#name').fill('Text only');
+      await page.locator('#submit').click();
+      await page.waitForFunction(() => document.querySelector('.summary .text')?.textContent === 'Local biography');
+      assert.equal(await buttons.count(), 0);
+      assert.equal(await page.locator('.summary .source a').first().getAttribute('href'), 'https://example.test/Contributors');
+      assert.deepEqual(errors, []);
+      await context.close();
+    }
+    assert.ok(paths.some((path) => path.startsWith('/api/enrich-stream?')));
+    assert.ok(paths.some((path) => path.includes('refresh=true')));
+    assert.ok(paths.some((path) => path.startsWith('/api/enrich?')));
+  } finally {
+    await browser.close();
+    await new Promise((resolve) => server.close(resolve));
+  }
 });

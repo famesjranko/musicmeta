@@ -7,15 +7,16 @@
 
 /** The page's HTML escape, shared by both renderers. */
 export function escapeHtml(s) {
-  return String(s ?? '').replace(/[&<>"']/g, (c) => ({
+  return String(s ?? '').replace(/[\u0000-\u001f\u007f-\u009f]/g, (c) => `\\u${c.charCodeAt(0).toString(16).padStart(4, '0')}`).replace(/[&<>"']/g, (c) => ({
     '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
   }[c]));
 }
 
 function safeUrl(value) {
+  if (typeof value !== 'string' || /[\u0000-\u0020\u007f]/.test(value)) return null;
   try {
     const url = new URL(value);
-    return url.protocol === 'https:' ? url.href : null;
+    return url.protocol === 'https:' && !url.username && !url.password ? url.href : null;
   } catch (_) { return null; }
 }
 
@@ -29,8 +30,12 @@ export function contentCreditHtml(credit) {
     const href = safeUrl(license.url);
     return href ? linkHtml(href, license.identifier) : `<span>${escapeHtml(license.identifier)}</span>`;
   }).filter(Boolean);
+  const relation = licences.length > 1 ? ({ ALL_OF: 'All licences apply', ANY_OF: 'Choose one licence' }[credit.licenseRelation] || 'Licence relationship unknown') : '';
+  const details = [credit.usageTerms, ...(credit.restrictions || [])].filter(Boolean).map((value) => `<span>${escapeHtml(value)}</span>`);
+  const modifications = credit.modificationNote || (credit.isModified === true ? 'Modified; details not supplied' : credit.isModified === false ? 'No modifications reported' : '');
   const parts = [text ? `<span>${escapeHtml(text)}</span>` : '', sourceHtml, ...licences,
-    credit.modificationNote ? `<span>${escapeHtml(credit.modificationNote)}</span>` : ''].filter(Boolean);
+    relation ? `<span>${relation}</span>` : '', ...details,
+    modifications ? `<span>${escapeHtml(modifications)}</span>` : ''].filter(Boolean);
   return parts.length ? `<span class="content-credit">${parts.join('<span class="credit-sep"> · </span>')}</span>` : '';
 }
 
@@ -79,7 +84,7 @@ function linkHtml(href, text) {
 function creditHtml(credit) {
   const entry = PROVIDER_CREDITS[credit.provider];
   if (!entry) return `<span class="credit-item">${escapeHtml(credit.provider)}</span>`;
-  const href = credit.url || entry.site;
+  const href = safeUrl(credit.url) || entry.site;
   const body = linkHtml(href, entry.label || entry.name);
   return `<span class="credit-item">${escapeHtml(entry.prefix || '')}${body}` +
     `${escapeHtml(entry.suffix || '')}${entry.extraHtml || ''}</span>`;

@@ -116,7 +116,11 @@ fun ArtistProfile.toDemoResponse(elapsedMs: Long, pending: Set<EnrichmentType> =
     }
 
     val photo = r.artistPhoto()?.takeIf { r.isSafeArtwork(EnrichmentType.ARTIST_PHOTO, it) }
-    val primaryImage = photo?.url ?: bio?.thumbnailUrl?.takeIf { r.isSafeBiography(EnrichmentType.ARTIST_BIO, bio) }
+    val primaryImage = photo?.url ?: bio?.thumbnailUrl?.takeIf {
+        !requiresFileCredit((r.raw[EnrichmentType.ARTIST_BIO] as? EnrichmentResult.Success)?.provider, it)
+    }
+    val background = r.get<EnrichmentData.Artwork>(EnrichmentType.ARTIST_BACKGROUND)
+        ?.takeIf { r.isSafeArtwork(EnrichmentType.ARTIST_BACKGROUND, it) }
     val gallery = buildList {
         val seen = mutableSetOf<String>().apply { primaryImage?.let { add(it) } }
         addArtwork(seen, r, EnrichmentType.ARTIST_LOGO, "Logo", linker)
@@ -137,10 +141,10 @@ fun ArtistProfile.toDemoResponse(elapsedMs: Long, pending: Set<EnrichmentType> =
             title = name,
             imageUrl = primaryImage?.fanartTvPreviewUrl(),
             imageCredit = imageCredit,
-            imageAttribution = photo?.attribution?.toDemoCredit() ?: bio?.attribution?.toDemoCredit(),
-            backgroundImageUrl = r.get<EnrichmentData.Artwork>(EnrichmentType.ARTIST_BACKGROUND)
-                ?.url
-                ?.fanartTvPreviewUrl(),
+            imageAttribution = photo?.attribution?.toDemoCredit(),
+            backgroundImageUrl = background?.url?.fanartTvPreviewUrl(),
+            backgroundAttribution = background?.attribution?.toDemoCredit(),
+            backgroundCredit = background?.let { r.credit(EnrichmentType.ARTIST_BACKGROUND, linker) },
             text = bio?.text,
             textSource = bio?.source,
             textCredit = bio?.let { r.credit(EnrichmentType.ARTIST_BIO, linker) },
@@ -714,7 +718,7 @@ private fun MutableList<GalleryImage>.addAlternatives(
 ) {
     artwork?.alternatives?.forEach { alt ->
         if (alt.url.isNotBlank() && seen.add(alt.url)) {
-            if (alt.provider == "wikipedia" && alt.attribution == null) return@forEach
+            if (requiresFileCredit(alt.provider, alt.url) && !alt.attribution.hasFileRights()) return@forEach
             add(GalleryImage(alt.url, alt.provider, linker.credit(alt.provider), alt.attribution.toDemoCredit()))
         }
     }
@@ -722,10 +726,24 @@ private fun MutableList<GalleryImage>.addAlternatives(
 
 /** Old Wikimedia cache payloads do not establish file rights, so never paint them in the demo. */
 private fun EnrichmentResults.isSafeArtwork(type: EnrichmentType, artwork: EnrichmentData.Artwork): Boolean =
-    (raw[type] as? EnrichmentResult.Success)?.let { it.provider != "wikipedia" || artwork.attribution != null } ?: false
+    (raw[type] as? EnrichmentResult.Success)?.let {
+        !requiresFileCredit(it.provider, artwork.url) || artwork.attribution.hasFileRights()
+    } ?: false
 
-private fun EnrichmentResults.isSafeBiography(type: EnrichmentType, biography: EnrichmentData.Biography): Boolean =
-    (raw[type] as? EnrichmentResult.Success)?.let { it.provider != "wikipedia" || biography.attribution != null } ?: false
+private fun requiresFileCredit(provider: String?, url: String): Boolean {
+    val host = runCatching { java.net.URI(url).host }.getOrNull().orEmpty()
+    return provider == "wikipedia" || host == "wikimedia.org" || host.endsWith(".wikimedia.org")
+}
+
+private fun ContentAttribution?.hasFileRights(): Boolean {
+    if (this == null || !resourceId.startsWith("File:") || nonFree != false || restrictions != emptyList<String>()) return false
+    val safeSource = runCatching { java.net.URI(sourceUrl).let { it.scheme == "https" && it.host != null && it.userInfo == null } }.getOrDefault(false)
+    if (!safeSource || licenses.isEmpty()) return false
+    if (licenses.size > 1 && licenseRelation == com.landofoz.musicmeta.LicenseRelation.UNKNOWN) return false
+    val publicDomain = licenses.all { it.identifier == "Public domain" || it.identifier == "CC0" }
+    if (copyrighted != !publicDomain || attributionRequired != !publicDomain) return false
+    return publicDomain || !attributionText.isNullOrBlank() || !creator.isNullOrBlank()
+}
 
 /** Suffix-matched hosts of CDNs fast enough to paint a card image without a visible delay. */
 private val FAST_ART_CDN_HOSTS = listOf("dzcdn.net", "mzstatic.com")
@@ -744,7 +762,9 @@ private fun String.hasFastCdnHost(): Boolean {
 private fun EnrichmentData.Artwork?.cardImageUrl(): String? {
     if (this == null) return null
     if (url.hasFastCdnHost()) return url
-    return alternatives?.firstOrNull { it.url.hasFastCdnHost() }?.url ?: url
+    return alternatives?.firstOrNull {
+        it.url.hasFastCdnHost() && (!requiresFileCredit(it.provider, it.url) || it.attribution.hasFileRights())
+    }?.url ?: url
 }
 
 private fun EnrichmentData.Artwork?.attributionFor(url: String?): ContentAttribution? = when {
@@ -760,7 +780,11 @@ private fun ContentAttribution?.toDemoCredit(): ContentCredit? = this?.let {
         attributionText = attributionText,
         sourceUrl = sourceUrl,
         licenses = licenses.map { license -> LicenseCredit(license.identifier, license.url) },
+        licenseRelation = licenseRelation.name,
+        usageTerms = usageTerms,
+        restrictions = restrictions.orEmpty(),
         modificationNote = modificationNote,
+        isModified = isModified,
     )
 }
 

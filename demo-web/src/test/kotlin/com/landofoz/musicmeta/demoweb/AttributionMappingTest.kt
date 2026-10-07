@@ -14,6 +14,7 @@ import com.landofoz.musicmeta.EnrichmentResults
 import com.landofoz.musicmeta.EnrichmentType
 import com.landofoz.musicmeta.IdentifierNamespace
 import com.landofoz.musicmeta.IdentityResolution
+import com.landofoz.musicmeta.LicenseRelation
 import com.landofoz.musicmeta.SimilarArtist
 import com.landofoz.musicmeta.TrackProfile
 import org.junit.Assert.assertEquals
@@ -175,6 +176,10 @@ class AttributionMappingTest {
             sourceUrl = "https://commons.wikimedia.org/wiki/File:Master_of_Puppets.jpg",
             creator = "<Metallica>",
             licenses = listOf(ContentLicense("CC BY-SA 4.0", "https://creativecommons.org/licenses/by-sa/4.0/")),
+            copyrighted = true,
+            attributionRequired = true,
+            nonFree = false,
+            restrictions = emptyList(),
         )
         val results = resultsWith(entries = arrayOf(
             Triple(EnrichmentType.ALBUM_ART, "wikipedia", EnrichmentData.Artwork("https://example.com/a.jpg", attribution = attribution)),
@@ -202,6 +207,110 @@ class AttributionMappingTest {
         // Then - the unsafe legacy image has no rendered URL or provider fallback credit
         assertNull(response.summary.imageUrl)
         assertNull(response.summary.imageAttribution)
+    }
+
+    @Test
+    fun `article attribution never establishes thumbnail rights`() {
+        // Given - an attributed Wikipedia article with an independently unattributed thumbnail
+        val article = ContentAttribution("Fixture", "https://en.wikipedia.org/wiki/Fixture", creator = "Contributors")
+        val results = resultsWith(entries = arrayOf(Triple(EnrichmentType.ARTIST_BIO, "wikipedia",
+            EnrichmentData.Biography("Biography", "Wikipedia", thumbnailUrl = "https://upload.wikimedia.org/unsafe.jpg", attribution = article))))
+
+        // When - mapping the article and thumbnail to the demo
+        val response = ArtistProfile("Fixture", results).toDemoResponse(0)
+
+        // Then - the biography keeps its article attribution while the thumbnail is withheld
+        assertNull(response.summary.imageUrl)
+        assertNull(response.summary.imageAttribution)
+        assertEquals(article.sourceUrl, response.summary.textAttribution?.sourceUrl)
+    }
+
+    @Test
+    fun `unsafe Wikimedia alternatives and backgrounds are withheld`() {
+        // Given - an eligible primary plus old Wikimedia alternative and background payloads
+        val art = EnrichmentData.Artwork("https://example.test/primary.jpg", alternatives = listOf(
+            ArtworkSource("wikipedia", "https://cdn-images.dzcdn.net/unsafe.jpg")))
+        val results = resultsWith(entries = arrayOf(
+            Triple(EnrichmentType.ARTIST_PHOTO, "other", art),
+            Triple(EnrichmentType.ARTIST_BACKGROUND, "wikipedia", EnrichmentData.Artwork("https://upload.wikimedia.org/unsafe.jpg"))))
+
+        // When - mapping the images to the demo
+        val response = ArtistProfile("Fixture", results).toDemoResponse(0)
+
+        // Then - the eligible primary remains while neither unsafe image is rendered
+        assertEquals(art.url, response.summary.imageUrl)
+        assertEquals(emptyList<GalleryImage>(), response.gallery)
+        assertNull(response.summary.backgroundImageUrl)
+    }
+
+    @Test
+    fun `public domain artwork preserves its file source and licence without inventing a creator`() {
+        // Given - a file explicitly released into the public domain
+        val attribution = ContentAttribution("File:Archive.jpg", "https://commons.wikimedia.org/wiki/File:Archive.jpg",
+            licenses = listOf(ContentLicense("Public domain")), copyrighted = false, attributionRequired = false,
+            nonFree = false, restrictions = emptyList())
+        val results = resultsWith(entries = arrayOf(Triple(EnrichmentType.ALBUM_ART, "wikipedia",
+            EnrichmentData.Artwork("https://example.test/archive.jpg", attribution = attribution))))
+
+        // When - mapping public domain artwork
+        val response = AlbumProfile("Fixture", "Artist", results).toDemoResponse(0)
+
+        // Then - the source and public domain designation survive with no invented creator
+        assertEquals("https://example.test/archive.jpg", response.summary.imageUrl)
+        assertEquals(attribution.sourceUrl, response.summary.imageAttribution?.sourceUrl)
+        assertEquals("Public domain", response.summary.imageAttribution?.licenses?.single()?.identifier)
+        assertNull(response.summary.imageAttribution?.creator)
+    }
+
+    @Test
+    fun `ambiguous or restricted Wikimedia artwork is withheld`() {
+        // Given - incomplete or restricted file rights in a cached payload
+        val attribution = ContentAttribution("File:Unsafe.jpg", "https://commons.wikimedia.org/wiki/File:Unsafe.jpg",
+            creator = "Photographer", licenses = listOf(ContentLicense("CC BY 4.0"), ContentLicense("CC0")),
+            licenseRelation = LicenseRelation.UNKNOWN, nonFree = false, restrictions = listOf("editorial only"))
+        val results = resultsWith(entries = arrayOf(Triple(EnrichmentType.ALBUM_ART, "wikipedia",
+            EnrichmentData.Artwork("https://example.test/unsafe.jpg", attribution = attribution))))
+
+        // When - mapping an image whose reuse is not established
+        val response = AlbumProfile("Fixture", "Artist", results).toDemoResponse(0)
+
+        // Then - the demo withholds the image even though an attribution object exists
+        assertNull(response.summary.imageUrl)
+    }
+
+    @Test
+    fun `Wikimedia image URLs require file attribution regardless of provider`() {
+        // Given - a legacy Wikidata image hosted by Wikimedia without file attribution
+        val results = resultsWith(entries = arrayOf(Triple(EnrichmentType.ARTIST_PHOTO, "wikidata",
+            EnrichmentData.Artwork("https://upload.wikimedia.org/wikipedia/commons/a/a1/Legacy.jpg"))))
+
+        // When - mapping an image routed through another provider
+        val response = ArtistProfile("Fixture", results).toDemoResponse(0)
+
+        // Then - the Wikimedia image cannot bypass the file attribution guard
+        assertNull(response.summary.imageUrl)
+    }
+
+    @Test
+    fun `the chosen CDN alternative preserves its custom credit and multiple licence relation`() {
+        // Given - a fast alternative with file-specific custom credit and two required licences
+        val attribution = ContentAttribution("Alternative", "https://example.test/alternative", creator = "Author",
+            attributionText = "Custom credit", licenses = listOf(ContentLicense("CC BY 4.0"), ContentLicense("Custom grant")),
+            licenseRelation = LicenseRelation.ALL_OF, usageTerms = "Both apply", restrictions = listOf("Retain notice"))
+        val art = EnrichmentData.Artwork("https://example.test/primary.jpg", alternatives = listOf(
+            ArtworkSource("other", "https://cdn-images.dzcdn.net/alternative.jpg", attribution = attribution)))
+        val results = resultsWith(entries = arrayOf(Triple(EnrichmentType.ALBUM_ART, "other", art)))
+
+        // When - mapping the fast alternative selected for the card
+        val response = AlbumProfile("Fixture", "Artist", results).toDemoResponse(0)
+
+        // Then - primary and gallery uses carry that exact file credit and required licence relation
+        assertEquals("Custom credit", response.summary.imageAttribution?.attributionText)
+        assertEquals("ALL_OF", response.summary.imageAttribution?.licenseRelation)
+        assertEquals(listOf("CC BY 4.0", "Custom grant"), response.summary.imageAttribution?.licenses?.map { it.identifier })
+        assertEquals("Both apply", response.summary.imageAttribution?.usageTerms)
+        assertEquals(listOf("Retain notice"), response.summary.imageAttribution?.restrictions)
+        assertEquals(response.summary.imageAttribution, response.gallery.single().attribution)
     }
 
     @Test
