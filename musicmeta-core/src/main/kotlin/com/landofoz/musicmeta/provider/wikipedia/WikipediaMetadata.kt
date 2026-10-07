@@ -40,7 +40,7 @@ internal object WikipediaMetadata {
     }
 
     fun httpsUrl(value: String): Boolean {
-        if (value.any(::unsafeCharacter)) {
+        if (value.codePoints().anyMatch(::unsafeCodePoint)) {
             return false
         }
         if (hasEncodedControl(value)) return false
@@ -73,8 +73,11 @@ internal object WikipediaMetadata {
         return HTML_ENTITIES[entity.lowercase()] ?: "&$entity;"
     }
 
-    private fun unsafeCharacter(char: Char): Boolean =
-        char.isISOControl() || char.isWhitespace() || Character.getType(char) == Character.FORMAT.toInt()
+    private fun unsafeCharacter(char: Char): Boolean = unsafeCodePoint(char.code)
+
+    private fun unsafeCodePoint(codePoint: Int): Boolean =
+        Character.isISOControl(codePoint) || Character.isWhitespace(codePoint) ||
+            Character.getType(codePoint) == Character.FORMAT.toInt()
 
     private fun isHexDigit(char: Char): Boolean =
         char in '0'..'9' || char.lowercaseChar() in 'a'..'f'

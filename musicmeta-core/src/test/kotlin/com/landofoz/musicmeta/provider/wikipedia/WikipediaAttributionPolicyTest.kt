@@ -315,6 +315,24 @@ class WikipediaAttributionPolicyTest {
     }
 
     @Test
+    fun `file metadata rejects Unicode format characters in source and licence URLs`() = runTest {
+        // Given - BMP and supplementary format characters in otherwise valid URLs and encoded UTF-8 path data
+        val formatCharacters = listOf("\u200E", String(Character.toChars(0xE0001)))
+        val safeUrl = "https://example.test/%F0%9F%8E%B5"
+
+        // When - parsing source and licence URLs from file metadata
+        val rejected = formatCharacters.map { character ->
+            requireNotNull(read(variant("LicenseUrl" to "https://example.test/$character", descriptionUrl = "https://example.test/$character")))
+        }
+        val retained = requireNotNull(read(variant("LicenseUrl" to safeUrl, descriptionUrl = safeUrl)))
+
+        // Then - Unicode format data is cleared while safe encoded UTF-8 remains available
+        assertTrue(rejected.all { it.licenseUrl == null && it.descriptionPageUrl == null })
+        assertEquals(safeUrl, retained.licenseUrl)
+        assertEquals(safeUrl, retained.descriptionPageUrl)
+    }
+
+    @Test
     fun `local repository redirects and multilingual canonical titles retain selected identity`() = runTest {
         // Given - synthetic local-file metadata whose requested title redirects to a Unicode canonical title
         val json = variant(descriptionUrl = "https://en.wikipedia.org/wiki/File:%E6%9D%B1%E4%BA%AC.jpg")
