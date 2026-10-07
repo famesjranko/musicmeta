@@ -556,8 +556,9 @@ internal class DefaultEnrichmentEngine(
         if (currentCoroutineContext()[SuppliedIdentifierContradiction]?.seen() == true) {
             session.identityHolder.contradicted = true
         }
-        val filtered = normalizeOnServe(type, raw)
-        if (raw is EnrichmentResult.Success && filtered is EnrichmentResult.NotFound) {
+        val safeRaw = if (raw is EnrichmentResult.Success) cachePersistence.suppressUnsafeWikipedia(raw) else raw
+        val filtered = normalizeOnServe(type, safeRaw)
+        if (safeRaw is EnrichmentResult.Success && filtered is EnrichmentResult.NotFound) {
             session.filterEmptied.add(type)
         }
         val stamped = stampProvenanceOne(filtered, execution, session.nameEvidence)
@@ -575,9 +576,8 @@ internal class DefaultEnrichmentEngine(
 
     /**
      * The normalization every result gets on its way to a caller, whatever produced it — a
-     * provider, this call's own cache read, or a stale-cache substitution: catalog filtering, then
-     * discography ordering. One function rather than a call to each, so a serve route cannot pick
-     * up one step and miss the other.
+     * provider, this call's own cache read, or a stale-cache substitution: attribution safety,
+     * catalog filtering, then discography ordering. Shared so every serve route applies all steps.
      */
     private suspend fun normalizeOnServe(type: EnrichmentType, result: EnrichmentResult): EnrichmentResult =
         orderDiscography(

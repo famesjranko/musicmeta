@@ -86,6 +86,14 @@ public interface EnrichmentCacheDao {
     @Query("DELETE FROM enrichment_cache")
     public suspend fun clearAll()
 
-    @Query("DELETE FROM enrichment_cache WHERE expires_at < :now")
+    @Query(
+        """
+        DELETE FROM enrichment_cache WHERE expires_at < :now AND NOT EXISTS (
+            SELECT 1 FROM selections
+            WHERE selections.entity_key = enrichment_cache.entity_key
+              AND selections.enrichment_type = enrichment_cache.enrichment_type
+        )
+        """,
+    )
     public suspend fun deleteExpired(now: Long)
 }

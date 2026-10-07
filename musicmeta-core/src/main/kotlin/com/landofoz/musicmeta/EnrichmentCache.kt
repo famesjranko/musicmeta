@@ -17,8 +17,7 @@ public data class CacheEnvelope<out T : EnrichmentResult>(
  * Stores enrichment results for reuse across sessions.
  * Implementations may be in-memory (LRU), Room-backed, or custom.
  *
- * Every implementation's obligations here are asserted once, for every backend, by
- * `com.landofoz.musicmeta.contract.EnrichmentCacheContract`.
+ * The shipped backends share `com.landofoz.musicmeta.contract.EnrichmentCacheContract`.
  */
 public interface EnrichmentCache {
 
@@ -28,6 +27,8 @@ public interface EnrichmentCache {
      * Returns a cached result even if expired. Used by STALE_IF_ERROR mode
      * to serve stale data when providers fail. Return null if this implementation
      * has no notion of expiry, or does not support stale serving.
+     * Also serves manually selected positives past their TTL; an implementation retaining
+     * selections must return their positive values here even after ordinary expiry or cleanup.
      */
     public suspend fun getIncludingExpired(
         entityKey: String,

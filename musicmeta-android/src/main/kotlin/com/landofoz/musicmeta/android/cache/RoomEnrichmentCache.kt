@@ -176,7 +176,7 @@ public class RoomEnrichmentCache(
         selectionDao.clearAll()
     }
 
-    /** Cleanup expired entries. Call periodically (e.g., from WorkManager). */
+    /** Removes expired ordinary entries while retaining selected positives and their markers. */
     public suspend fun deleteExpired() {
         dao.deleteExpired(clock())
         negativeDao.deleteExpired(clock())

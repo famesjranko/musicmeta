@@ -253,7 +253,13 @@ public interface EnrichmentEngine {
     /** Whether the user has manually selected data for this request/type (e.g., picked artwork). */
     public suspend fun isManuallySelected(request: EnrichmentRequest, type: EnrichmentType): Boolean
 
-    /** Marks data as manually selected by the user, protecting it from automatic overwrites. */
+    /**
+     * Pins this exact request/type until [invalidate], `forceRefresh`, or [EnrichmentCache.clear].
+     * A valid selected positive is served past its TTL; an empty selection permits its first fill.
+     * Safety checks may withhold a selected value without clearing its pin. Each canonical alias
+     * has its own selection. Concurrent writes must respect the cache's atomic protection contract;
+     * a selection cannot withdraw a progressive snapshot already emitted to the caller.
+     */
     public suspend fun markManuallySelected(request: EnrichmentRequest, type: EnrichmentType)
 
     /**

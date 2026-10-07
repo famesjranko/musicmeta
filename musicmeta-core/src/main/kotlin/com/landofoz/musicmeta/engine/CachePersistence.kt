@@ -45,36 +45,34 @@ internal class CachePersistence(
             } else {
                 guardedCacheRead(logger, "get") { cache.get(entityKeyFor(request, type), type) }
             }
-            val safeCached = cached?.result?.let(::suppressUnsafeWikipedia)
+            val safeCached = safeFreshCacheHit(cached?.result, type)
             // A cached Success answering nothing is a *miss*, not a NotFound. An empty entry written
             // by an older build would otherwise outlive this fix by the type's TTL — 90 days for
             // GENRE — re-demoted on every call and never refetched. Leaving the type uncached lets
             // the providers run and the write-back overwrite it, so the entry heals itself.
             // An entry whose genre tags never learned whether they were curated takes the same route
             // for the same reason: see hasUnknownGenreCuration.
-            if (safeCached is EnrichmentResult.Success &&
-                safeCached.data.answers(type) &&
-                !safeCached.data.hasUnknownGenreCuration(type)
-            ) {
+            if (safeCached != null) {
                 results[type] = withCacheProvenanceFallback(safeCached)
                 continue
             }
             // A manual selection is a value the caller chose, not a freshness promise. A pinned
             // positive therefore remains readable after its TTL. A marker with no value stays a
             // miss so the first positive fill can establish the selected value.
-            if (!forceRefresh && pinState(entityKeyFor(request, type), type) == PinState.PINNED) {
-                val pinned = guardedCacheRead(logger, "getIncludingExpired") {
+            val pinned = !forceRefresh && pinState(entityKeyFor(request, type), type) == PinState.PINNED
+            if (pinned) {
+                val pinnedEntry = guardedCacheRead(logger, "getIncludingExpired") {
                     cache.getIncludingExpired(entityKeyFor(request, type), type)
                 }
-                val safePinned = pinned?.result?.let(::suppressUnsafeWikipedia)
+                val safePinned = pinnedEntry?.result?.let(::suppressUnsafeWikipedia)
                 if (safePinned is EnrichmentResult.Success && safePinned.data.answers(type)) {
                     results[type] = withCacheProvenanceFallback(safePinned)
                     continue
                 }
             }
             // A fresh negative entry answers "providers had nothing" without a re-ask; the read is
-            // skipped under forceRefresh for the same reason as the positive read above.
-            val negative = if (forceRefresh) {
+            // skipped on refresh and for selections, where a past absence must not block a first fill.
+            val negative = if (forceRefresh || pinned) {
                 null
             } else {
                 guardedCacheRead(logger, "getNegative") { cache.getNegative(entityKeyFor(request, type), type) }
@@ -87,6 +85,14 @@ internal class CachePersistence(
             }
         }
         return CacheLayer(results, uncachedTypes, negativeCacheHits)
+    }
+
+    private fun safeFreshCacheHit(
+        result: EnrichmentResult.Success?,
+        type: EnrichmentType,
+    ): EnrichmentResult.Success? {
+        val safe = result?.let(::suppressUnsafeWikipedia) as? EnrichmentResult.Success ?: return null
+        return safe.takeIf { it.data.answers(type) && !it.data.hasUnknownGenreCuration(type) }
     }
 
     suspend fun writeBack(
@@ -186,17 +192,18 @@ internal class CachePersistence(
             canonicalStatus.isCacheable()
 
     /**
-     * Old cache rows predate attribution. Wikipedia prose without article credit is refetched, and
+     * Wikipedia prose without article credit is refetched, and
      * a Wikipedia file without file attribution is withheld. Other-provider artwork alternatives
      * remain usable; a safe alternative becomes the primary image when the old primary is unsafe.
      */
     internal fun suppressUnsafeWikipedia(
         result: EnrichmentResult.Success,
     ): EnrichmentResult = when (val data = result.data) {
-        is EnrichmentData.Biography -> if (result.provider == WIKIPEDIA && data.attribution == null) {
-            EnrichmentResult.NotFound(result.type, WIKIPEDIA)
-        } else {
-            result
+        is EnrichmentData.Biography -> when {
+            result.provider != WIKIPEDIA -> result
+            data.attribution == null -> EnrichmentResult.NotFound(result.type, WIKIPEDIA)
+            // Article credit establishes no rights for a separate thumbnail file.
+            else -> result.copy(data = data.copy(thumbnailUrl = null))
         }
         is EnrichmentData.Artwork -> {
             val safeAlternatives = data.alternatives.orEmpty().filter {
@@ -279,9 +286,13 @@ internal class CachePersistence(
     private suspend fun mayWritePositive(key: String, type: EnrichmentType): Boolean = when (pinState(key, type)) {
         PinState.UNPINNED -> true
         PinState.UNKNOWN -> false
-        PinState.PINNED -> guardedCacheRead(logger, "getIncludingExpired") {
-            cache.getIncludingExpired(key, type)
-        } == null
+        PinState.PINNED -> try {
+            cache.getIncludingExpired(key, type) == null
+        } catch (e: Exception) {
+            currentCoroutineContext().ensureActive()
+            logger.warn("EnrichmentCache", "Cache getIncludingExpired failed; skipping persistence: ${e.message}", e)
+            false
+        }
     }
 
     private suspend fun pinState(key: String, type: EnrichmentType): PinState = try {
@@ -370,8 +381,9 @@ internal class CachePersistence(
         }
         // A stale entry that answers nothing is worse than the Error it would replace: the Error at
         // least tells the consumer to retry.
-        return if (stale != null && stale.result.data.answers(type)) {
-            withCacheProvenanceFallback(stale.result).copy(isStale = true)
+        val safeStale = stale?.result?.let(::suppressUnsafeWikipedia)
+        return if (safeStale is EnrichmentResult.Success && safeStale.data.answers(type)) {
+            withCacheProvenanceFallback(safeStale).copy(isStale = true)
         } else {
             result
         }

@@ -9,6 +9,25 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class InMemoryEnrichmentCacheTest {
+    @Test fun `pins survive LRU pressure and capacity becomes a soft bound`() = runTest {
+        // Given - two marker-only selections in a cache whose capacity is one
+        val selected = InMemoryEnrichmentCache(maxEntries = 1)
+        selected.markManuallySelected("first", EnrichmentType.ALBUM_ART)
+        selected.markManuallySelected("second", EnrichmentType.ALBUM_ART)
+        selected.put("first", EnrichmentType.ALBUM_ART, art("first"), CanonicalStatus.RESOLVED)
+
+        // When - the second selected value and an ordinary value exceed capacity
+        selected.put("second", EnrichmentType.ALBUM_ART, art("second"), CanonicalStatus.RESOLVED)
+        selected.put("ordinary", EnrichmentType.ALBUM_ART, art("ordinary"), CanonicalStatus.RESOLVED)
+
+        // Then - both selected positives survive while the ordinary entry is evicted
+        assertEquals(art("first"), selected.get("first", EnrichmentType.ALBUM_ART)?.result)
+        assertEquals(art("second"), selected.get("second", EnrichmentType.ALBUM_ART)?.result)
+        assertNull(selected.get("ordinary", EnrichmentType.ALBUM_ART))
+        assertTrue(selected.isManuallySelected("first", EnrichmentType.ALBUM_ART))
+        assertTrue(selected.isManuallySelected("second", EnrichmentType.ALBUM_ART))
+    }
+
     private var time = 1000L
     private val cache = InMemoryEnrichmentCache(maxEntries = 3, clock = { time })
     private fun art(url: String = "url") = EnrichmentResult.Success(EnrichmentType.ALBUM_ART, EnrichmentData.Artwork(url), "test", 0.95f)

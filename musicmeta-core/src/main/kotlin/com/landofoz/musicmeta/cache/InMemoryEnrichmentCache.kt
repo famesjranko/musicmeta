@@ -106,7 +106,7 @@ public class InMemoryEnrichmentCache(
 
     private fun cacheKey(entityKey: String, type: EnrichmentType) = "$entityKey:$type"
 
-    /** Pins are user choices, so capacity is a soft bound when every least-recent entry is pinned. */
+    /** Selected entries can exceed capacity; eviction removes only unselected entries. */
     private fun <T> evictUnpinned(map: LinkedHashMap<String, T>) {
         while (map.size > maxEntries) {
             val key = map.keys.firstOrNull { it !in manualSelections } ?: return
