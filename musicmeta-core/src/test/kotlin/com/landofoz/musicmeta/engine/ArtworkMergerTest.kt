@@ -1,6 +1,7 @@
 package com.landofoz.musicmeta.engine
 
 import com.landofoz.musicmeta.ArtworkSize
+import com.landofoz.musicmeta.ArtworkSource
 import com.landofoz.musicmeta.ContentAttribution
 import com.landofoz.musicmeta.EnrichmentData
 import com.landofoz.musicmeta.EnrichmentIdentifiers
@@ -176,6 +177,80 @@ class ArtworkMergerTest {
         // Then - no disputed file fact is selected or exposed as an alternative
         assertEquals("https://images.test/safe.jpg", artwork.url)
         assertNull(artwork.alternatives)
+    }
+
+    @Test fun `duplicate URL keeps its known credit when the uncredited candidate ranks first`() {
+        // Given - the uncredited duplicate is ranked before the same credited file
+        val url = "https://images.test/known.jpg"
+        val credit = ContentAttribution("File:known.jpg", "https://files.test/known")
+        val results = listOf(
+            artwork("uncredited", url, 1.0f, thumbnailUrl = "https://images.test/null-thumb.jpg"),
+            artwork("credited", url, 0.9f, thumbnailUrl = "https://images.test/known-thumb.jpg", attribution = credit),
+        )
+
+        // When - the duplicate file candidates are merged
+        val artwork = (merger.merge(results) as EnrichmentResult.Success).data as EnrichmentData.Artwork
+
+        // Then - the coherent credited file tuple is retained
+        assertEquals(credit, artwork.attribution)
+        assertEquals("https://images.test/known-thumb.jpg", artwork.thumbnailUrl)
+    }
+
+    @Test fun `duplicate URL keeps its known credit when the credited candidate ranks first`() {
+        // Given - the credited duplicate is ranked before an uncredited copy
+        val url = "https://images.test/known.jpg"
+        val credit = ContentAttribution("File:known.jpg", "https://files.test/known")
+        val results = listOf(
+            artwork("credited", url, 1.0f, thumbnailUrl = "https://images.test/known-thumb.jpg", attribution = credit),
+            artwork("uncredited", url, 0.9f, thumbnailUrl = "https://images.test/null-thumb.jpg"),
+        )
+
+        // When - the duplicate file candidates are merged
+        val artwork = (merger.merge(results) as EnrichmentResult.Success).data as EnrichmentData.Artwork
+
+        // Then - the credited tuple remains intact
+        assertEquals(credit, artwork.attribution)
+        assertEquals("https://images.test/known-thumb.jpg", artwork.thumbnailUrl)
+    }
+
+    @Test fun `nested alternatives are retained as complete deduplicated file tuples`() {
+        // Given - providers carry existing alternatives alongside their primary files
+        val nestedCredit = ContentAttribution("File:nested.jpg", "https://files.test/nested")
+        val nestedSizes = listOf(ArtworkSize("https://images.test/nested-large.jpg", 1200, 900, "large"))
+        val duplicateCredit = ContentAttribution("File:duplicate.jpg", "https://files.test/duplicate")
+        val results = listOf(
+            artwork("first", "https://images.test/primary.jpg", 1.0f).copy(
+                data = EnrichmentData.Artwork(
+                    url = "https://images.test/primary.jpg",
+                    alternatives = listOf(
+                        ArtworkSource("nested", "https://images.test/nested.jpg", "https://images.test/nested-thumb.jpg", nestedSizes, nestedCredit),
+                        ArtworkSource("duplicate-null", "https://images.test/duplicate.jpg"),
+                    ),
+                ),
+            ),
+            artwork("second", "https://images.test/second.jpg", 0.9f).copy(
+                data = EnrichmentData.Artwork(
+                    url = "https://images.test/second.jpg",
+                    alternatives = listOf(
+                        ArtworkSource("duplicate-credited", "https://images.test/duplicate.jpg", "https://images.test/duplicate-thumb.jpg", attribution = duplicateCredit),
+                        ArtworkSource("primary-copy", "https://images.test/primary.jpg"),
+                    ),
+                ),
+            ),
+        )
+
+        // When - the provider results and their nested alternatives are merged
+        val merged = merger.merge(results) as EnrichmentResult.Success
+        val artwork = merged.data as EnrichmentData.Artwork
+
+        // Then - every distinct non-primary file keeps its own complete tuple and known credit
+        assertEquals("https://images.test/primary.jpg", artwork.url)
+        assertEquals(listOf("https://images.test/nested.jpg", "https://images.test/duplicate.jpg", "https://images.test/second.jpg"), artwork.alternatives?.map { it.url })
+        assertEquals(nestedCredit, artwork.alternatives?.get(0)?.attribution)
+        assertEquals(nestedSizes, artwork.alternatives?.get(0)?.sizes)
+        assertEquals("nested", artwork.alternatives?.get(0)?.provider)
+        assertEquals(duplicateCredit, artwork.alternatives?.get(1)?.attribution)
+        assertEquals("https://images.test/duplicate-thumb.jpg", artwork.alternatives?.get(1)?.thumbnailUrl)
     }
 
     @Test fun `works for ALBUM_ART type`() {

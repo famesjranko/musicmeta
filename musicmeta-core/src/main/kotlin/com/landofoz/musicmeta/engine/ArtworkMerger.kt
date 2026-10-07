@@ -25,6 +25,20 @@ internal class ArtworkMerger(override val type: EnrichmentType) : ResultMerger {
         // A URL group with contradictory file facts is unsafe to represent as one image.
         val sorted = artworkResults.sortedByDescending { it.confidence }
         val distinctImages = sorted
+            .flatMap { result ->
+                val artwork = result.data as EnrichmentData.Artwork
+                listOf(result) + artwork.alternatives.orEmpty().map { alternative ->
+                    result.copy(
+                        provider = alternative.provider,
+                        data = EnrichmentData.Artwork(
+                            url = alternative.url,
+                            thumbnailUrl = alternative.thumbnailUrl,
+                            sizes = alternative.sizes,
+                            attribution = alternative.attribution,
+                        ),
+                    )
+                }
+            }
             .groupBy { (it.data as EnrichmentData.Artwork).url }
             .values
             .filter { candidates ->
@@ -33,7 +47,10 @@ internal class ArtworkMerger(override val type: EnrichmentType) : ResultMerger {
                     .distinct()
                     .size <= 1
             }
-            .map { it.first() }
+            .map { candidates ->
+                candidates.firstOrNull { (it.data as EnrichmentData.Artwork).attribution != null }
+                    ?: candidates.first()
+            }
         if (distinctImages.isEmpty()) return EnrichmentResult.NotFound(type, "all_providers")
 
         val primary = distinctImages.first()
