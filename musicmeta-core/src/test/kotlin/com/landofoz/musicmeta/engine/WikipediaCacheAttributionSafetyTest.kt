@@ -38,7 +38,12 @@ class WikipediaCacheAttributionSafetyTest {
             attribution(copyrighted = false),
             attribution(copyrighted = null),
             attribution(usageTerms = "CC BY-NC 4.0"),
+            attribution(resourceId = "Radiohead"),
             attribution(sourceUrl = "http://commons.wikimedia.org/wiki/File:unsafe.jpg"),
+            attribution(sourceUrl = "https://editor@commons.wikimedia.org/wiki/File:unsafe.jpg"),
+            attribution(sourceUrl = "https:///wiki/File:unsafe.jpg"),
+            attribution(sourceUrl = "https://commons.wikimedia.org/wiki/File:unsafe image.jpg"),
+            attribution(sourceUrl = "https://commons.wikimedia.org/wiki/File:unsafe\nimage.jpg"),
             attribution(creator = null, credit = null, attributionText = null),
         )
         for ((route, claim) in listOf("full", "partial", "stale", "pinned", "fresh").flatMap { route -> unsafe.map { route to it } }) {
@@ -84,7 +89,11 @@ class WikipediaCacheAttributionSafetyTest {
             assertNull((served.data as EnrichmentData.Artwork).alternatives)
             engine.close()
         }
-        for (control in listOf(attribution(), attribution(licenses = listOf(publicDomain), copyrighted = false, attributionRequired = false, usageTerms = null))) {
+        for (control in listOf(
+            attribution(),
+            attribution(resourceId = "File:OK%20Computer.jpg", sourceUrl = "https://commons.wikimedia.org/wiki/File:OK%20Computer.jpg"),
+            attribution(licenses = listOf(publicDomain), copyrighted = false, attributionRequired = false, usageTerms = null),
+        )) {
             val cache = IndependentCache()
             cache.put(entityKeyFor(request, type), type, wikipediaArtwork(control), CanonicalStatus.RESOLVED)
 
@@ -123,6 +132,7 @@ class WikipediaCacheAttributionSafetyTest {
         EnrichmentResult.Success(type, EnrichmentData.Artwork("https://images.test/other.jpg", alternatives = alternatives), "other", 0.9f)
 
     private fun attribution(
+        resourceId: String = "File:safe.jpg",
         sourceUrl: String = "https://commons.wikimedia.org/wiki/File:safe.jpg",
         creator: String? = "Photographer",
         credit: String? = "Photographer",
@@ -134,7 +144,7 @@ class WikipediaCacheAttributionSafetyTest {
         nonFree: Boolean? = false,
         usageTerms: String? = "CC BY 4.0",
         restrictions: List<String>? = emptyList(),
-    ) = ContentAttribution("File:safe.jpg", sourceUrl, creator, credit, attributionText, licenses, relation, copyrighted, attributionRequired, nonFree, usageTerms, restrictions)
+    ) = ContentAttribution(resourceId, sourceUrl, creator, credit, attributionText, licenses, relation, copyrighted, attributionRequired, nonFree, usageTerms, restrictions)
 
     private companion object {
         val ccBy = ContentLicense("CC BY 4.0", "https://creativecommons.org/licenses/by/4.0/")

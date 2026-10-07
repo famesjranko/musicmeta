@@ -14,6 +14,7 @@ import com.landofoz.musicmeta.ErrorKind
 import com.landofoz.musicmeta.LookupProvenance
 import com.landofoz.musicmeta.LicenseRelation
 import com.landofoz.musicmeta.cache.CacheMode
+import java.net.URI
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
 
@@ -234,7 +235,7 @@ internal class CachePersistence(
     /** A Wikipedia file is reusable only when its complete source facts establish one safe licence. */
     private fun ContentAttribution?.isReusableWikipediaFile(): Boolean {
         val attribution = this ?: return false
-        if (attribution.resourceId.isBlank() || !attribution.sourceUrl.startsWith("https://")) return false
+        if (!attribution.resourceId.startsWith("File:") || !attribution.sourceUrl.isSafeHttpsUrl()) return false
         if (attribution.nonFree != false || attribution.restrictions != emptyList<String>()) return false
         val licenses = attribution.licenses
         if (licenses.isEmpty() || attribution.licenseRelation == LicenseRelation.UNKNOWN) return false
@@ -243,6 +244,16 @@ internal class CachePersistence(
         if (attribution.copyrighted != !publicDomain || attribution.attributionRequired != !publicDomain) return false
         if (!publicDomain && attribution.attributionText.isNullOrBlank() && attribution.creator.isNullOrBlank()) return false
         return attribution.usageTerms == null || licenses.any { it.matchesWikipediaUsageTerms(attribution.usageTerms) }
+    }
+
+    private fun String.isSafeHttpsUrl(): Boolean {
+        if (any { it.isWhitespace() || Character.isISOControl(it) }) return false
+        val uri = try {
+            URI(this)
+        } catch (_: Exception) {
+            return false
+        }
+        return uri.scheme.equals("https", ignoreCase = true) && uri.host != null && uri.rawUserInfo == null
     }
 
     private fun ContentLicense.isSupportedWikipediaLicense(): Boolean {
