@@ -1,6 +1,8 @@
 package com.landofoz.musicmeta.provider.wikipedia
 
 import com.landofoz.musicmeta.ArtworkSize
+import com.landofoz.musicmeta.ContentAttribution
+import com.landofoz.musicmeta.ContentLicense
 import com.landofoz.musicmeta.EnrichmentData
 
 /** Maps Wikipedia responses to EnrichmentData subclasses. */
@@ -10,7 +12,16 @@ internal object WikipediaMapper {
         EnrichmentData.Biography(
             text = summary.extract,
             source = "Wikipedia",
-            thumbnailUrl = summary.thumbnailUrl,
+            // A page-image thumbnail is a file route and has no file-specific attribution here.
+            thumbnailUrl = null,
+            attribution = ContentAttribution(
+                resourceId = summary.title,
+                sourceUrl = "https://en.wikipedia.org/wiki/" + encodeArticleTitle(summary.title),
+                creator = "Wikipedia contributors",
+                licenses = listOf(
+                    ContentLicense("CC BY-SA 4.0", "https://creativecommons.org/licenses/by-sa/4.0/"),
+                ),
+            ),
         )
 
     /**
@@ -27,4 +38,6 @@ internal object WikipediaMapper {
                 .map { ArtworkSize(url = it.url, width = it.width, label = it.scale) }
                 .takeIf { it.isNotEmpty() },
         )
+
+    private fun encodeArticleTitle(title: String): String = title.replace(" ", "_")
 }

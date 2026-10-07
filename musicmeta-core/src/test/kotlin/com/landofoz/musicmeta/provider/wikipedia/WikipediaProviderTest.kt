@@ -1,5 +1,6 @@
 package com.landofoz.musicmeta.provider.wikipedia
 
+import com.landofoz.musicmeta.ContentLicense
 import com.landofoz.musicmeta.EnrichmentData
 import com.landofoz.musicmeta.EnrichmentIdentifiers
 import com.landofoz.musicmeta.EnrichmentRequest
@@ -46,7 +47,31 @@ class WikipediaProviderTest {
         val bio = success.data as EnrichmentData.Biography
         assertEquals(RADIOHEAD_EXTRACT_TEXT, bio.text)
         assertEquals("Wikipedia", bio.source)
-        assertTrue(bio.thumbnailUrl != null)
+        assertEquals(null, bio.thumbnailUrl)
+    }
+
+    @Test
+    fun `enrich attaches the article attribution and suppresses its uncredited thumbnail`() = runTest {
+        // Given - an article extract whose thumbnail has no selected-file attribution
+        httpClient.givenJsonResponse("wikipedia.org", RADIOHEAD_EXTRACT_JSON)
+        val request = EnrichmentRequest.ForArtist(
+            identifiers = EnrichmentIdentifiers(wikipediaTitle = "Radiohead"),
+            name = "Radiohead",
+        )
+
+        // When - enriching the article text
+        val result = provider.enrich(request, EnrichmentType.ARTIST_BIO)
+
+        // Then - article text carries its own reusable notice but the media route is withheld
+        val bio = (result as EnrichmentResult.Success).data as EnrichmentData.Biography
+        assertEquals(null, bio.thumbnailUrl)
+        assertEquals("Radiohead", bio.attribution?.resourceId)
+        assertEquals("https://en.wikipedia.org/wiki/Radiohead", bio.attribution?.sourceUrl)
+        assertEquals("Wikipedia contributors", bio.attribution?.creator)
+        assertEquals(
+            listOf(ContentLicense("CC BY-SA 4.0", "https://creativecommons.org/licenses/by-sa/4.0/")),
+            bio.attribution?.licenses,
+        )
     }
 
     @Test
@@ -134,7 +159,7 @@ class WikipediaProviderTest {
     }
 
     @Test
-    fun `enrich includes article thumbnail URL`() = runTest {
+    fun `enrich suppresses article thumbnail URL without file attribution`() = runTest {
         // Given - the Action API returns a pageimages thumbnail alongside the extract
         httpClient.givenJsonResponse("wikipedia.org", RADIOHEAD_EXTRACT_JSON)
         val request = EnrichmentRequest.ForArtist(
@@ -145,9 +170,9 @@ class WikipediaProviderTest {
         // When - enriching for artist bio
         val result = provider.enrich(request, EnrichmentType.ARTIST_BIO)
 
-        // Then - the thumbnail source is carried through to the Biography
+        // Then - article attribution does not establish any file's reuse terms
         val bio = (result as EnrichmentResult.Success).data as EnrichmentData.Biography
-        assertEquals(RADIOHEAD_THUMBNAIL_URL, bio.thumbnailUrl)
+        assertEquals(null, bio.thumbnailUrl)
     }
 
     @Test
@@ -202,7 +227,7 @@ class WikipediaProviderTest {
     }
 
     @Test
-    fun `enrich strips the utm tracking parameters from the bio thumbnail`() = runTest {
+    fun `enrich suppresses tracked bio thumbnails without file attribution`() = runTest {
         // Given - pageimages thumbnails arrive with Wikimedia's utm_ attribution parameters
         httpClient.givenJsonResponse("wikipedia.org", RADIOHEAD_EXTRACT_JSON)
         val request = EnrichmentRequest.ForArtist(
@@ -213,9 +238,9 @@ class WikipediaProviderTest {
         // When - enriching for artist bio
         val result = provider.enrich(request, EnrichmentType.ARTIST_BIO)
 
-        // Then - the URL handed to a consumer carries none of them
+        // Then - no image URL is handed to a consumer under text-only attribution
         val bio = (result as EnrichmentResult.Success).data as EnrichmentData.Biography
-        assertEquals(RADIOHEAD_THUMBNAIL_URL, bio.thumbnailUrl)
+        assertEquals(null, bio.thumbnailUrl)
     }
 
     @Test

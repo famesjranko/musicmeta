@@ -42,3 +42,18 @@ internal data class WikipediaMediaItem(
     val renderings: List<WikipediaRendering>,
     val isLeadImage: Boolean,
 )
+
+/** File-specific facts from `imageinfo.extmetadata`; never inferred from an article's text licence. */
+internal data class WikipediaFileMetadata(
+    val title: String,
+    val descriptionPageUrl: String?,
+    val attribution: String?,
+    val artist: String?,
+    val credit: String?,
+    val licenseShortName: String?,
+    val licenseUrl: String?,
+    val usageTerms: String?,
+    val restrictions: List<String>?,
+    val copyrighted: Boolean?,
+    val nonFree: Boolean?,
+)

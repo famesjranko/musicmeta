@@ -6,6 +6,7 @@ import com.landofoz.musicmeta.http.RateLimiter
 import com.landofoz.musicmeta.http.bodyOrThrowTransient
 import com.landofoz.musicmeta.provider.encodePathSegment
 import java.io.IOException
+import java.net.URI
 
 /**
  * Fetches artist biographies and page images from Wikipedia.
@@ -63,6 +64,41 @@ internal class WikipediaApi(
         val url = "$MEDIA_LIST_BASE_URL/${encodePathSegment(title)}"
         val json = httpClient.fetchJsonResult(url).bodyOrThrowTransient() ?: return@execute emptyList()
         parseMediaList(json)
+    }
+
+    /**
+     * Gets attribution for exactly one selected file. This is deliberately separate from the
+     * article route: article licensing says nothing about the file's reuse terms.
+     */
+    suspend fun getFileMetadata(fileTitle: String): WikipediaFileMetadata? = rateLimiter.execute {
+        require(fileTitle.startsWith("File:")) { "Wikipedia media title must start with File:" }
+        val json = httpClient.fetchJsonResult(fileInfoUrl(fileTitle)).bodyOrThrowTransient()
+            ?: return@execute null
+        json.optJSONObject("error")?.let { error ->
+            throw IOException("Wikipedia Action API error: ${error.optString("code")}")
+        }
+        val page = json.optJSONObject("query")?.optJSONArray("pages")?.optJSONObject(0)
+            ?: return@execute null
+        val info = page.optJSONArray("imageinfo")?.optJSONObject(0) ?: return@execute null
+        val metadata = info.optJSONObject("extmetadata") ?: return@execute null
+        fun value(name: String): String? = metadata.optJSONObject(name)?.optString("value")
+            ?.takeIf { it.isNotBlank() }?.let(::plainText)
+        fun url(name: String): String? = value(name)?.takeIf(::httpsUrl)
+        val restrictions = metadata.optJSONObject("Restrictions")?.optString("value")
+            ?.let(::plainText)?.split("|")?.map(String::trim)?.filter(String::isNotBlank)
+        WikipediaFileMetadata(
+            title = page.optString("title", fileTitle),
+            descriptionPageUrl = info.optString("descriptionurl").takeIf(::httpsUrl),
+            attribution = value("Attribution"),
+            artist = value("Artist"),
+            credit = value("Credit"),
+            licenseShortName = value("LicenseShortName"),
+            licenseUrl = url("LicenseUrl"),
+            usageTerms = value("UsageTerms"),
+            restrictions = restrictions,
+            copyrighted = value("Copyrighted")?.equals("True", ignoreCase = true),
+            nonFree = value("NonFree")?.equals("True", ignoreCase = true),
+        )
     }
 
     /**
@@ -144,6 +180,21 @@ internal class WikipediaApi(
         return if (kept.isEmpty()) base else "$base?${kept.joinToString("&")}"
     }
 
+    /** Metadata is HTML; retain readable text only, so a consumer never receives markup to render. */
+    private fun plainText(value: String): String = value
+        .replace(Regex("<[^>]*>"), " ")
+        .replace("&amp;", "&")
+        .replace("&quot;", "\"")
+        .replace("&#39;", "'")
+        .replace(Regex("\\s+"), " ")
+        .trim()
+
+    private fun httpsUrl(value: String): Boolean = try {
+        URI(value).scheme.equals("https", ignoreCase = true) && URI(value).host != null
+    } catch (_: Exception) {
+        false
+    }
+
     /**
      * The width a thumbnail URL renders at, read from its `…/500px-Name.jpg` segment. Null for a
      * URL with no such segment, which is a full-size file of unknown width rather than a small one.
@@ -164,6 +215,11 @@ internal class WikipediaApi(
                 "&prop=extracts%7Cpageimages%7Cpageprops&exintro=1&explaintext=1" +
                 "&piprop=thumbnail&pithumbsize=$THUMBNAIL_SIZE&titles=${encodePathSegment(title)}"
 
+        /** The URL [getFileMetadata] requests for the selected file identity. */
+        fun fileInfoUrl(fileTitle: String): String =
+            "$ACTION_API?action=query&format=json&formatversion=2&redirects=1" +
+                "&prop=imageinfo&iiprop=url%7Cextmetadata&titles=${encodePathSegment(fileTitle)}"
+
         /**
          * Schema-pin target, mirroring [getPageExtract]'s parse.
          *
@@ -181,6 +237,16 @@ internal class WikipediaApi(
                     "query.pages[0].title",
                     "query.pages[0].extract",
                     "query.pages[0].thumbnail.source",
+                ),
+            ),
+            SchemaTarget(
+                provider = "wikipedia",
+                route = "file information",
+                url = fileInfoUrl("File:RadioheadO2211125_composite.jpg"),
+                requiredPaths = listOf(
+                    "query.pages[0].title",
+                    "query.pages[0].imageinfo[0].descriptionurl",
+                    "query.pages[0].imageinfo[0].extmetadata.LicenseShortName.value",
                 ),
             ),
         )

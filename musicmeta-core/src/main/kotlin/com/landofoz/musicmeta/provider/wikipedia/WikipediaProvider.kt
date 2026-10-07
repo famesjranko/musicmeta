@@ -17,7 +17,7 @@ import com.landofoz.musicmeta.provider.wikidata.WikidataApi
 import kotlinx.coroutines.currentCoroutineContext
 
 /**
- * Provides artist biographies, album descriptions and photos from Wikipedia articles.
+ * Provides artist biographies and album descriptions from Wikipedia articles.
  *
  * `ALBUM_DESCRIPTION` reuses the same title-resolution and `Biography` mapping as `ARTIST_BIO`;
  * only the identifiers differ — for an album request they come from the release-group's Wikidata
@@ -68,11 +68,6 @@ public class WikipediaProvider internal constructor(
             identifierRequirement = IdentifierRequirement.WIKIPEDIA_TITLE,
         ),
         ProviderCapability(
-            type = EnrichmentType.ARTIST_PHOTO,
-            priority = 30,
-            identifierRequirement = IdentifierRequirement.WIKIPEDIA_TITLE,
-        ),
-        ProviderCapability(
             type = EnrichmentType.ALBUM_DESCRIPTION,
             priority = 100,
             identifierRequirement = IdentifierRequirement.WIKIPEDIA_TITLE,
@@ -94,7 +89,7 @@ public class WikipediaProvider internal constructor(
 
         return when (type) {
             EnrichmentType.ARTIST_BIO, EnrichmentType.ALBUM_DESCRIPTION -> enrichBio(title, type)
-            EnrichmentType.ARTIST_PHOTO -> enrichArtistPhoto(title, type)
+            EnrichmentType.ARTIST_PHOTO -> enrichQuarantinedArtistPhoto(title, type)
             else -> EnrichmentResult.NotFound(type, id)
         }
     }
@@ -113,22 +108,17 @@ public class WikipediaProvider internal constructor(
         )
     }
 
-    private suspend fun enrichArtistPhoto(title: String, type: EnrichmentType): EnrichmentResult {
-        val mediaItems = try {
+    /**
+     * Preserve transport failure classification for direct legacy calls, but never return media
+     * until a selected-file attribution survives the complete provider and result path.
+     */
+    private suspend fun enrichQuarantinedArtistPhoto(title: String, type: EnrichmentType): EnrichmentResult {
+        try {
             api.getPageMediaList(title)
         } catch (e: Exception) {
             return mapError(type, e)
         }
-        // The list arrives lead-image first; where the article flags none, the head is its first
-        // surviving image in article order.
-        val bestImage = mediaItems.firstOrNull()
-            ?: return EnrichmentResult.NotFound(type, id)
-        return EnrichmentResult.Success(
-            type = type,
-            data = WikipediaMapper.toArtwork(bestImage),
-            provider = id,
-            confidence = ConfidenceCalculator.fuzzyMatch(hasArtistMatch = false),
-        )
+        return EnrichmentResult.NotFound(type, id)
     }
 
     /**
