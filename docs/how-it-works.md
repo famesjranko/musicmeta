@@ -65,7 +65,7 @@ enrich(request, types, forceRefresh)
               ├── yes ──→ ┌──────────────────────────────────────────────────────┐
               │          │ 6. One call-level cache write-back                    │── positive/negative + eligible canonical alias
               │          └─────────────┬────────────────────────────────────────┘
-              │                        ▼
+              │                        └──→ return EnrichmentResults(requestedTypes, identity)
               └── timeout ──→ retain settled results; fill unresolved types with TIMEOUT
                                   │
                                   └── bypass write-back ──→ return EnrichmentResults(requestedTypes, identity)
