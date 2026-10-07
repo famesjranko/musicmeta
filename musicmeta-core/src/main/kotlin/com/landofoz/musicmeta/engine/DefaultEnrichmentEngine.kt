@@ -582,7 +582,13 @@ internal class DefaultEnrichmentEngine(
     private suspend fun normalizeOnServe(type: EnrichmentType, result: EnrichmentResult): EnrichmentResult =
         orderDiscography(
             type,
-            applyCatalogFilteringToType(type, result, config.catalogProvider, config.catalogFilterMode, logger),
+            applyCatalogFilteringToType(
+                type,
+                if (result is EnrichmentResult.Success) cachePersistence.suppressUnsafeWikipedia(result) else result,
+                config.catalogProvider,
+                config.catalogFilterMode,
+                logger,
+            ),
         )
 
     override fun enrichBatch(

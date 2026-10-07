@@ -45,8 +45,10 @@ public class InMemoryEnrichmentCache(
         ttlMs: Long,
     ) {
         mutex.withLock {
-            entries[cacheKey(entityKey, type)] = CacheEntry(result, canonicalStatus, clock() + ttlMs)
-            while (entries.size > maxEntries) entries.remove(entries.keys.first())
+            val key = cacheKey(entityKey, type)
+            if (key in manualSelections && key in entries) return@withLock
+            entries[key] = CacheEntry(result, canonicalStatus, clock() + ttlMs)
+            evictUnpinned(entries)
         }
     }
 
@@ -68,8 +70,10 @@ public class InMemoryEnrichmentCache(
         ttlMs: Long,
     ) {
         mutex.withLock {
-            negativeEntries[cacheKey(entityKey, type)] = NegativeEntry(result, canonicalStatus, clock() + ttlMs)
-            while (negativeEntries.size > maxEntries) negativeEntries.remove(negativeEntries.keys.first())
+            val key = cacheKey(entityKey, type)
+            if (key in manualSelections) return@withLock
+            negativeEntries[key] = NegativeEntry(result, canonicalStatus, clock() + ttlMs)
+            evictUnpinned(negativeEntries)
         }
     }
 
@@ -101,6 +105,14 @@ public class InMemoryEnrichmentCache(
     }
 
     private fun cacheKey(entityKey: String, type: EnrichmentType) = "$entityKey:$type"
+
+    /** Pins are user choices, so capacity is a soft bound when every least-recent entry is pinned. */
+    private fun <T> evictUnpinned(map: LinkedHashMap<String, T>) {
+        while (map.size > maxEntries) {
+            val key = map.keys.firstOrNull { it !in manualSelections } ?: return
+            map.remove(key)
+        }
+    }
 
     private data class CacheEntry(
         val result: EnrichmentResult.Success,

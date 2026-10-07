@@ -3,6 +3,7 @@ package com.landofoz.musicmeta.engine
 import com.landofoz.musicmeta.CanonicalStatus
 import com.landofoz.musicmeta.EnrichmentCache
 import com.landofoz.musicmeta.EnrichmentConfig
+import com.landofoz.musicmeta.EnrichmentData
 import com.landofoz.musicmeta.EnrichmentLogger
 import com.landofoz.musicmeta.EnrichmentRequest
 import com.landofoz.musicmeta.EnrichmentResult
@@ -10,6 +11,8 @@ import com.landofoz.musicmeta.EnrichmentType
 import com.landofoz.musicmeta.ErrorKind
 import com.landofoz.musicmeta.LookupProvenance
 import com.landofoz.musicmeta.cache.CacheMode
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 
 /**
  * Every read from and write to the [EnrichmentCache] a call makes, and the rules that decide which
@@ -27,6 +30,7 @@ internal class CachePersistence(
 ) {
 
     /** [runProgressiveFanOut]'s cache-read pass: cache hits, negative-cache hits, and what remains uncached. */
+    @Suppress("LoopWithTooManyJumpStatements")
     suspend fun readCacheLayer(
         request: EnrichmentRequest,
         types: Set<EnrichmentType>,
@@ -41,18 +45,32 @@ internal class CachePersistence(
             } else {
                 guardedCacheRead(logger, "get") { cache.get(entityKeyFor(request, type), type) }
             }
+            val safeCached = cached?.result?.let(::suppressUnsafeWikipedia)
             // A cached Success answering nothing is a *miss*, not a NotFound. An empty entry written
             // by an older build would otherwise outlive this fix by the type's TTL — 90 days for
             // GENRE — re-demoted on every call and never refetched. Leaving the type uncached lets
             // the providers run and the write-back overwrite it, so the entry heals itself.
             // An entry whose genre tags never learned whether they were curated takes the same route
             // for the same reason: see hasUnknownGenreCuration.
-            if (cached != null &&
-                cached.result.data.answers(type) &&
-                !cached.result.data.hasUnknownGenreCuration(type)
+            if (safeCached is EnrichmentResult.Success &&
+                safeCached.data.answers(type) &&
+                !safeCached.data.hasUnknownGenreCuration(type)
             ) {
-                results[type] = withCacheProvenanceFallback(cached.result)
+                results[type] = withCacheProvenanceFallback(safeCached)
                 continue
+            }
+            // A manual selection is a value the caller chose, not a freshness promise. A pinned
+            // positive therefore remains readable after its TTL. A marker with no value stays a
+            // miss so the first positive fill can establish the selected value.
+            if (!forceRefresh && pinState(entityKeyFor(request, type), type) == PinState.PINNED) {
+                val pinned = guardedCacheRead(logger, "getIncludingExpired") {
+                    cache.getIncludingExpired(entityKeyFor(request, type), type)
+                }
+                val safePinned = pinned?.result?.let(::suppressUnsafeWikipedia)
+                if (safePinned is EnrichmentResult.Success && safePinned.data.answers(type)) {
+                    results[type] = withCacheProvenanceFallback(safePinned)
+                    continue
+                }
             }
             // A fresh negative entry answers "providers had nothing" without a re-ask; the read is
             // skipped under forceRefresh for the same reason as the positive read above.
@@ -162,7 +180,46 @@ internal class CachePersistence(
      * and a retry could never heal or re-offer the suggestions that produced it.
      */
     private fun isCacheablePositive(result: EnrichmentResult, canonicalStatus: CanonicalStatus): Boolean =
-        result is EnrichmentResult.Success && !result.isStale && canonicalStatus.isCacheable()
+        result is EnrichmentResult.Success &&
+            suppressUnsafeWikipedia(result) is EnrichmentResult.Success &&
+            !result.isStale &&
+            canonicalStatus.isCacheable()
+
+    /**
+     * Old cache rows predate attribution. Wikipedia prose without article credit is refetched, and
+     * a Wikipedia file without file attribution is withheld. Other-provider artwork alternatives
+     * remain usable; a safe alternative becomes the primary image when the old primary is unsafe.
+     */
+    internal fun suppressUnsafeWikipedia(
+        result: EnrichmentResult.Success,
+    ): EnrichmentResult = when (val data = result.data) {
+        is EnrichmentData.Biography -> if (result.provider == WIKIPEDIA && data.attribution == null) {
+            EnrichmentResult.NotFound(result.type, WIKIPEDIA)
+        } else {
+            result
+        }
+        is EnrichmentData.Artwork -> {
+            val safeAlternatives = data.alternatives.orEmpty().filter {
+                it.provider != WIKIPEDIA || it.attribution != null
+            }
+            if (result.provider != WIKIPEDIA || data.attribution != null) {
+                result.copy(data = data.copy(alternatives = safeAlternatives.takeIf { it.isNotEmpty() }))
+            } else {
+                val replacement = safeAlternatives.firstOrNull()
+                if (replacement == null) EnrichmentResult.NotFound(result.type, WIKIPEDIA) else result.copy(
+                    provider = replacement.provider,
+                    data = EnrichmentData.Artwork(
+                        url = replacement.url,
+                        thumbnailUrl = replacement.thumbnailUrl,
+                        sizes = replacement.sizes,
+                        alternatives = safeAlternatives.drop(1).takeIf { it.isNotEmpty() },
+                        attribution = replacement.attribution,
+                    ),
+                )
+            }
+        }
+        else -> result
+    }
 
     private suspend fun writeNegative(
         request: EnrichmentRequest,
@@ -171,13 +228,9 @@ internal class CachePersistence(
         result: EnrichmentResult.NotFound,
         canonicalStatus: CanonicalStatus,
     ) {
-        guardedCacheWrite(logger, "putNegative") {
-            cache.putNegative(entityKeyFor(request, type), type, result, canonicalStatus, config.negativeTtlMs)
-        }
+        writeNegativeAt(entityKeyFor(request, type), type, result, canonicalStatus)
         if (aliasKey != null) {
-            guardedCacheWrite(logger, "putNegative") {
-                cache.putNegative(aliasKey, type, result, canonicalStatus, config.negativeTtlMs)
-            }
+            writeNegativeAt(aliasKey, type, result, canonicalStatus)
         }
     }
 
@@ -189,13 +242,57 @@ internal class CachePersistence(
         canonicalStatus: CanonicalStatus,
     ) {
         val ttl = config.ttlOverrides[type] ?: type.defaultTtlMs
-        guardedCacheWrite(logger, "put") {
-            cache.put(entityKeyFor(request, type), type, result, canonicalStatus, ttl)
-        }
+        writePositiveAt(entityKeyFor(request, type), type, result, canonicalStatus, ttl)
         if (aliasKey != null) {
-            guardedCacheWrite(logger, "put") { cache.put(aliasKey, type, result, canonicalStatus, ttl) }
+            writePositiveAt(aliasKey, type, result, canonicalStatus, ttl)
         }
     }
+
+    private suspend fun writePositiveAt(
+        key: String,
+        type: EnrichmentType,
+        result: EnrichmentResult.Success,
+        canonicalStatus: CanonicalStatus,
+        ttl: Long,
+    ) {
+        if (!mayWritePositive(key, type)) return
+        guardedCacheWrite(logger, "put") { cache.put(key, type, result, canonicalStatus, ttl) }
+    }
+
+    private suspend fun writeNegativeAt(
+        key: String,
+        type: EnrichmentType,
+        result: EnrichmentResult.NotFound,
+        canonicalStatus: CanonicalStatus,
+    ) {
+        if (pinState(key, type) != PinState.UNPINNED) return
+        guardedCacheWrite(logger, "putNegative") {
+            cache.putNegative(key, type, result, canonicalStatus, config.negativeTtlMs)
+        }
+    }
+
+    /**
+     * A failed pin-state read is deliberately fail-closed for persistence. Cache reads may still
+     * fall through to providers, but an unreadable selection must never become permission to
+     * replace data a caller selected.
+     */
+    private suspend fun mayWritePositive(key: String, type: EnrichmentType): Boolean = when (pinState(key, type)) {
+        PinState.UNPINNED -> true
+        PinState.UNKNOWN -> false
+        PinState.PINNED -> guardedCacheRead(logger, "getIncludingExpired") {
+            cache.getIncludingExpired(key, type)
+        } == null
+    }
+
+    private suspend fun pinState(key: String, type: EnrichmentType): PinState = try {
+        if (cache.isManuallySelected(key, type)) PinState.PINNED else PinState.UNPINNED
+    } catch (e: Exception) {
+        currentCoroutineContext().ensureActive()
+        logger.warn("EnrichmentCache", "Cache isManuallySelected failed; skipping persistence: ${e.message}", e)
+        PinState.UNKNOWN
+    }
+
+    private enum class PinState { PINNED, UNPINNED, UNKNOWN }
 
     suspend fun invalidateForRefresh(request: EnrichmentRequest, types: Set<EnrichmentType>) {
         for (type in types) {
@@ -281,6 +378,8 @@ internal class CachePersistence(
     }
 
     private companion object {
+        private const val WIKIPEDIA = "wikipedia"
+
         // RESOLVING never actually reaches isCacheable(): writeBack only runs with the real,
         // settled session.identityResolution. Listed anyway so a future caller of isCacheable()
         // against a live IdentityHolder.current can't accidentally treat an in-progress

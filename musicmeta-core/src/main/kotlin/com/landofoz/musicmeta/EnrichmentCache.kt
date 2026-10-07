@@ -40,6 +40,10 @@ public interface EnrichmentCache {
      * no loss of confidence. [EnrichmentResult.Success.provenance] on [result] is what a hit later
      * replays; see [CacheEnvelope.canonicalStatus] for what a later [get] does with the value
      * stored here.
+     * A manually selected key with an existing positive value must reject automatic positive
+     * replacement atomically. A marker-only key may accept its first positive value. Custom caches
+     * that cannot make that check atomic must document the concurrency limit; the engine also
+     * checks the marker, but cannot close a race between that check and this call.
      */
     public suspend fun put(
         entityKey: String,
@@ -68,6 +72,8 @@ public interface EnrichmentCache {
      * override that does store must also clear negative entries from [invalidate] and [clear] — a
      * negative entry that outlives an invalidation would keep reporting an absence a caller just
      * asked to forget. See [getNegative] for the same forwarding obligation on a delegating cache.
+     * A manually selected key must reject this automatic negative write atomically, so a selected
+     * positive cannot be shadowed by a later absence.
      */
     public suspend fun putNegative(
         entityKey: String,

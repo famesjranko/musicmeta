@@ -98,19 +98,18 @@ public class RoomEnrichmentCache(
         val resolvedIdsJson = result.resolvedIdentifiers?.let {
             json.encodeToString(EnrichmentIdentifiers.serializer(), it)
         }
-        dao.insert(
-            EnrichmentCacheEntity(
-                entityKey = entityKey,
-                enrichmentType = type.name,
-                provider = result.provider,
-                dataJson = json.encodeToString(EnrichmentData.serializer(), result.data),
-                confidence = result.confidence,
-                lookupProvenance = result.provenance?.name,
-                canonicalStatus = canonicalStatus.name,
-                resolvedIdsJson = resolvedIdsJson,
-                cachedAt = now,
-                expiresAt = now + ttlMs,
-            ),
+        dao.insertUnlessPinned(
+            entityKey = entityKey,
+            type = type.name,
+            provider = result.provider,
+            dataJson = json.encodeToString(EnrichmentData.serializer(), result.data),
+            confidence = result.confidence,
+            lookupProvenance = result.provenance?.name,
+            canonicalStatus = canonicalStatus.name,
+            resolvedIdsJson = resolvedIdsJson,
+            cachedAt = now,
+            expiresAt = now + ttlMs,
+            schemaVersion = CACHE_SCHEMA_VERSION,
         )
     }
 
@@ -139,15 +138,14 @@ public class RoomEnrichmentCache(
         ttlMs: Long,
     ) {
         val now = clock()
-        negativeDao.insert(
-            NegativeCacheEntity(
-                entityKey = entityKey,
-                enrichmentType = type.name,
-                provider = result.provider,
-                canonicalStatus = canonicalStatus.name,
-                cachedAt = now,
-                expiresAt = now + ttlMs,
-            ),
+        dao.insertNegativeUnlessPinned(
+            entityKey = entityKey,
+            type = type.name,
+            provider = result.provider,
+            canonicalStatus = canonicalStatus.name,
+            cachedAt = now,
+            expiresAt = now + ttlMs,
+            schemaVersion = CACHE_SCHEMA_VERSION,
         )
     }
 
