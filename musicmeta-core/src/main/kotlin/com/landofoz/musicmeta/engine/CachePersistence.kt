@@ -11,12 +11,12 @@ import com.landofoz.musicmeta.EnrichmentRequest
 import com.landofoz.musicmeta.EnrichmentResult
 import com.landofoz.musicmeta.EnrichmentType
 import com.landofoz.musicmeta.ErrorKind
-import com.landofoz.musicmeta.LookupProvenance
 import com.landofoz.musicmeta.LicenseRelation
+import com.landofoz.musicmeta.LookupProvenance
 import com.landofoz.musicmeta.cache.CacheMode
-import java.net.URI
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
+import java.net.URI
 
 /**
  * Every read from and write to the [EnrichmentCache] a call makes, and the rules that decide which
@@ -242,7 +242,10 @@ internal class CachePersistence(
         if (licenses.any { !it.isSupportedWikipediaLicense() }) return false
         val publicDomain = licenses.all { it.isPublicDomainLicense() }
         if (attribution.copyrighted != !publicDomain || attribution.attributionRequired != !publicDomain) return false
-        if (!publicDomain && attribution.attributionText.isNullOrBlank() && attribution.creator.isNullOrBlank()) return false
+        if (
+            !publicDomain &&
+            attribution.attributionText.isNullOrBlank() && attribution.creator.isNullOrBlank()
+        ) return false
         return attribution.usageTerms == null || licenses.any { it.matchesWikipediaUsageTerms(attribution.usageTerms) }
     }
 
@@ -274,7 +277,8 @@ internal class CachePersistence(
         if (identifier == terms) return true
         val longName = when {
             identifier == "CC0" -> "Creative Commons CC0 1.0 Universal"
-            identifier.startsWith("CC BY-SA ") -> "Creative Commons Attribution Share Alike ${identifier.substringAfterLast(' ')}"
+            identifier.startsWith("CC BY-SA ") ->
+                "Creative Commons Attribution Share Alike ${identifier.substringAfterLast(' ')}"
             identifier.startsWith("CC BY ") -> "Creative Commons Attribution ${identifier.substringAfterLast(' ')}"
             else -> return false
         }
