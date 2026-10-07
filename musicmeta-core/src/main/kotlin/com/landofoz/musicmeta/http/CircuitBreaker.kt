@@ -33,9 +33,13 @@ internal class CircuitBreaker(
         }
     }
 
-    /** Compatibility boundary for callers that only need an admission decision. */
+    /** Observes whether an attempt could acquire a permit without claiming one. */
     @Synchronized
-    fun allowRequest(): Boolean = acquire() != null
+    fun allowRequest(): Boolean = when (currentState()) {
+        State.CLOSED -> true
+        State.OPEN -> false
+        State.HALF_OPEN -> halfOpenPermitId == null
+    }
 
     /** Records a successful un-tokened call, such as test setup. */
     @Synchronized
@@ -84,7 +88,12 @@ internal class CircuitBreaker(
     private fun settlePermit(permitGeneration: Long, halfOpenId: Long?, success: Boolean) {
         if (permitGeneration != generation || (halfOpenId != null && halfOpenId != halfOpenPermitId)) return
         if (success) {
-            closeCircuit()
+            if (halfOpenId != null) {
+                closeCircuit()
+            } else {
+                consecutiveFailures = 0
+                openedAt = 0L
+            }
         } else if (halfOpenId != null) {
             consecutiveFailures = failureThreshold
             openCircuit()

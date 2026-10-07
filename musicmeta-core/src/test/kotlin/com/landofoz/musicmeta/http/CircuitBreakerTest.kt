@@ -80,12 +80,47 @@ class CircuitBreakerTest {
         time.set(100L)
 
         // When - two callers ask for admission before either records its outcome
-        val first = breaker.allowRequest()
-        val second = breaker.allowRequest()
+        val first = breaker.acquire()
+        val second = breaker.acquire()
 
         // Then - only the first caller owns the recovery probe
-        assertTrue(first)
-        assertFalse(second)
+        assertNotNull(first)
+        assertNull(second)
+        first?.abandon()
+    }
+
+    @Test fun `observing half-open admission does not consume its recovery permit`() {
+        // Given - a breaker whose cooldown has expired
+        val time = AtomicLong(0L)
+        val breaker = CircuitBreaker(failureThreshold = 1, cooldownMs = 100, clock = time::get)
+        breaker.recordFailure()
+        time.set(100L)
+
+        // When - callers only observe eligibility before an actual attempt
+        repeat(3) { assertTrue(breaker.allowRequest()) }
+        val permit = breaker.acquire()
+
+        // Then - the actual attempt still owns the one recovery permit
+        assertNotNull(permit)
+        assertNull(breaker.acquire())
+        permit?.abandon()
+    }
+
+    @Test fun `closed success preserves other current permits while resetting failures`() {
+        // Given - concurrent closed permits after one failure below a threshold of two
+        val breaker = CircuitBreaker(failureThreshold = 2)
+        breaker.recordFailure()
+        val successful = requireNotNull(breaker.acquire())
+        val firstFailure = requireNotNull(breaker.acquire())
+        val secondFailure = requireNotNull(breaker.acquire())
+
+        // When - one permit succeeds and the other current permits then fail consecutively
+        successful.recordSuccess()
+        firstFailure.recordFailure()
+        secondFailure.recordFailure()
+
+        // Then - the success reset the streak but did not invalidate the other current permits
+        assertEquals(CircuitBreaker.State.OPEN, breaker.state)
     }
 
     @Test fun `success in half-open closes circuit`() {

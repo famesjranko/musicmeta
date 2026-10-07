@@ -44,6 +44,7 @@ internal class ProviderRegistry(
     providers: List<EnrichmentProvider>,
     private val priorityOverrides: Map<String, Map<EnrichmentType, Int>> = emptyMap(),
     private val logger: EnrichmentLogger = EnrichmentLogger.NoOp,
+    private val circuitBreakerFactory: () -> CircuitBreaker = { CircuitBreaker() },
 ) {
 
     private val allProviders: List<EnrichmentProvider> = providers.toList()
@@ -54,7 +55,7 @@ internal class ProviderRegistry(
 
     /** One circuit breaker per provider, shared across all chains. */
     private val circuitBreakers: Map<String, CircuitBreaker> =
-        allProviders.associate { it.id to CircuitBreaker() }
+        allProviders.associate { it.id to circuitBreakerFactory() }
 
     private val chains: Map<EnrichmentType, ProviderChain> = buildChains(allProviders)
 
@@ -72,10 +73,11 @@ internal class ProviderRegistry(
         allProviders.filterIsInstance<MusicBrainzProvider>().firstOrNull()
 
     /**
-     * Whether [id]'s breaker currently admits a call — the gate [ProviderChain] applies, exposed for
-     * the one caller that reaches a provider without going through a chain.
+     * Whether [id]'s breaker could currently admit a call — the gate [ProviderChain] applies,
+     * exposed for the one caller that reaches a provider without going through a chain.
      *
-     * A caller that reads this must not report its own outcome back: a breaker is opened by the
+     * This is observational, so the actual provider attempt must still acquire its own permit. A
+     * caller that reads this must not report its own outcome back: a breaker is opened by the
      * failures of the answers a provider owes, never by a best-effort extra asked alongside them.
      */
     fun allowsRequest(id: String): Boolean = circuitBreakers[id]?.allowRequest() ?: true
