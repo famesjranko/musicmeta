@@ -4,6 +4,7 @@ import com.landofoz.musicmeta.AlbumProfile
 import com.landofoz.musicmeta.ArtistProfile
 import com.landofoz.musicmeta.CanonicalStatus
 import com.landofoz.musicmeta.ContentAttribution
+import com.landofoz.musicmeta.ContentLicense
 import com.landofoz.musicmeta.EnrichmentData
 import com.landofoz.musicmeta.EnrichmentIdentifiers
 import com.landofoz.musicmeta.EnrichmentResult
@@ -12,6 +13,7 @@ import com.landofoz.musicmeta.EnrichmentType
 import com.landofoz.musicmeta.GenreAffinity
 import com.landofoz.musicmeta.GenreTag
 import com.landofoz.musicmeta.IdentifierNamespace
+import com.landofoz.musicmeta.LicenseRelation
 import com.landofoz.musicmeta.PopularitySignal
 import com.landofoz.musicmeta.PopularitySignalKind
 import com.landofoz.musicmeta.SearchCandidate
@@ -740,14 +742,42 @@ private fun requiresFileCredit(provider: String?, url: String): Boolean {
 }
 
 private fun ContentAttribution?.hasFileRights(): Boolean {
-    if (this == null || !resourceId.startsWith("File:") || nonFree != false ||
-        restrictions != emptyList<String>()) return false
-    val safeSource = sourceUrl.isSafeHttpsUrl()
-    if (!safeSource || licenses.isEmpty()) return false
-    if (licenses.size > 1 && licenseRelation == com.landofoz.musicmeta.LicenseRelation.UNKNOWN) return false
-    val publicDomain = licenses.all { it.identifier == "Public domain" || it.identifier == "CC0" }
+    if (this == null || !resourceId.startsWith("File:") || !sourceUrl.isSafeHttpsUrl()) return false
+    if (nonFree != false || restrictions != emptyList<String>()) return false
+    if (licenses.isEmpty() || licenseRelation == LicenseRelation.UNKNOWN) return false
+    if (licenses.any { !it.isSupportedWikipediaLicense() }) return false
+    val publicDomain = licenses.all { it.isPublicDomainLicense() }
     if (copyrighted != !publicDomain || attributionRequired != !publicDomain) return false
-    return publicDomain || !attributionText.isNullOrBlank() || !creator.isNullOrBlank()
+    if (!publicDomain && attributionText.isNullOrBlank() && creator.isNullOrBlank()) return false
+    val terms = usageTerms
+    return terms == null || licenses.any { it.matchesWikipediaUsageTerms(terms) }
+}
+
+private fun ContentLicense.isSupportedWikipediaLicense(): Boolean {
+    val expectedUrl = when {
+        identifier == "Public domain" -> return url == null
+        identifier == "CC0" -> "https://creativecommons.org/publicdomain/zero/1.0"
+        else -> {
+            val match = Regex("CC (BY|BY-SA) (1.0|2.0|2.5|3.0|4.0)").matchEntire(identifier) ?: return false
+            "https://creativecommons.org/licenses/${match.groupValues[1].lowercase()}/${match.groupValues[2]}"
+        }
+    }
+    return url?.trimEnd('/') == expectedUrl
+}
+
+private fun ContentLicense.isPublicDomainLicense(): Boolean = identifier == "Public domain" || identifier == "CC0"
+
+private fun ContentLicense.matchesWikipediaUsageTerms(terms: String): Boolean {
+    if (identifier == terms) return true
+    val longName = when {
+        identifier == "CC0" -> "Creative Commons CC0 1.0 Universal"
+        identifier.startsWith("CC BY-SA ") ->
+            "Creative Commons Attribution Share Alike ${identifier.substringAfterLast(' ')}"
+        identifier.startsWith("CC BY ") -> "Creative Commons Attribution ${identifier.substringAfterLast(' ')}"
+        else -> return false
+    }
+    fun normalized(value: String) = value.lowercase().replace(Regex("[-\\s]"), "")
+    return normalized(terms) == normalized(longName)
 }
 
 private fun String.isSafeHttpsUrl(): Boolean {

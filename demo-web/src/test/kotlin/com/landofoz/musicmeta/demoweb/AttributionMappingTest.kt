@@ -176,6 +176,7 @@ class AttributionMappingTest {
             sourceUrl = "https://commons.wikimedia.org/wiki/File:Master_of_Puppets.jpg",
             creator = "<Metallica>",
             licenses = listOf(ContentLicense("CC BY-SA 4.0", "https://creativecommons.org/licenses/by-sa/4.0/")),
+            licenseRelation = LicenseRelation.ANY_OF,
             copyrighted = true,
             attributionRequired = true,
             nonFree = false,
@@ -250,7 +251,7 @@ class AttributionMappingTest {
         // Given - a file explicitly released into the public domain
         val attribution = ContentAttribution("File:Archive.jpg", "https://commons.wikimedia.org/wiki/File:Archive.jpg",
             licenses = listOf(ContentLicense("Public domain")), copyrighted = false, attributionRequired = false,
-            nonFree = false, restrictions = emptyList())
+            nonFree = false, licenseRelation = LicenseRelation.ANY_OF, restrictions = emptyList())
         val results = resultsWith(entries = arrayOf(Triple(EnrichmentType.ALBUM_ART, "wikipedia",
             EnrichmentData.Artwork("https://example.test/archive.jpg", attribution = attribution))))
 
@@ -281,13 +282,133 @@ class AttributionMappingTest {
     }
 
     @Test
+    fun `Wikipedia image paths with incomplete file rights are withheld`() {
+        // Given - file claims that violate one required reuse fact on each rendered image path
+        fun fileClaim(
+            licenses: List<ContentLicense> = listOf(ContentLicense("CC BY 4.0", "https://creativecommons.org/licenses/by/4.0")),
+            relation: LicenseRelation = LicenseRelation.ANY_OF,
+            copyrighted: Boolean? = true,
+            attributionRequired: Boolean? = true,
+            nonFree: Boolean? = false,
+            usageTerms: String? = "CC BY 4.0",
+            restrictions: List<String>? = emptyList(),
+            creator: String? = "Photographer",
+        ) = ContentAttribution(
+            resourceId = "File:Unsafe.jpg",
+            sourceUrl = "https://commons.wikimedia.org/wiki/File:Unsafe.jpg",
+            creator = creator,
+            licenses = licenses,
+            licenseRelation = relation,
+            copyrighted = copyrighted,
+            attributionRequired = attributionRequired,
+            nonFree = nonFree,
+            usageTerms = usageTerms,
+            restrictions = restrictions,
+        )
+        val unsafeClaims = listOf(
+            fileClaim(licenses = emptyList()),
+            fileClaim(licenses = listOf(ContentLicense("All rights reserved"))),
+            fileClaim(licenses = listOf(ContentLicense("CC BY 4.0", "https://example.test/not-by"))),
+            fileClaim(licenses = listOf(ContentLicense("CC BY 4.0", "https://creativecommons.org/licenses/by/4.0\n"))),
+            fileClaim(licenses = listOf(ContentLicense("CC BY 4.0", "https://creativecommons.org/licenses/by/4.0%0A"))),
+            fileClaim(licenses = listOf(ContentLicense("CC BY 4.0", "https://creativecommons.org/licenses/by/4.0%250A"))),
+            fileClaim(relation = LicenseRelation.UNKNOWN),
+            fileClaim(copyrighted = false),
+            fileClaim(copyrighted = null),
+            fileClaim(attributionRequired = false),
+            fileClaim(attributionRequired = null),
+            fileClaim(usageTerms = "CC BY-NC 4.0"),
+            fileClaim(creator = null),
+            fileClaim(nonFree = true),
+            fileClaim(nonFree = null),
+            fileClaim(restrictions = listOf("editorial only")),
+            fileClaim(restrictions = null),
+        )
+
+        // When - mapping each unsafe claim from primary, background, and alternative cache payloads
+        unsafeClaims.forEach { claim ->
+            val photo = EnrichmentData.Artwork(
+                "https://upload.wikimedia.org/primary.jpg",
+                alternatives = listOf(
+                    ArtworkSource("wikipedia", "https://upload.wikimedia.org/alternative.jpg", attribution = claim),
+                ),
+                attribution = claim,
+            )
+            val results = resultsWith(entries = arrayOf(
+                Triple(EnrichmentType.ARTIST_PHOTO, "wikipedia", photo),
+                Triple(
+                    EnrichmentType.ARTIST_BACKGROUND,
+                    "wikipedia",
+                    EnrichmentData.Artwork("https://upload.wikimedia.org/background.jpg", attribution = claim),
+                ),
+            ))
+            val response = ArtistProfile("Fixture", results).toDemoResponse(0)
+
+            // Then - none of those routes exposes a file whose rights are not completely established
+            assertNull(response.summary.imageUrl)
+            assertNull(response.summary.backgroundImageUrl)
+            assertEquals(emptyList<GalleryImage>(), response.gallery)
+        }
+    }
+
+    @Test
+    fun `complete Wikipedia file rights retain canonical licences and permitted relations`() {
+        // Given - supported licences with canonical URLs and the relations accepted by the cache policy
+        val controls = listOf(
+            ContentAttribution("File:By.jpg", "https://commons.wikimedia.org/wiki/File:By.jpg", creator = "Photographer",
+                licenses = listOf(ContentLicense("CC BY 4.0", "https://creativecommons.org/licenses/by/4.0/")),
+                licenseRelation = LicenseRelation.ANY_OF, copyrighted = true, attributionRequired = true, nonFree = false,
+                usageTerms = "Creative Commons Attribution 4.0", restrictions = emptyList()),
+            ContentAttribution("File:BySa.jpg", "https://commons.wikimedia.org/wiki/File:BySa.jpg", creator = "Photographer",
+                licenses = listOf(ContentLicense("CC BY-SA 4.0", "https://creativecommons.org/licenses/by-sa/4.0")),
+                licenseRelation = LicenseRelation.ANY_OF, copyrighted = true, attributionRequired = true, nonFree = false,
+                usageTerms = "CC BY-SA 4.0", restrictions = emptyList()),
+            ContentAttribution("File:Cc0.jpg", "https://commons.wikimedia.org/wiki/File:Cc0.jpg",
+                licenses = listOf(ContentLicense("CC0", "https://creativecommons.org/publicdomain/zero/1.0/")),
+                licenseRelation = LicenseRelation.ANY_OF, copyrighted = false, attributionRequired = false, nonFree = false,
+                restrictions = emptyList()),
+            ContentAttribution("File:PublicDomain.jpg", "https://commons.wikimedia.org/wiki/File:PublicDomain.jpg",
+                licenses = listOf(ContentLicense("Public domain")), licenseRelation = LicenseRelation.ANY_OF,
+                copyrighted = false, attributionRequired = false, nonFree = false, restrictions = emptyList()),
+            ContentAttribution("File:Multiple.jpg", "https://commons.wikimedia.org/wiki/File:Multiple.jpg", creator = "Photographer",
+                licenses = listOf(
+                    ContentLicense("CC BY 4.0", "https://creativecommons.org/licenses/by/4.0"),
+                    ContentLicense("CC BY-SA 4.0", "https://creativecommons.org/licenses/by-sa/4.0"),
+                ), licenseRelation = LicenseRelation.ALL_OF, copyrighted = true, attributionRequired = true, nonFree = false,
+                usageTerms = "CC BY-SA 4.0", restrictions = emptyList()),
+            ContentAttribution("File:Either.jpg", "https://commons.wikimedia.org/wiki/File:Either.jpg", creator = "Photographer",
+                licenses = listOf(
+                    ContentLicense("CC BY 4.0", "https://creativecommons.org/licenses/by/4.0"),
+                    ContentLicense("CC BY-SA 4.0", "https://creativecommons.org/licenses/by-sa/4.0"),
+                ), licenseRelation = LicenseRelation.ANY_OF, copyrighted = true, attributionRequired = true, nonFree = false,
+                usageTerms = "CC BY 4.0", restrictions = emptyList()),
+        )
+
+        // When - mapping each complete file claim, including a valid encoded UTF-8 source URL
+        controls.forEachIndexed { index, claim ->
+            val source = if (index == 0) claim.copy(sourceUrl = "https://commons.wikimedia.org/wiki/File:%E6%9D%B1%E4%BA%AC.jpg") else claim
+            val results = resultsWith(entries = arrayOf(
+                Triple(EnrichmentType.ALBUM_ART, "wikipedia", EnrichmentData.Artwork("https://upload.wikimedia.org/$index.jpg", attribution = source)),
+            ))
+            val response = AlbumProfile("Fixture", "Artist", results).toDemoResponse(0)
+
+            // Then - the complete file stays available with its licence and source facts
+            assertEquals("https://upload.wikimedia.org/$index.jpg", response.summary.imageUrl)
+            assertEquals(source.sourceUrl, response.summary.imageAttribution?.sourceUrl)
+            assertEquals(source.licenses.map { it.identifier }, response.summary.imageAttribution?.licenses?.map { it.identifier })
+            assertEquals(source.licenseRelation.name, response.summary.imageAttribution?.licenseRelation)
+        }
+    }
+
+    @Test
     fun `Wikimedia file credits with encoded controls are withheld on every image path`() {
         // Given - complete-looking file credits whose source URLs contain encoded C0, C1, or DEL controls
         fun creditedFile(sourceUrl: String) = ContentAttribution(
             resourceId = "File:Unsafe.jpg",
             sourceUrl = sourceUrl,
             creator = "Photographer",
-            licenses = listOf(ContentLicense("CC BY 4.0")),
+            licenses = listOf(ContentLicense("CC BY 4.0", "https://creativecommons.org/licenses/by/4.0")),
+            licenseRelation = LicenseRelation.ANY_OF,
             copyrighted = true,
             attributionRequired = true,
             nonFree = false,
@@ -333,7 +454,8 @@ class AttributionMappingTest {
             resourceId = "File:Tokyo.jpg",
             sourceUrl = sourceUrl,
             creator = "Photographer",
-            licenses = listOf(ContentLicense("CC BY 4.0")),
+            licenses = listOf(ContentLicense("CC BY 4.0", "https://creativecommons.org/licenses/by/4.0")),
+            licenseRelation = LicenseRelation.ANY_OF,
             copyrighted = true,
             attributionRequired = true,
             nonFree = false,
