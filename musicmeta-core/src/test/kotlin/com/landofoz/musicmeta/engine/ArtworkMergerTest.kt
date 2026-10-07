@@ -1,6 +1,7 @@
 package com.landofoz.musicmeta.engine
 
 import com.landofoz.musicmeta.ArtworkSize
+import com.landofoz.musicmeta.ContentAttribution
 import com.landofoz.musicmeta.EnrichmentData
 import com.landofoz.musicmeta.EnrichmentIdentifiers
 import com.landofoz.musicmeta.EnrichmentResult
@@ -19,10 +20,16 @@ class ArtworkMergerTest {
         confidence: Float = 0.9f,
         thumbnailUrl: String? = null,
         sizes: List<ArtworkSize>? = null,
+        attribution: ContentAttribution? = null,
         identifiers: EnrichmentIdentifiers? = null,
     ) = EnrichmentResult.Success(
         type = EnrichmentType.ARTIST_PHOTO,
-        data = EnrichmentData.Artwork(url = url, thumbnailUrl = thumbnailUrl, sizes = sizes),
+        data = EnrichmentData.Artwork(
+            url = url,
+            thumbnailUrl = thumbnailUrl,
+            sizes = sizes,
+            attribution = attribution,
+        ),
         provider = provider,
         confidence = confidence,
         resolvedIdentifiers = identifiers,
@@ -132,6 +139,43 @@ class ArtworkMergerTest {
         assertEquals(2, alts[0].sizes!!.size)
         assertEquals(56, alts[0].sizes!![0].width)
         assertEquals(1000, alts[0].sizes!![1].width)
+    }
+
+    @Test fun `primary and alternatives retain their own file attribution after reorder`() {
+        // Given - independently credited files whose confidence order differs from provider order
+        val primaryAttribution = ContentAttribution("File:primary.jpg", "https://files.test/primary")
+        val alternativeAttribution = ContentAttribution("File:alternative.jpg", "https://files.test/alternative")
+        val results = listOf(
+            artwork("alternative", "https://images.test/alternative.jpg", 0.8f,
+                thumbnailUrl = "https://images.test/alternative-thumb.jpg", attribution = alternativeAttribution),
+            artwork("primary", "https://images.test/primary.jpg", 1.0f,
+                thumbnailUrl = "https://images.test/primary-thumb.jpg", attribution = primaryAttribution),
+        )
+
+        // When - confidence reorders the primary image
+        val artwork = (merger.merge(results) as EnrichmentResult.Success).data as EnrichmentData.Artwork
+
+        // Then - each URL keeps the attribution that described that file
+        assertEquals(primaryAttribution, artwork.attribution)
+        assertEquals(alternativeAttribution, artwork.alternatives?.single()?.attribution)
+        assertEquals("https://images.test/alternative-thumb.jpg", artwork.alternatives?.single()?.thumbnailUrl)
+    }
+
+    @Test fun `conflicting attribution for one duplicate URL suppresses that URL group`() {
+        // Given - two providers disagree about the file facts for their shared image URL
+        val disputed = "https://images.test/disputed.jpg"
+        val results = listOf(
+            artwork("first", disputed, 1.0f, attribution = ContentAttribution("File:first.jpg", "https://files.test/first")),
+            artwork("second", disputed, 0.9f, attribution = ContentAttribution("File:second.jpg", "https://files.test/second")),
+            artwork("safe", "https://images.test/safe.jpg", 0.8f, attribution = ContentAttribution("File:safe.jpg", "https://files.test/safe")),
+        )
+
+        // When - merging candidates with one conflicting duplicate group
+        val artwork = (merger.merge(results) as EnrichmentResult.Success).data as EnrichmentData.Artwork
+
+        // Then - no disputed file fact is selected or exposed as an alternative
+        assertEquals("https://images.test/safe.jpg", artwork.url)
+        assertNull(artwork.alternatives)
     }
 
     @Test fun `works for ALBUM_ART type`() {

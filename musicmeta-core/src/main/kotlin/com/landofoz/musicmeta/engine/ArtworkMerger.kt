@@ -21,13 +21,26 @@ internal class ArtworkMerger(override val type: EnrichmentType) : ResultMerger {
         val artworkResults = results.filter { it.data is EnrichmentData.Artwork }
         if (artworkResults.isEmpty()) return EnrichmentResult.NotFound(type, "all_providers")
 
-        // Primary = highest confidence; ties broken by provider order (first in chain)
+        // Primary = highest confidence; ties broken by provider order (first in chain).
+        // A URL group with contradictory file facts is unsafe to represent as one image.
         val sorted = artworkResults.sortedByDescending { it.confidence }
-        val primary = sorted.first()
+        val distinctImages = sorted
+            .groupBy { (it.data as EnrichmentData.Artwork).url }
+            .values
+            .filter { candidates ->
+                candidates
+                    .mapNotNull { (it.data as EnrichmentData.Artwork).attribution }
+                    .distinct()
+                    .size <= 1
+            }
+            .map { it.first() }
+        if (distinctImages.isEmpty()) return EnrichmentResult.NotFound(type, "all_providers")
+
+        val primary = distinctImages.first()
         val primaryArtwork = primary.data as EnrichmentData.Artwork
 
-        // Remaining providers become alternatives (excluding duplicates of primary URL)
-        val alternatives = sorted.drop(1)
+        // Each alternate keeps the complete tuple from the provider that supplied that image.
+        val alternatives = distinctImages.drop(1)
             .map { result ->
                 val art = result.data as EnrichmentData.Artwork
                 ArtworkSource(
@@ -35,10 +48,9 @@ internal class ArtworkMerger(override val type: EnrichmentType) : ResultMerger {
                     url = art.url,
                     thumbnailUrl = art.thumbnailUrl,
                     sizes = art.sizes,
+                    attribution = art.attribution,
                 )
             }
-            .filter { it.url != primaryArtwork.url }
-            .distinctBy { it.url }
 
         val merged = primaryArtwork.copy(
             alternatives = alternatives.takeIf { it.isNotEmpty() },
