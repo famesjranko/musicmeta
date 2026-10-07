@@ -2,11 +2,11 @@ package com.landofoz.musicmeta.provider.wikipedia
 
 import com.landofoz.musicmeta.drift.SchemaTarget
 import com.landofoz.musicmeta.http.HttpClient
+import com.landofoz.musicmeta.http.HttpResult
 import com.landofoz.musicmeta.http.RateLimiter
 import com.landofoz.musicmeta.http.bodyOrThrowTransient
 import com.landofoz.musicmeta.provider.encodePathSegment
 import java.io.IOException
-import java.net.URI
 
 /**
  * Fetches artist biographies and page images from Wikipedia.
@@ -33,8 +33,8 @@ internal class WikipediaApi(
 
         // The Action API reports its own failures inside a 200 (`maxlag` is the one this call can
         // provoke), so an error body must not read as an article that does not exist.
-        json.optJSONObject("error")?.let { error ->
-            throw IOException("Wikipedia Action API error: ${error.optString("code")}")
+        json.optJSONObject("error")?.let {
+            throw IOException("Wikipedia Action API error")
         }
 
         val page = json.optJSONObject("query")
@@ -71,24 +71,41 @@ internal class WikipediaApi(
      * article route: article licensing says nothing about the file's reuse terms.
      */
     suspend fun getFileMetadata(fileTitle: String): WikipediaFileMetadata? = rateLimiter.execute {
-        require(fileTitle.startsWith("File:")) { "Wikipedia media title must start with File:" }
-        val json = httpClient.fetchJsonResult(fileInfoUrl(fileTitle)).bodyOrThrowTransient()
-            ?: return@execute null
-        json.optJSONObject("error")?.let { error ->
-            throw IOException("Wikipedia Action API error: ${error.optString("code")}")
+        require(validFileTitle(fileTitle)) {
+            "Wikipedia media title must identify one File"
         }
-        val page = json.optJSONObject("query")?.optJSONArray("pages")?.optJSONObject(0)
+        val response = httpClient.fetchJsonResult(fileInfoUrl(fileTitle))
+        if (response is HttpResult.ClientError) throw IOException("Wikipedia file-information request rejected")
+        val json = response.bodyOrThrowTransient()
             ?: return@execute null
-        val info = page.optJSONArray("imageinfo")?.optJSONObject(0) ?: return@execute null
-        val metadata = info.optJSONObject("extmetadata") ?: return@execute null
-        fun value(name: String): String? = metadata.optJSONObject(name)?.optString("value")
-            ?.takeIf { it.isNotBlank() }?.let(::plainText)
-        fun url(name: String): String? = value(name)?.takeIf(::httpsUrl)
-        val restrictions = metadata.optJSONObject("Restrictions")?.optString("value")
-            ?.let(::plainText)?.split("|")?.map(String::trim)?.filter(String::isNotBlank)
-        WikipediaFileMetadata(
-            title = page.optString("title", fileTitle),
-            descriptionPageUrl = info.optString("descriptionurl").takeIf(::httpsUrl),
+        json.optJSONObject("error")?.let {
+            throw IOException("Wikipedia Action API error")
+        }
+        parseFileMetadata(json)
+    }
+
+    private fun validFileTitle(title: String): Boolean =
+        title.startsWith("File:") && title.substringAfter(':').isNotBlank() &&
+            title.length <= 512 && '|' !in title && title.none(Char::isISOControl)
+
+    private fun parseFileMetadata(json: org.json.JSONObject): WikipediaFileMetadata? {
+        val page = json.optJSONObject("query")?.optJSONArray("pages")?.optJSONObject(0)
+            ?: throw IOException("Wikipedia file-information response has no page")
+        val info = page.optJSONArray("imageinfo")?.optJSONObject(0) ?: return null
+        val metadata = info.optJSONObject("extmetadata") ?: return null
+        fun rawValue(name: String): String? = metadata.optJSONObject(name)?.opt("value") as? String
+        fun value(name: String): String? = rawValue(name)?.let(WikipediaMetadata::plainText)
+        fun url(name: String): String? = rawValue(name)?.takeIf(WikipediaMetadata::httpsUrl)
+        val canonicalTitle = page.optString("title").takeIf(::validFileTitle)
+            ?: throw IOException("Wikipedia file-information response has no canonical file title")
+        val restrictions = rawValue("Restrictions")
+            ?.let { raw ->
+                if (raw.isBlank()) emptyList()
+                else WikipediaMetadata.plainText(raw)?.split("|")?.map(String::trim)?.filter(String::isNotBlank)
+            }
+        return WikipediaFileMetadata(
+            title = canonicalTitle,
+            descriptionPageUrl = info.optString("descriptionurl").takeIf(WikipediaMetadata::httpsUrl),
             attribution = value("Attribution"),
             artist = value("Artist"),
             credit = value("Credit"),
@@ -96,8 +113,10 @@ internal class WikipediaApi(
             licenseUrl = url("LicenseUrl"),
             usageTerms = value("UsageTerms"),
             restrictions = restrictions,
-            copyrighted = value("Copyrighted")?.equals("True", ignoreCase = true),
-            nonFree = value("NonFree")?.equals("True", ignoreCase = true),
+            copyrighted = WikipediaMetadata.boolean(rawValue("Copyrighted")),
+            nonFree = WikipediaMetadata.boolean(rawValue("NonFree")),
+            attributionRequired = WikipediaMetadata.boolean(rawValue("AttributionRequired")),
+            licenseCode = value("License"),
         )
     }
 
@@ -152,6 +171,7 @@ internal class WikipediaApi(
             val entry = srcset.optJSONObject(i) ?: continue
             val src = entry.optString("src").takeIf { it.isNotBlank() } ?: continue
             val url = shippableUrl(src)
+            if (!WikipediaMetadata.httpsUrl(url)) continue
             renderings.add(
                 WikipediaRendering(
                     url = url,
@@ -178,21 +198,6 @@ internal class WikipediaApi(
         val kept = query.split('&').filterNot { it.startsWith("utm_") }
         val base = absolute.substringBefore('?')
         return if (kept.isEmpty()) base else "$base?${kept.joinToString("&")}"
-    }
-
-    /** Metadata is HTML; retain readable text only, so a consumer never receives markup to render. */
-    private fun plainText(value: String): String = value
-        .replace(Regex("<[^>]*>"), " ")
-        .replace("&amp;", "&")
-        .replace("&quot;", "\"")
-        .replace("&#39;", "'")
-        .replace(Regex("\\s+"), " ")
-        .trim()
-
-    private fun httpsUrl(value: String): Boolean = try {
-        URI(value).scheme.equals("https", ignoreCase = true) && URI(value).host != null
-    } catch (_: Exception) {
-        false
     }
 
     /**

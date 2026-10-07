@@ -56,4 +56,6 @@ internal data class WikipediaFileMetadata(
     val restrictions: List<String>?,
     val copyrighted: Boolean?,
     val nonFree: Boolean?,
+    val attributionRequired: Boolean? = null,
+    val licenseCode: String? = null,
 )

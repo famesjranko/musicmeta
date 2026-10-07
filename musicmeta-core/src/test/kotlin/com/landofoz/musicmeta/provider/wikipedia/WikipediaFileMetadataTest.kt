@@ -72,6 +72,8 @@ class WikipediaFileMetadataTest {
             restrictions = emptyList(),
             copyrighted = true,
             nonFree = false,
+            attributionRequired = true,
+            licenseCode = "cc-by-4.0",
         )
 
         // When - representing file-specific attribution for a consumer
@@ -129,8 +131,7 @@ class WikipediaFileMetadataTest {
     )
 
     private companion object {
-        // Captured before this implementation from Wikimedia imageinfo; reduced only outside paths
-        // this mapper reads. The original-response SHA-256 is in resources/wikipedia-attribution.
+        // Synthetic metadata exercises custom Attribution absent from the independent live capture.
         val COMMONS_FILE_JSON = """{
             "query":{"pages":[{"title":"File:Canonical name.jpg","missing":true,
             "imageinfo":[{"descriptionurl":"https://commons.wikimedia.org/wiki/File:Canonical_name.jpg",
