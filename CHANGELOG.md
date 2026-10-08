@@ -31,6 +31,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Breaking Changes
 - `ArtistProfile.similarAlbums` is removed: it was always null, since artist requests never ask for it; read `AlbumProfile.similarAlbums` or `EnrichmentResults.similarAlbums()` (#385)
+- `Artwork`, `Biography` and `ArtworkSource` gain a trailing `attribution` parameter, so their constructor, `copy` and `componentN` descriptors move: recompile; cached entries read with it null (#384)
+
+### Added
+- `Attribution`, a serialized, all-optional record of who made content and the licence its upstream names; descriptive only, the library never acts on it (#384)
+- `Biography`, `Artwork` and `ArtworkSource` carry `attribution` (#384)
+- Wikipedia article text carries its article title, language, URL, and CC BY-SA 4.0 with the licence URL, in `Biography.attribution` (#384)
 
 ### Fixed
 - A half-open circuit breaker now allows one test request; other calls to that provider, even other types in one `enrich()`, get an uncached transient error until it answers (#382)

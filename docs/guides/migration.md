@@ -30,6 +30,31 @@ Read it from the album's profile, which an album request fills:
 val similarAlbumsRead = engine.albumProfile("OK Computer", "Radiohead").similarAlbums
 ```
 
+### `Artwork`, `Biography` and `ArtworkSource` gain `attribution`
+
+Each gains a trailing `attribution: Attribution?` parameter, defaulted to null, so the
+constructor, `copy` and `componentN` descriptors moved. Recompile against this release. Source
+that constructs them by position still compiles; switch to named arguments so the next trailing
+parameter does not rebind anything. A destructuring declaration over any of the three binds one
+more component, so check each.
+
+An entry cached by an earlier release still reads, with `attribution` null; there is no cache to
+clear. A custom `EnrichmentCache` that stores the payload whole needs no change. One that copies
+fields by hand into its own schema must add `attribution`.
+
+Positional construction still compiles:
+
+```kotlin
+val positionalBio = EnrichmentData.Biography("Text", "Wikipedia", "en")
+```
+
+Name the arguments instead, and read the new field where you display the text:
+
+```kotlin
+val bio = EnrichmentData.Biography(text = "Text", source = "Wikipedia", language = "en")
+val credit = bio.attribution?.title
+```
+
 ## 0.13.0
 
 ### Six provider constants leave the published surface
