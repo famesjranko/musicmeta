@@ -161,7 +161,7 @@ tuple is used for direct requests and transitive composite dependencies.
 
 ## Manual selection
 
-The cache supports marking entries as "manually selected" — useful when a user explicitly picks artwork or corrects a result. Explicit invalidation, `forceRefresh`, and `clear()` remove the flag with the cached entry; an ordinary cache hit or background write does not clear it.
+The cache can record that a user explicitly picked artwork or corrected a result. **The mark is advisory.** It protects nothing: once the entry expires or is refreshed, `enrich()` and the shipped caches overwrite it with the providers' new result, and the mark stays set. Your code decides what the mark means, by checking it before its own refresh. Explicit invalidation, `forceRefresh`, and `clear()` remove the flag with the cached entry; an ordinary cache hit or background write does not clear it.
 
 ```kotlin
 val request = EnrichmentRequest.forArtist("Radiohead")
@@ -169,14 +169,14 @@ val request = EnrichmentRequest.forArtist("Radiohead")
 // Mark an entry as manually selected (e.g., user picked this photo)
 engine.markManuallySelected(request, EnrichmentType.ARTIST_PHOTO)
 
-// Check if an entry was manually selected before overwriting
+// Check the mark before your own refresh; the engine does not check it for you
 val isManual = engine.isManuallySelected(request, EnrichmentType.ARTIST_PHOTO)
 if (!isManual) {
     // Safe to refresh automatically
 }
 ```
 
-Use manual selection for features like user artwork overrides, where the user's explicit choice should not be silently replaced by a background refresh.
+Use manual selection for features like user artwork overrides: your code skips its background refresh for a marked type. A custom `EnrichmentCache` only has to store and report the flag.
 
 ### Manual selection via the cache directly
 
