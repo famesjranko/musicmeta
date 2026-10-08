@@ -247,6 +247,24 @@ class CircuitBreakerTest {
         assertNotNull(breaker.acquire())
     }
 
+    @Test fun `a late settle from an older generation does not free the current probe`() {
+        // Given - a call admitted while closed, the breaker opened, and a probe now in flight
+        val time = AtomicLong(0L)
+        val breaker = CircuitBreaker(failureThreshold = 2, cooldownMs = 100, clock = { time.get() })
+        val early = checkNotNull(breaker.acquire())
+        breaker.recordFailure()
+        breaker.recordFailure()
+        time.set(200L)
+        checkNotNull(breaker.acquire())
+
+        // When - the early call settles late, with a success
+        early.recordSuccess()
+
+        // Then - the breaker is still half-open and the probe still holds the slot
+        assertEquals(CircuitBreaker.State.HALF_OPEN, breaker.state)
+        assertNull(breaker.acquire())
+    }
+
     @Test fun `a success from an abandoned probe leaves the current probe in place`() {
         // Given - a probe that was abandoned, and a second probe now in flight
         val breaker = halfOpen(AtomicLong(0L))
