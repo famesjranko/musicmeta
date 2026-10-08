@@ -1,5 +1,7 @@
 package com.landofoz.musicmeta.contract
 
+import com.landofoz.musicmeta.ArtworkSource
+import com.landofoz.musicmeta.Attribution
 import com.landofoz.musicmeta.CanonicalStatus
 import com.landofoz.musicmeta.EnrichmentCache
 import com.landofoz.musicmeta.EnrichmentData
@@ -281,8 +283,181 @@ abstract class EnrichmentCacheContract : ContractSuite<EnrichmentCache>() {
         }
     }
 
+    @Test
+    fun `a payload with no attribution round-trips through both reads`() = runTest {
+        // Given - a biography and an artwork carrying no attribution, stored in a fresh cache
+        val cache = subject()
+        try {
+            val stored = putAttributed(cache, AttributionStates.missing)
+
+            // When - each is read back through the fresh read and the expired read
+            val read = readAttributed(cache)
+
+            // Then - every read returns the stored payload equal to what went in, attribution included
+            assertEquals(stored, read)
+        } finally {
+            release(cache)
+        }
+    }
+
+    @Test
+    fun `a payload with partial attribution and no source URL round-trips through both reads`() = runTest {
+        // Given - a biography and an artwork carrying partial attribution and no source URL, stored in a fresh cache
+        val cache = subject()
+        try {
+            val stored = putAttributed(cache, AttributionStates.partial)
+
+            // When - each is read back through the fresh read and the expired read
+            val read = readAttributed(cache)
+
+            // Then - every read returns the stored payload equal to what went in, attribution included
+            assertEquals(stored, read)
+        } finally {
+            release(cache)
+        }
+    }
+
+    @Test
+    fun `a payload with restrictive attribution round-trips through both reads`() = runTest {
+        // Given - a biography and an artwork carrying restrictive attribution, stored in a fresh cache
+        val cache = subject()
+        try {
+            val stored = putAttributed(cache, AttributionStates.restrictive)
+
+            // When - each is read back through the fresh read and the expired read
+            val read = readAttributed(cache)
+
+            // Then - every read returns the stored payload equal to what went in, attribution included
+            assertEquals(stored, read)
+        } finally {
+            release(cache)
+        }
+    }
+
+    @Test
+    fun `a payload with contradictory attribution round-trips through both reads`() = runTest {
+        // Given - a biography and an artwork carrying contradictory attribution, stored in a fresh cache
+        val cache = subject()
+        try {
+            val stored = putAttributed(cache, AttributionStates.contradictory)
+
+            // When - each is read back through the fresh read and the expired read
+            val read = readAttributed(cache)
+
+            // Then - every read returns the stored payload equal to what went in, attribution included
+            assertEquals(stored, read)
+        } finally {
+            release(cache)
+        }
+    }
+
+    @Test
+    fun `a payload with unsafe attribution links round-trips through both reads`() = runTest {
+        // Given - a biography and an artwork carrying unsafe attribution links, stored in a fresh cache
+        val cache = subject()
+        try {
+            val stored = putAttributed(cache, AttributionStates.unsafeLink)
+
+            // When - each is read back through the fresh read and the expired read
+            val read = readAttributed(cache)
+
+            // Then - every read returns the stored payload equal to what went in, attribution included
+            assertEquals(stored, read)
+        } finally {
+            release(cache)
+        }
+    }
+
+    /**
+     * Stores a biography and an artwork whose alternatives carry [attribution] and their own, and
+     * returns the four payloads a faithful cache hands back: each stored value, once per read. A
+     * cache keeps what it is given whatever the attribution says; nothing here may be dropped,
+     * blanked or turned into a miss.
+     */
+    private suspend fun putAttributed(cache: EnrichmentCache, attribution: Attribution?): List<EnrichmentData> {
+        val biography = EnrichmentData.Biography(
+            text = "Radiohead are an English rock band.",
+            source = "Wikipedia",
+            thumbnailUrl = "https://upload.wikimedia.org/thumb/radiohead.jpg",
+            attribution = attribution,
+        )
+        val artwork = EnrichmentData.Artwork(
+            url = "https://upload.wikimedia.org/radiohead.jpg",
+            attribution = attribution,
+            alternatives = listOf(
+                ArtworkSource("deezer", "https://cdn.example.test/radiohead.jpg", attribution = attribution),
+                ArtworkSource("fanarttv", "https://assets.example.test/radiohead.jpg", attribution = null),
+            ),
+        )
+        val bioResult = success(EnrichmentType.ARTIST_BIO, biography)
+        val photoResult = success(EnrichmentType.ARTIST_PHOTO, artwork)
+        cache.put(ATTR_KEY, EnrichmentType.ARTIST_BIO, bioResult, CanonicalStatus.RESOLVED, TTL_MS)
+        cache.put(ATTR_KEY, EnrichmentType.ARTIST_PHOTO, photoResult, CanonicalStatus.RESOLVED, TTL_MS)
+        return listOf(biography, biography, artwork, artwork)
+    }
+
+    /** The payloads [EnrichmentCache.get] and [EnrichmentCache.getIncludingExpired] return for both entries, in [putAttributed]'s order. */
+    private suspend fun readAttributed(cache: EnrichmentCache): List<EnrichmentData?> = listOf(
+        cache.get(ATTR_KEY, EnrichmentType.ARTIST_BIO)?.result?.data,
+        cache.getIncludingExpired(ATTR_KEY, EnrichmentType.ARTIST_BIO)?.result?.data,
+        cache.get(ATTR_KEY, EnrichmentType.ARTIST_PHOTO)?.result?.data,
+        cache.getIncludingExpired(ATTR_KEY, EnrichmentType.ARTIST_PHOTO)?.result?.data,
+    )
+
+    private fun success(type: EnrichmentType, data: EnrichmentData) =
+        EnrichmentResult.Success(type = type, data = data, provider = "wikipedia", confidence = 0.9f)
+
     private companion object {
         /** Long enough that no rule here can pass or fail because of expiry timing. */
         const val TTL_MS = 60_000L
+
+        const val ATTR_KEY = "artist:attr"
     }
+}
+
+/**
+ * The five shapes of attribution an upstream can send, as plain data. Every one is content a cache
+ * and the engine must carry unchanged: none of them is a reason to drop, refetch or refuse a payload.
+ * Public because the engine's own tests read the same states.
+ */
+object AttributionStates {
+    /** The upstream said nothing. */
+    val missing: Attribution? = null
+
+    /** Some facts and no page URL. */
+    val partial = Attribution(creator = "Raph_PH", licence = "CC BY 4.0")
+
+    /** An upstream-listed restriction, a non-free licence and a copyright flag set. */
+    val restrictive = Attribution(
+        title = "File:Radiohead logo.png",
+        sourceUrl = "https://commons.wikimedia.org/wiki/File:Radiohead_logo.png",
+        licence = "Non-free logo",
+        copyrightStatus = "True",
+        restrictions = listOf("trademarked", "personality rights"),
+    )
+
+    /** Licence and flags that disagree with each other. */
+    val contradictory = Attribution(
+        licence = "CC0",
+        otherLicences = listOf("CC BY-SA 4.0", "All rights reserved"),
+        copyrightStatus = "False",
+        restrictions = listOf("copyrighted"),
+    )
+
+    /** Link fields an app must not render as clickable: script scheme, plain http, control characters. */
+    val unsafeLink = Attribution(
+        sourceUrl = "javascript:alert(1)",
+        licenceUrl = "http://example.test/licence\u0007",
+        licence = "CC BY 4.0",
+        creator = "<a href=\"javascript:alert(1)\">Raph_PH</a>",
+    )
+
+    /** Every state with its label, in a fixed order. */
+    val all: List<Pair<String, Attribution?>> = listOf(
+        "missing" to missing,
+        "partial" to partial,
+        "restrictive" to restrictive,
+        "contradictory" to contradictory,
+        "unsafe-link" to unsafeLink,
+    )
 }
