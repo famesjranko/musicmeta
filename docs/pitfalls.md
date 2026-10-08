@@ -1589,3 +1589,7 @@ The generalisation is the same one, one level up: a gate is a claim about a rang
 as capable of being empty as the matcher is of being wrong. Test the emptiness, not only the match —
 and when a gate's own documentation says a surface cannot be reached, check whether that is a fact
 about the surface or about the range you chose.
+
+## 42. Two checks that read the same files can each be right and still contradict
+
+`check_migration_guide.py` forbids `## Unreleased` in the migration guide unless `[Unreleased]` has a `### Breaking Changes` heading, while `test_pin_release.py` once required it whenever `[Unreleased]` pinned. Both passed on `main` only because `[Unreleased]` was empty, so the first PR adding a `### Fixed` line failed CI. A self-test that reads live files must state the same rule as the check that gates them.
