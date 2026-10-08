@@ -3,6 +3,7 @@ package com.landofoz.musicmeta.demoweb
 import com.landofoz.musicmeta.AlbumProfile
 import com.landofoz.musicmeta.ArtistProfile
 import com.landofoz.musicmeta.ArtworkSource
+import com.landofoz.musicmeta.Attribution
 import com.landofoz.musicmeta.CanonicalStatus
 import com.landofoz.musicmeta.DiscographyAlbum
 import com.landofoz.musicmeta.EnrichmentData
@@ -328,5 +329,166 @@ class AttributionMappingTest {
         // Then - the text is credited to LRCLIB with no link-back the response could not support
         assertEquals("lrclib", response.summary.textCredit?.provider)
         assertNull(response.summary.textCredit?.url)
+    }
+
+    private val commonsPhoto = "https://upload.wikimedia.org/wikipedia/commons/a/a1/Thom_Yorke.jpg"
+
+    private fun artistWithPhoto(
+        photoProvider: String,
+        photoAttribution: Attribution?,
+        bioAttribution: Attribution? = null,
+    ): DemoResponse {
+        val photo = EnrichmentData.Artwork(url = commonsPhoto, attribution = photoAttribution)
+        val bio = EnrichmentData.Biography(
+            text = "Radiohead are an English rock band.",
+            source = "Wikipedia",
+            attribution = bioAttribution,
+        )
+        val results = resultsWith(
+            entries = arrayOf(
+                Triple(EnrichmentType.ARTIST_PHOTO, photoProvider, photo),
+                Triple(EnrichmentType.ARTIST_BIO, "wikipedia", bio),
+            ),
+        )
+        return ArtistProfile(name = "Radiohead", results = results).toDemoResponse(elapsedMs = 0)
+    }
+
+    private fun assertShownWithCredit(response: DemoResponse, provider: String, expected: Attribution?) {
+        assertEquals(commonsPhoto, response.summary.imageUrl)
+        assertEquals("Radiohead are an English rock band.", response.summary.text)
+        assertEquals(provider, response.summary.imageCredit?.provider)
+        assertEquals(expected, response.summary.imageCredit?.attribution)
+    }
+
+    @Test
+    fun `a Wikipedia photo with no attribution is shown and credited to Wikipedia alone`() {
+        // Given - a Wikipedia photo whose upstream said nothing about the file
+        // When - mapping the artist
+        val response = artistWithPhoto("wikipedia", photoAttribution = null)
+
+        // Then - the photo and the text are returned, and the credit carries no file facts
+        assertShownWithCredit(response, "wikipedia", expected = null)
+    }
+
+    @Test
+    fun `a Wikipedia photo with partial attribution is shown with the facts it has`() {
+        // Given - a Wikipedia photo whose upstream named only a creator
+        val partial = Attribution(creator = "Jane Doe")
+
+        // When - mapping the artist
+        val response = artistWithPhoto("wikipedia", partial)
+
+        // Then - the photo and the text are returned, and the credit carries that creator
+        assertShownWithCredit(response, "wikipedia", partial)
+    }
+
+    @Test
+    fun `a Wikipedia photo with restrictive attribution is shown with the restrictions attached`() {
+        // Given - a Wikipedia photo whose upstream lists a non-commercial licence and restrictions
+        val restrictive = Attribution(
+            licence = "CC BY-NC 4.0",
+            restrictions = listOf("No commercial use", "Personality rights"),
+        )
+
+        // When - mapping the artist
+        val response = artistWithPhoto("wikipedia", restrictive)
+
+        // Then - the photo and the text are returned, and the credit carries every restriction
+        assertShownWithCredit(response, "wikipedia", restrictive)
+    }
+
+    @Test
+    fun `a Wikipedia photo with contradictory attribution is shown with every statement kept`() {
+        // Given - a Wikipedia photo whose upstream names public domain, a second licence and copyright
+        val contradictory = Attribution(
+            licence = "Public domain",
+            otherLicences = listOf("CC BY-NC 4.0"),
+            copyrightStatus = "True",
+        )
+
+        // When - mapping the artist
+        val response = artistWithPhoto("wikipedia", contradictory)
+
+        // Then - the photo and the text are returned, and the credit carries all of it unreconciled
+        assertShownWithCredit(response, "wikipedia", contradictory)
+    }
+
+    @Test
+    fun `a Wikipedia photo with unsafe links is shown with the links passed through for the page to judge`() {
+        // Given - a Wikipedia photo whose description and licence links are not https
+        val unsafe = Attribution(
+            creator = "Jane Doe",
+            sourceUrl = "javascript:alert(1)",
+            licence = "CC BY 4.0",
+            licenceUrl = "http://creativecommons.org/licenses/by/4.0/",
+        )
+
+        // When - mapping the artist
+        val response = artistWithPhoto("wikipedia", unsafe)
+
+        // Then - the photo and the text are returned, and every fact survives, links unchanged
+        assertShownWithCredit(response, "wikipedia", unsafe)
+    }
+
+    @Test
+    fun `a Wikidata photo on a Wikimedia host is shown and credited to Wikidata`() {
+        // Given - a Wikidata photo carrying a licence
+        val facts = Attribution(licence = "CC0")
+
+        // When - mapping the artist
+        val response = artistWithPhoto("wikidata", facts)
+
+        // Then - the photo is returned and credited to Wikidata, with its facts
+        assertShownWithCredit(response, "wikidata", facts)
+    }
+
+    @Test
+    fun `the card image carries the facts of the alternative that is painted, not the primary's`() {
+        // Given - album art whose primary is on the Cover Art Archive and whose iTunes alternative paints the card
+        val art = EnrichmentData.Artwork(
+            url = "https://coverartarchive.org/release/1/front.jpg",
+            attribution = Attribution(creator = "Primary creator"),
+            alternatives = listOf(
+                ArtworkSource(
+                    provider = "itunes",
+                    url = "https://is1-ssl.mzstatic.com/image/thumb/x.jpg",
+                    attribution = Attribution(creator = "Alternative creator"),
+                ),
+            ),
+        )
+        val results = resultsWith(entries = arrayOf(Triple(EnrichmentType.ALBUM_ART, "coverartarchive", art)))
+        val profile = AlbumProfile(title = "Master of Puppets", artist = "Metallica", results = results)
+
+        // When - mapping to a demo response
+        val response = profile.toDemoResponse(elapsedMs = 0)
+
+        // Then - the credit is iTunes' with iTunes' facts, and the gallery entry carries them too
+        assertEquals("itunes", response.summary.imageCredit?.provider)
+        assertEquals("Alternative creator", response.summary.imageCredit?.attribution?.creator)
+        assertEquals("Alternative creator", response.gallery.single { it.label == "itunes" }.credit?.attribution?.creator)
+    }
+
+    @Test
+    fun `a biography thumbnail is credited to its provider without reading the article's terms as the picture's`() {
+        // Given - a Wikipedia biography with a thumbnail and no photo, whose attribution describes the text
+        val article = Attribution(
+            sourceUrl = "https://en.wikipedia.org/wiki/Radiohead",
+            licence = "CC BY-SA 4.0",
+        )
+        val bio = EnrichmentData.Biography(
+            text = "Radiohead are an English rock band.",
+            source = "Wikipedia",
+            thumbnailUrl = commonsPhoto,
+            attribution = article,
+        )
+        val results = resultsWith(entries = arrayOf(Triple(EnrichmentType.ARTIST_BIO, "wikipedia", bio)))
+
+        // When - mapping the artist
+        val response = ArtistProfile(name = "Radiohead", results = results).toDemoResponse(elapsedMs = 0)
+
+        // Then - the thumbnail is shown with a provider-only credit, and the text link falls back to the article
+        assertEquals(commonsPhoto, response.summary.imageUrl)
+        assertNull(response.summary.imageCredit?.attribution)
+        assertEquals("https://en.wikipedia.org/wiki/Radiohead", response.summary.textCredit?.url)
     }
 }
