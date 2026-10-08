@@ -317,7 +317,12 @@ fields read, so `Categories` and `ImageDescription` are not requested. Mapping, 
 - `restrictions` are the `Restrictions` keywords (`|`-joined in the answer), plus `non-free` when
   `NonFree` is true. Wikimedia has no field for a modification, so that stays null.
 - `Artist`, `Credit` and `UsageTerms` arrive as HTML. Tags are removed, entities decoded once and
-  whitespace collapsed. A `Credit` may be a whole gallery: the Radiohead lead image's is.
+  whitespace collapsed, in single passes with no regex, so the cost is linear in the value. A `<`
+  opens a tag only before a letter, `/`, `!` or `?`; a tag, comment or `script`/`style` element
+  that never closes drops the rest of the value, as a browser reads it. A numeric entity for NUL,
+  a surrogate or a control character stays as written. A value past 8192 characters
+  (`MAX_FIELD_CHARS`) is cut there and ends in `…`; the other fields are unaffected. A `Credit`
+  may be a whole gallery: the Radiohead lead image's is.
 - A multi-licensed file states one licence and no marker for the others. Wikimedia says these
   fields are "currently unreliable" for such files, and a scan of 350 files chosen for carrying
   several licence templates found none that named two, so `otherLicences` is never built here.

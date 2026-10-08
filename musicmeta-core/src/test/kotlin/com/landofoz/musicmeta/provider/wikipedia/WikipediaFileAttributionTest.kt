@@ -9,7 +9,11 @@ import org.json.JSONObject
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
+import java.util.concurrent.CompletableFuture
+import java.util.concurrent.TimeUnit
+import kotlin.concurrent.thread
 
 /**
  * The facts `imageinfo` states about one file, read from live captures in
@@ -29,7 +33,7 @@ class WikipediaFileAttributionTest {
         checkNotNull(fileInfoFrom(UpstreamPools.body(POOL, file))).toFileAttribution()
 
     /** A copy of the Radiohead capture whose `extmetadata` is replaced by [fields]. */
-    private suspend fun attributionOfDerived(fields: Map<String, String>, descriptionUrl: String? = null): Attribution {
+    private suspend fun fileInfoOfDerived(fields: Map<String, String>, descriptionUrl: String? = null): WikipediaFileInfo {
         val body = JSONObject(UpstreamPools.body(POOL, "imageinfo-radiohead-lead.json"))
         val info = body.getJSONObject("query").getJSONArray("pages").getJSONObject(0)
             .getJSONArray("imageinfo").getJSONObject(0)
@@ -37,7 +41,21 @@ class WikipediaFileAttributionTest {
         fields.forEach { (name, value) -> extmetadata.put(name, JSONObject().put("value", value)) }
         info.put("extmetadata", extmetadata)
         if (descriptionUrl != null) info.put("descriptionurl", descriptionUrl)
-        return checkNotNull(fileInfoFrom(body.toString())).toFileAttribution()
+        return checkNotNull(fileInfoFrom(body.toString()))
+    }
+
+    private suspend fun attributionOfDerived(fields: Map<String, String>, descriptionUrl: String? = null): Attribution =
+        fileInfoOfDerived(fields, descriptionUrl).toFileAttribution()
+
+    /**
+     * The attribution [artist] maps to, failing with a [java.util.concurrent.TimeoutException] when
+     * the mapping takes 2 s. It runs on a daemon thread so a slow mapping fails the test, not the suite.
+     */
+    private suspend fun attributionOfWithin2s(artist: String): Attribution {
+        val info = fileInfoOfDerived(mapOf("Artist" to artist, "LicenseShortName" to "CC BY 4.0"))
+        val result = CompletableFuture<Attribution>()
+        thread(isDaemon = true) { result.complete(info.toFileAttribution()) }
+        return result.get(2, TimeUnit.SECONDS)
     }
 
     @Test
@@ -295,6 +313,200 @@ class WikipediaFileAttributionTest {
         // Then - there is no creator, and the licence is still read
         assertNull(attribution.creator)
         assertEquals("CC BY 4.0", attribution.licence)
+    }
+
+    @Test
+    fun `a value of 240000 literal angle brackets is read in well under a second and is capped`() = runTest {
+        // Given - a copy of the Radiohead capture whose Artist is 240000 '<' characters and whose licence is intact (derived)
+        val hostile = "<".repeat(240_000)
+
+        // When - it is mapped to an attribution within 2 s
+        val attribution = attributionOfWithin2s(hostile)
+
+        // Then - the brackets are text, cut at the cap with an ellipsis, and the licence is still read
+        assertEquals("<".repeat(MAX_FIELD_CHARS) + "\u2026", attribution.creator)
+        assertEquals("CC BY 4.0", attribution.licence)
+    }
+
+    @Test
+    fun `a value of 80000 unclosed tag openers is read in well under a second`() = runTest {
+        // Given - a copy of the Radiohead capture whose Artist is 80000 '<a ' openers that never close (derived)
+        val hostile = "<a ".repeat(80_000)
+
+        // When - it is mapped to an attribution within 2 s
+        val attribution = attributionOfWithin2s(hostile)
+
+        // Then - the first unclosed tag swallowed the rest, so there is no creator, and the licence is still read
+        assertNull(attribution.creator)
+        assertEquals("CC BY 4.0", attribution.licence)
+    }
+
+    @Test
+    fun `a value of 240000 unclosed script elements is read in well under a second`() = runTest {
+        // Given - a copy of the Radiohead capture whose Artist is 240000 '<script>' openers and whose licence is intact (derived)
+        val hostile = "<script>".repeat(240_000)
+
+        // When - it is mapped to an attribution within 2 s
+        val attribution = attributionOfWithin2s(hostile)
+
+        // Then - the first unclosed script swallowed the rest, so there is no creator, and the licence is still read
+        assertNull(attribution.creator)
+        assertEquals("CC BY 4.0", attribution.licence)
+    }
+
+    @Test
+    fun `a value over the field cap is cut there and ends in an ellipsis, and the other fields are intact`() = runTest {
+        // Given - a copy of the Radiohead capture whose Artist is 500 characters past the cap (derived)
+        val fields = mapOf(
+            "Artist" to "A".repeat(MAX_FIELD_CHARS + 500),
+            "Credit" to "Own work",
+            "LicenseShortName" to "CC BY 4.0",
+        )
+
+        // When - it is mapped to an attribution
+        val attribution = attributionOfDerived(fields)
+
+        // Then - the creator is the first cap characters and an ellipsis, and the other facts are whole
+        assertEquals("A".repeat(MAX_FIELD_CHARS) + "\u2026", attribution.creator)
+        assertEquals("Own work", attribution.credit)
+        assertEquals("CC BY 4.0", attribution.licence)
+    }
+
+    @Test
+    fun `a value exactly at the field cap is kept whole with no ellipsis`() = runTest {
+        // Given - a copy of the Radiohead capture whose Artist is exactly the cap long (derived)
+        val fields = mapOf("Artist" to "A".repeat(MAX_FIELD_CHARS))
+
+        // When - it is mapped to an attribution
+        val attribution = attributionOfDerived(fields)
+
+        // Then - the creator is the whole value
+        assertEquals("A".repeat(MAX_FIELD_CHARS), attribution.creator)
+    }
+
+    @Test
+    fun `a cut that falls inside a surrogate pair drops the half character and still ends in an ellipsis`() = runTest {
+        // Given - a copy of the Radiohead capture whose Artist has an emoji straddling the cap (derived)
+        val fields = mapOf("Artist" to "A".repeat(MAX_FIELD_CHARS - 1) + "\uD83D\uDE00 tail")
+
+        // When - it is mapped to an attribution
+        val attribution = attributionOfDerived(fields)
+
+        // Then - no lone surrogate is left before the ellipsis
+        assertEquals("A".repeat(MAX_FIELD_CHARS - 1) + "\u2026", attribution.creator)
+    }
+
+    @Test
+    fun `a tag with no closing bracket drops the rest of the value, as a browser reads it`() = runTest {
+        // Given - a copy of the Radiohead capture whose Artist ends in a tag that never closes (derived)
+        val fields = mapOf("Artist" to "Ana &amp; Bo <a href=\"https://example.org\" Studio")
+
+        // When - it is mapped to an attribution
+        val attribution = attributionOfDerived(fields)
+
+        // Then - the text before the tag is kept and nothing after it is
+        assertEquals("Ana & Bo", attribution.creator)
+    }
+
+    @Test
+    fun `a script element with no closing tag drops the rest of the value`() = runTest {
+        // Given - a copy of the Radiohead capture whose Artist has an opened script and no close (derived)
+        val fields = mapOf("Artist" to "Ana <script>alert(1) Studio")
+
+        // When - it is mapped to an attribution
+        val attribution = attributionOfDerived(fields)
+
+        // Then - only the text before the script is kept
+        assertEquals("Ana", attribution.creator)
+    }
+
+    @Test
+    fun `script and style blocks close case-insensitively and a closing tag may carry spaces`() = runTest {
+        // Given - a copy of the Radiohead capture whose Artist has an upper-case style and a script closed with spaces (derived)
+        val fields = mapOf(
+            "Artist" to "Ana<STYLE type=\"text/css\">a > b { }</STYLE>Bo<script>x</script   >Cy",
+        )
+
+        // When - it is mapped to an attribution
+        val attribution = attributionOfDerived(fields)
+
+        // Then - both blocks are gone and each leaves a space between its neighbours
+        assertEquals("Ana Bo Cy", attribution.creator)
+    }
+
+    @Test
+    fun `block tags separate words and inline tags do not`() = runTest {
+        // Given - a copy of the Radiohead capture whose Artist mixes block tags, inline tags and a pre element (derived)
+        val fields = mapOf("Artist" to "a<p>b</p>c<b>d</b>e<pre>f</pre>g<br/>h")
+
+        // When - it is mapped to an attribution
+        val attribution = attributionOfDerived(fields)
+
+        // Then - paragraph and break tags leave a space and bold and pre tags leave none
+        assertEquals("a b cdefg h", attribution.creator)
+    }
+
+    @Test
+    fun `entities decode once and an entity that is malformed or out of range stays as written`() = runTest {
+        // Given - a copy of the Radiohead capture whose Artist has valid, double-encoded, unknown, malformed and out-of-range entities (derived)
+        val fields = mapOf(
+            "Artist" to "&amp;lt; &#x41;&#66;&#X43; &bogus; &#xZZ; &#1114112; AT&T &amp",
+        )
+
+        // When - it is mapped to an attribution
+        val attribution = attributionOfDerived(fields)
+
+        // Then - only the first layer is decoded and every non-entity is kept character for character
+        assertEquals("&lt; ABC &bogus; &#xZZ; &#1114112; AT&T &amp", attribution.creator)
+    }
+
+    @Test
+    fun `a less-than or greater-than sign in prose is text and not a tag`() = runTest {
+        // Given - a copy of the Radiohead capture whose Artist has bare angle brackets beside one real tag (derived)
+        val fields = mapOf("Artist" to "a < b and c > d, x <3 you <b>ok</b>, 1<2")
+
+        // When - it is mapped to an attribution
+        val attribution = attributionOfDerived(fields)
+
+        // Then - the brackets stay, and only the real tag is removed
+        assertEquals("a < b and c > d, x <3 you ok, 1<2", attribution.creator)
+    }
+
+    @Test
+    fun `a quoted attribute value may hold a greater-than sign and the tag still ends at its own bracket`() = runTest {
+        // Given - a copy of the Radiohead capture whose Artist is a link whose title holds '>' and one with a bare O'Brien (derived)
+        val fields = mapOf("Artist" to "<a title=\"a>b\" href='x>y'>Bob</a> <span title=O'Brien>Cy</span>")
+
+        // When - it is mapped to an attribution
+        val attribution = attributionOfDerived(fields)
+
+        // Then - the attribute text is not emitted and the apostrophe in the bare value swallowed nothing
+        assertEquals("Bob Cy", attribution.creator)
+    }
+
+    @Test
+    fun `a comment is dropped whole, and one with no end drops the rest of the value`() = runTest {
+        // Given - a copy of the Radiohead capture with a closed comment holding '>' and then an unclosed one (derived)
+        val fields = mapOf("Artist" to "Ana<!-- a > b -->Bo<!-- never closed Studio")
+
+        // When - it is mapped to an attribution
+        val attribution = attributionOfDerived(fields)
+
+        // Then - the closed comment leaves nothing behind and the unclosed one takes the rest
+        assertEquals("AnaBo", attribution.creator)
+    }
+
+    @Test
+    fun `a numeric entity for NUL, a surrogate or a control stays as written`() = runTest {
+        // Given - a copy of the Radiohead capture whose Artist has entities for NUL, a high surrogate, C0 and C1 controls, and a tab (derived)
+        val fields = mapOf("Artist" to "a&#0;b&#xD800;c&#55357;d&#1;e&#x85;f&#127;g&#9;h")
+
+        // When - it is mapped to an attribution
+        val attribution = attributionOfDerived(fields)
+
+        // Then - the unsafe entities are text, only the tab decodes (to a space), and no NUL or lone surrogate appears
+        assertEquals("a&#0;b&#xD800;c&#55357;d&#1;e&#x85;f&#127;g h", attribution.creator)
+        assertTrue(attribution.creator!!.none { it == '\u0000' || it.isSurrogate() })
     }
 
     private companion object {

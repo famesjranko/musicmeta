@@ -18,6 +18,7 @@ import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.runTest
 import org.json.JSONObject
 import org.junit.Assert.assertEquals
@@ -25,7 +26,10 @@ import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import java.util.concurrent.CompletableFuture
 import java.util.concurrent.CopyOnWriteArrayList
+import java.util.concurrent.TimeUnit
+import kotlin.concurrent.thread
 
 /**
  * What an `ARTIST_PHOTO` result carries from the selected file's `imageinfo`, and what it does not
@@ -331,6 +335,56 @@ class WikipediaPhotoAttributionTest {
         assertTrue(artwork.url.contains("RadioheadO2211125_composite.jpg"))
         assertNull(artwork.attribution)
         assertTrue("waited ${testScheduler.currentTime} ms", testScheduler.currentTime < 60_000L)
+    }
+
+    /** The lead image's capture with its `Artist` replaced by [artist] and the other fields kept. */
+    private fun captureWithArtist(artist: String): String {
+        val body = JSONObject(capture("imageinfo-radiohead-lead.json"))
+        body.getJSONObject("query").getJSONArray("pages").getJSONObject(0)
+            .getJSONArray("imageinfo").getJSONObject(0).getJSONObject("extmetadata")
+            .put("Artist", JSONObject().put("value", artist))
+        return body.toString()
+    }
+
+    /**
+     * The photo for an `Artist` of [artist], failing with a [java.util.concurrent.TimeoutException] when the
+     * whole enrichment takes 2 s. It runs on a daemon thread so a slow mapping fails the test, not the suite.
+     */
+    private fun photoWithin2s(artist: String): EnrichmentData.Artwork {
+        val http = radioheadHttp(captureWithArtist(artist))
+        val result = CompletableFuture<EnrichmentData.Artwork>()
+        thread(isDaemon = true) {
+            runCatching { runBlocking { photoOf(http) } }
+                .onSuccess { result.complete(it) }
+                .onFailure { result.completeExceptionally(it) }
+        }
+        return result.get(2, TimeUnit.SECONDS)
+    }
+
+    @Test
+    fun `an Artist of 240000 literal angle brackets returns the photo in well under a second`() {
+        // Given - the media list and a derived imageinfo whose Artist is 240000 '<' characters
+
+        // When - enriching for artist photo within 2 s
+        val artwork = photoWithin2s("<".repeat(240_000))
+
+        // Then - the photo is a Success, the creator is the capped text, and the licence is still read
+        assertTrue(artwork.url.contains("RadioheadO2211125_composite.jpg"))
+        assertEquals("<".repeat(MAX_FIELD_CHARS) + "\u2026", artwork.attribution?.creator)
+        assertEquals("CC BY 4.0", artwork.attribution?.licence)
+    }
+
+    @Test
+    fun `an Artist of 240000 unclosed script elements returns the photo in well under a second`() {
+        // Given - the media list and a derived imageinfo whose Artist is 240000 '<script>' openers
+
+        // When - enriching for artist photo within 2 s
+        val artwork = photoWithin2s("<script>".repeat(240_000))
+
+        // Then - the photo is a Success with no creator, and the licence is still read
+        assertTrue(artwork.url.contains("RadioheadO2211125_composite.jpg"))
+        assertNull(artwork.attribution?.creator)
+        assertEquals("CC BY 4.0", artwork.attribution?.licence)
     }
 
     @Test
