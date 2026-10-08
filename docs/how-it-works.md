@@ -49,37 +49,34 @@ enrich(request, types, forceRefresh)
               │   suggestions → kept at the top level; fan-out still runs (step 4)
               │   not needed → skip (MBID already provided)
               ▼
-┌────────────────────────────────────────────────────┐
-│ 4. Concurrent Type Resolution (fan-out)            │
-│                                                    │
-│  Standard  ──→ chain.resolve()   (first wins)      │
-│  Mergeable ──→ chain.resolveAll() (all win)        │
-│  Composite ──→ resolve deps → synthesize           │
-└─────────────┬──────────────────────────────────────┘
-              │
+┌────────────────────────────────────────────────────────────┐
+│ 4. Concurrent Type Resolution (one fan-out, one deadline)  │
+│                                                            │
+│  Every uncached type is launched at once, with no stage    │
+│  in front of another:                                      │
+│  Standard  ──→ chain.resolve()    (first wins)             │
+│  Mergeable ──→ chain.resolveAll() (all win, merged)        │
+│  Composite ──→ waits only on its OWN dependencies, then    │
+│                synthesizes (no barrier)                    │
+└─────────────┬──────────────────────────────────────────────┘
+              │ each type, independently, as it lands:
+              ▼
+┌────────────────────────────────────────────────────────────┐
+│ Per-type settlement (once per type, never one pass)        │
+│  5. Confidence filter  ── below threshold (default 0.5)    │
+│                           becomes NotFound; runs as the    │
+│                           type resolves, before settle     │
+│  6. Catalog filter     ── reorder/filter recommendations   │
+│     Provenance stamp   ── mark Success with                │
+│                           LookupProvenance                 │
+│     Stale fallback     ── STALE_IF_ERROR: serve expired    │
+│                           cache on Error/RateLimited       │
+└─────────────┬──────────────────────────────────────────────┘
+              │ after the last type settles, inside the deadline
               ▼
 ┌────────────────────────────┐
-│ 5. Confidence Filter       │── drop below threshold (default 0.5)
-└─────────────┬──────────────┘
-              │
-              ▼
-┌────────────────────────────┐
-│ 6. Catalog Filter          │── reorder/filter recommendations
-└─────────────┬──────────────┘
-              │
-              ▼
-┌────────────────────────────┐
-│ 7. Stale Fallback          │── STALE_IF_ERROR: serve expired cache on Error/RateLimited
-└─────────────┬──────────────┘
-              │
-              ▼
-┌────────────────────────────┐
-│ 8. Provenance Stamp        │── mark provider results with LookupProvenance
-└─────────────┬──────────────┘
-              │
-              ▼
-┌────────────────────────────┐
-│ 9. Cache Store + Alias     │── save with TTL + eligible canonical alias (skip stale results)
+│ 8. Cache Store + Alias     │── once per call: save with TTL + eligible canonical alias
+│                            │   (skip stale results; nothing on a timeout)
 └─────────────┬──────────────┘
               │
               ▼
@@ -177,7 +174,7 @@ a provider-native exact-id result is not implicitly aliased to a bare name. The 
 versioned; a format change intentionally causes a one-time miss. Custom cache implementations must
 treat keys as opaque.
 
-**Suggestions do not veto the fan-out:** If MusicBrainz can't find an exact match but has near-miss candidates, that is a statement about MusicBrainz's own lookup, not a global "nothing can be fetched" decision. Every uncached type still resolves through step 4 exactly as it would under a plain unresolved identity — each provider's own `ProviderChain` eligibility (availability, identifier requirements, circuit breaker) decides whether it runs. A `NONE`-identifier provider like Deezer's track preview search still answers; an MBID-only provider without an MBID still doesn't. Surviving `Success` results carry a `LookupProvenance` reflecting the fuzzy search that produced them (step 8), while the call's `CanonicalStatus` stays `AMBIGUOUS`. The suggestion list itself is attached once, to `EnrichmentResults.identity`, never copied onto a per-type result — the consumer can present it as "Did you mean?" and re-enrich with the selected candidate.
+**Suggestions do not veto the fan-out:** If MusicBrainz can't find an exact match but has near-miss candidates, that is a statement about MusicBrainz's own lookup, not a global "nothing can be fetched" decision. Every uncached type still resolves through step 4 exactly as it would under a plain unresolved identity — each provider's own `ProviderChain` eligibility (availability, identifier requirements, circuit breaker) decides whether it runs. A `NONE`-identifier provider like Deezer's track preview search still answers; an MBID-only provider without an MBID still doesn't. Surviving `Success` results carry a `LookupProvenance` reflecting the fuzzy search that produced them (per-type settlement), while the call's `CanonicalStatus` stays `AMBIGUOUS`. The suggestion list itself is attached once, to `EnrichmentResults.identity`, never copied onto a per-type result — the consumer can present it as "Did you mean?" and re-enrich with the selected candidate.
 
 ### Step 4: Concurrent Type Resolution
 
