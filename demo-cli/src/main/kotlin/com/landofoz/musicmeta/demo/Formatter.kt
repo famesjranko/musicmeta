@@ -2,6 +2,7 @@ package com.landofoz.musicmeta.demo
 
 import com.landofoz.musicmeta.AlbumProfile
 import com.landofoz.musicmeta.ArtistProfile
+import com.landofoz.musicmeta.Attribution
 import com.landofoz.musicmeta.BandMember
 import com.landofoz.musicmeta.CanonicalStatus
 import com.landofoz.musicmeta.EnrichmentData
@@ -65,8 +66,14 @@ object Formatter {
     private fun printArtistSummary(profile: ArtistProfile, term: Terminal) {
         term.heading("Profile")
         term.keyValue("Name:", profile.name)
-        profile.photo?.let { term.keyValue("Photo:", term.link(it.url, artworkLabel(it))) }
-        profile.bio?.let { term.keyValue("Bio:", textSnippet(it.text)) }
+        profile.photo?.let {
+            term.keyValue("Photo:", safeLink(it.url, artworkLabel(it), term))
+            printCredit(it.attribution, term)
+        }
+        profile.bio?.let {
+            term.keyValue("Bio:", textSnippet(it.text))
+            printCredit(it.attribution, term)
+        }
         val genres = profile.genres.take(4).joinToString(", ") { it.name }
         if (genres.isNotEmpty()) term.keyValue("Genres:", genres)
         profile.country?.let { term.keyValue("Country:", it) }
@@ -82,9 +89,15 @@ object Formatter {
         term.heading("Profile")
         term.keyValue("Title:", profile.title)
         term.keyValue("Artist:", profile.artist)
-        profile.artwork?.let { term.keyValue("Artwork:", term.link(it.url, artworkLabel(it))) }
+        profile.artwork?.let {
+            term.keyValue("Artwork:", safeLink(it.url, artworkLabel(it), term))
+            printCredit(it.attribution, term)
+        }
         // The Tier 2 named accessor; AlbumProfile.description reads the same value through Tier 1.
-        profile.results.albumDescription()?.let { term.keyValue("Description:", textSnippet(it.text)) }
+        profile.results.albumDescription()?.let {
+            term.keyValue("Description:", textSnippet(it.text))
+            printCredit(it.attribution, term)
+        }
         profile.label?.let { term.keyValue("Label:", it) }
         profile.releaseDate?.let { term.keyValue("Released:", it) }
         val genres = profile.genres.take(4).joinToString(", ") { it.name }
@@ -118,7 +131,10 @@ object Formatter {
             val label = it.source + (it.durationMs?.let { ms -> " ${ms / 1000}s" } ?: "")
             term.keyValue("Preview:", term.link(it.url, label))
         }
-        profile.artwork?.let { term.keyValue("Artwork:", term.link(it.url, artworkLabel(it))) }
+        profile.artwork?.let {
+            term.keyValue("Artwork:", safeLink(it.url, artworkLabel(it), term))
+            printCredit(it.attribution, term)
+        }
         profile.popularity?.let { p ->
             p.listenerCount?.let { term.keyValue("Listeners:", "%,d".format(it)) }
         }
@@ -183,6 +199,7 @@ object Formatter {
             } else {
                 term.success(typeName(type), "$detail  $conf$tags")
             }
+            printResultCredits(result.data, term)
         }
 
         if (rest.isNotEmpty() && successes.isNotEmpty()) term.println()
@@ -274,12 +291,68 @@ object Formatter {
         data.genreTags?.take(3)?.joinToString(", ") { "${it.name}(%.2f)".format(it.confidence) }
             ?: data.genres?.take(4)?.joinToString(", ")
 
+    /**
+     * A terminal hyperlink only for an http(s) URL with no control or whitespace character on a
+     * styled terminal; otherwise the label followed by the escaped URL. The URL is printed either
+     * way; this only decides whether it is clickable.
+     */
+    private fun safeLink(url: String, label: String, term: Terminal): String {
+        val clickable = Regex("https?://[^\\s\\p{Cntrl}\\u0080-\\u009f]+", RegexOption.IGNORE_CASE).matches(url)
+        val styled = term.theme.reset.isNotEmpty()
+        return if (clickable && styled) term.link(url, label) else "$label ${escapeControls(url)}"
+    }
+
+    /** Printable text: each control character (C0, DEL, C1) becomes a visible `\uXXXX` escape. */
+    internal fun escapeControls(text: String): String = buildString {
+        for (c in text) {
+            if (c.isISOControl()) append(String.format(Locale.ROOT, "\\u%04x", c.code)) else append(c)
+        }
+    }
+
+    private fun printResultCredits(data: EnrichmentData, term: Terminal) {
+        when (data) {
+            is EnrichmentData.Artwork -> {
+                printCredit(data.attribution, term)
+                data.alternatives.orEmpty().forEach { printCredit(it.attribution, term, it.provider) }
+            }
+            is EnrichmentData.Biography -> printCredit(data.attribution, term)
+            else -> {}
+        }
+    }
+
+    /**
+     * One indented row per attribution fact the upstream stated, as plain text. Nothing here
+     * decides whether content is shown: the content row is already printed, and every fact that is
+     * present is printed, including contradictory, restrictive and unlinkable ones.
+     */
+    private fun printCredit(attribution: Attribution?, term: Terminal, owner: String? = null) {
+        if (attribution == null) return
+        val prefix = "      " + (owner?.let { "${escapeControls(it)} " } ?: "")
+        val facts = listOf(
+            "title" to attribution.title?.let { t -> attribution.language?.let { "$t ($it)" } ?: t },
+            "source" to attribution.sourceUrl,
+            "creator" to attribution.creator,
+            "attribution" to attribution.attributionText,
+            "credit" to attribution.credit,
+            "licence" to attribution.licence,
+            "licence url" to attribution.licenceUrl,
+            "other licences" to attribution.otherLicences.takeIf { it.isNotEmpty() }?.joinToString(", "),
+            "copyright" to attribution.copyrightStatus,
+            "modification" to attribution.modification,
+            "restrictions" to attribution.restrictions.takeIf { it.isNotEmpty() }?.joinToString("; "),
+        )
+        for ((label, value) in facts) {
+            if (value == null) continue
+            term.println(term.styled("$prefix$label: ${escapeControls(value)}", term.theme.muted))
+        }
+    }
+
     private fun artworkSnippet(data: EnrichmentData.Artwork, provider: String, term: Terminal): String {
         val label = artworkLabel(data).let { if (it != "image") "$provider $it" else provider }
-        val primary = term.link(data.url, label)
+        val primary = safeLink(data.url, label, term)
         val alts = data.alternatives
         if (alts.isNullOrEmpty()) return primary
-        val altLinks = alts.joinToString(", ") { term.link(it.url, it.provider) }
+        val altLinks = alts.joinToString(", ") { safeLink(it.url, it.provider, term) }
         return "$primary (+${alts.size} alt: $altLinks)"
     }
 
