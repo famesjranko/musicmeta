@@ -40,7 +40,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Wikipedia `ARTIST_PHOTO` carries the chosen file's own creator, credit, licence, licence URL, restrictions and description page in `Artwork.attribution`; alternatives keep theirs (#386)
 
 ### Changed
-- Each Wikipedia `ARTIST_PHOTO` now costs one more Wikipedia request, an imageinfo call for the chosen file; if it fails the photo is still returned, without attribution (#386)
+- Each Wikipedia `ARTIST_PHOTO` now costs one more request, an imageinfo call for the chosen file with its own 5 s budget; if it fails or runs long, the photo is returned without attribution (#386)
 
 ### Fixed
 - A half-open circuit breaker now allows one test request; other calls to that provider, even other types in one `enrich()`, get an uncached transient error until it answers (#382)

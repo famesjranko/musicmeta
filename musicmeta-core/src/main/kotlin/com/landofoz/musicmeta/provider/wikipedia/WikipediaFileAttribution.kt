@@ -1,8 +1,6 @@
 package com.landofoz.musicmeta.provider.wikipedia
 
 import com.landofoz.musicmeta.Attribution
-import java.net.URI
-import java.net.URISyntaxException
 
 /**
  * What `imageinfo` states about one file, as an [Attribution]. Every fact the answer carries is
@@ -19,18 +17,20 @@ import java.net.URISyntaxException
  *   true. Wikimedia has no field for how a file was modified, so [Attribution.modification] is null.
  *
  * Text is reduced to plain text, because Commons delivers `Artist`, `Credit` and `UsageTerms` as
- * HTML. A URL that is not an absolute `https` URL is left out; the facts beside it stay.
+ * HTML. [Attribution.sourceUrl] and [Attribution.licenceUrl] are the upstream's text as given,
+ * trimmed and nothing more: an `http`, relative or otherwise unsafe URL is carried like any other,
+ * and checking it before it becomes a link is the consumer's job.
  */
 internal fun WikipediaFileInfo.toFileAttribution(): Attribution {
     fun text(field: String): String? = extmetadata[field]?.let(::plainText)
     return Attribution(
         title = title,
-        sourceUrl = descriptionUrl?.let(::absoluteHttpsUrl),
+        sourceUrl = descriptionUrl?.let(::urlAsGiven),
         creator = text("Artist"),
         attributionText = text("Attribution"),
         credit = text("Credit"),
         licence = text("LicenseShortName") ?: text("UsageTerms") ?: text("License"),
-        licenceUrl = extmetadata["LicenseUrl"]?.let(::absoluteHttpsUrl),
+        licenceUrl = extmetadata["LicenseUrl"]?.let(::urlAsGiven),
         copyrightStatus = text("Copyrighted"),
         restrictions = restrictionsOf(extmetadata),
     )
@@ -45,17 +45,8 @@ private fun restrictionsOf(extmetadata: Map<String, String>): List<String> {
 
 private const val NON_FREE = "non-free"
 
-/** [raw] as an absolute `https` URL, or null: a relative, protocol-relative, `http` or unparsable one. */
-private fun absoluteHttpsUrl(raw: String): String? {
-    val url = raw.trim()
-    val uri = try {
-        URI(url)
-    } catch (_: URISyntaxException) {
-        return null
-    }
-    val isHttps = uri.scheme.equals("https", ignoreCase = true) && !uri.host.isNullOrBlank()
-    return url.takeIf { isHttps }
-}
+/** [raw] trimmed and otherwise untouched, or null when nothing is left. */
+private fun urlAsGiven(raw: String): String? = raw.trim().takeIf { it.isNotEmpty() }
 
 private val SCRIPT_OR_STYLE = Regex(
     "<(script|style)\\b[^>]*>.*?</\\1\\s*>",

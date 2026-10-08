@@ -16,6 +16,7 @@ import com.landofoz.musicmeta.testkit.UpstreamPools
 import com.landofoz.musicmeta.testutil.FakeHttpClient
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.awaitCancellation
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.runTest
 import org.json.JSONObject
@@ -193,15 +194,15 @@ class WikipediaPhotoAttributionTest {
     }
 
     @Test
-    fun `a file with an http licence link returns the photo without the link and with the rest`() = runTest {
+    fun `a file with an http licence link returns the photo carrying the link as given`() = runTest {
         // Given - the live imageinfo answer for a file whose LicenseUrl is http
         val http = radioheadHttp(capture("imageinfo-multi-licensed.json"))
 
         // When - enriching for artist photo
         val artwork = photoOf(http)
 
-        // Then - the photo is returned, the link is absent, and the licence name and creator remain
-        assertNull(artwork.attribution?.licenceUrl)
+        // Then - the photo is returned and the http link rides beside the licence name and creator
+        assertEquals("http://www.gnu.org/licenses/old-licenses/fdl-1.2.html", artwork.attribution?.licenceUrl)
         assertEquals("GFDL 1.2", artwork.attribution?.licence)
         assertEquals("Ralf Roletschek", artwork.attribution?.creator)
     }
@@ -308,6 +309,28 @@ class WikipediaPhotoAttributionTest {
         // Then - the cancellation propagated: no result, not a photo without attribution
         assertTrue(job.isCancelled)
         assertNull(result)
+    }
+
+    @Test
+    fun `an imageinfo call that outlasts its own budget returns the photo with no attribution`() = runTest {
+        // Given - the media list answers and the imageinfo answer arrives a virtual minute late
+        val lateImageInfo = capture("imageinfo-radiohead-lead.json")
+        val mediaListOnly = radioheadHttp()
+        val http = object : HttpClient by mediaListOnly {
+            override suspend fun fetchJsonResult(url: String): HttpResult<JSONObject> {
+                if (!url.contains("prop=imageinfo")) return mediaListOnly.fetchJsonResult(url)
+                delay(60_000L)
+                return HttpResult.Ok(JSONObject(lateImageInfo))
+            }
+        }
+
+        // When - enriching for artist photo
+        val artwork = photoOf(http)
+
+        // Then - the photo is returned without attribution, and the wait ended well before the answer
+        assertTrue(artwork.url.contains("RadioheadO2211125_composite.jpg"))
+        assertNull(artwork.attribution)
+        assertTrue("waited ${testScheduler.currentTime} ms", testScheduler.currentTime < 60_000L)
     }
 
     @Test

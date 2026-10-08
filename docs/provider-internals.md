@@ -321,14 +321,17 @@ fields read, so `Categories` and `ImageDescription` are not requested. Mapping, 
 - A multi-licensed file states one licence and no marker for the others. Wikimedia says these
   fields are "currently unreliable" for such files, and a scan of 350 files chosen for carrying
   several licence templates found none that named two, so `otherLicences` is never built here.
-- A `sourceUrl` or `licenceUrl` that is not an absolute `https` URL is left out. The live
-  GFDL files carry an `http://` `LicenseUrl`, so this is not a corner case.
+- `sourceUrl` and `licenceUrl` are passed through as received, trimmed and nothing more. The live
+  GFDL files carry an `http://` `LicenseUrl`, so a non-`https` link is not a corner case; checking
+  one before it becomes a link is the consumer's job.
 
 The request is the same Wikipedia rate limiter slot as the other two, so a photo costs one more
 request and the limiter's gap. Nothing here decides the photo: it is selected from the media list
 first, and an `imageinfo` that fails (a 4xx, a 5xx, a dropped connection, malformed JSON, or an
-Action API error such as `maxlag` inside a 200), names no file or has no `extmetadata` returns the
-same photo, with the facts that were read or `attribution` null. Failures are logged at debug with
+Action API error such as `maxlag` inside a 200), names no file, has no `extmetadata` or takes
+longer than its own 5 s budget returns the same photo, with the facts that were read or
+`attribution` null. The budget is a coroutine deadline, so it frees the call but not a thread
+already blocked in socket I/O (`docs/pitfalls.md` §26). Failures are logged at debug with
 the status or the upstream error code. A cancellation during the request is not a failure and
 propagates.
 

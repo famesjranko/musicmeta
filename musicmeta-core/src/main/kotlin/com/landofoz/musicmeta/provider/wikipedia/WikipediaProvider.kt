@@ -17,6 +17,7 @@ import com.landofoz.musicmeta.provider.wikidata.EnwikiSitelink
 import com.landofoz.musicmeta.provider.wikidata.WikidataApi
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.withTimeoutOrNull
 
 /**
  * Provides artist biographies, album descriptions and photos from Wikipedia articles.
@@ -139,12 +140,14 @@ public class WikipediaProvider internal constructor(
 
     /**
      * The selected file's own facts, or null where none could be read. The photo is already chosen
-     * and is returned either way: a failed `imageinfo` request costs the facts, never the image.
-     * A cancellation of this job still propagates (`docs/pitfalls.md` §2).
+     * and is returned either way: a failed or slow `imageinfo` request costs the facts, never the
+     * image. A cancellation of this job still propagates (`docs/pitfalls.md` §2).
      */
     private suspend fun fileAttribution(file: WikipediaMediaItem): Attribution? = try {
-        val info = api.getFileInfo(file.title)
-        if (info == null) logger.debug(TAG, "imageinfo named no file for ${file.title}")
+        // withTimeoutOrNull, not withTimeout: its expiry is this budget alone, so a caller's own
+        // deadline or cancellation is never mistaken for it (`docs/pitfalls.md` §6).
+        val info = withTimeoutOrNull(IMAGEINFO_BUDGET_MS) { api.getFileInfo(file.title) }
+        if (info == null) logger.debug(TAG, "imageinfo gave no facts for ${file.title}")
         info?.toFileAttribution()
     } catch (e: Exception) {
         currentCoroutineContext().ensureActive()
@@ -184,5 +187,9 @@ public class WikipediaProvider internal constructor(
 
     private companion object {
         private const val TAG = "WikipediaProvider"
+
+        // The photo is already chosen when imageinfo is asked, so this lookup may cost the facts but
+        // never the image; 5 s sits well inside the default enrichTimeoutMs, which it must not spend.
+        private const val IMAGEINFO_BUDGET_MS = 5_000L
     }
 }

@@ -129,6 +129,27 @@ class WikipediaMediaListSelectionTest {
     }
 
     @Test
+    fun `enrich keeps and selects a rendering whose URL is plain http`() = runTest {
+        // Given - the Radiohead media list with every protocol-relative source rewritten to http:// (derived)
+        val httpOnly = RADIOHEAD_MEDIA_LIST_JSON.replace("\"src\": \"//upload", "\"src\": \"http://upload")
+        httpClient.givenJsonResponse("page/media-list", httpOnly)
+
+        // When - enriching for artist photo
+        val result = provider.enrich(photoRequest(), EnrichmentType.ARTIST_PHOTO)
+
+        // Then - the http rendering is selected at its largest scale and still listed in sizes
+        assertTrue("expected Success but was $result", result is EnrichmentResult.Success)
+        val artwork = (result as EnrichmentResult.Success).data as EnrichmentData.Artwork
+        assertEquals(
+            "http://upload.wikimedia.org/wikipedia/commons/thumb/a/a1/RadioheadO2211125_composite.jpg" +
+                "/1280px-RadioheadO2211125_composite.jpg",
+            artwork.url,
+        )
+        assertTrue(artwork.sizes.orEmpty().all { it.url.startsWith("http://") })
+        assertEquals(listOf(1280, 500), artwork.sizes.orEmpty().map { it.width })
+    }
+
+    @Test
     fun `enrich reports no height because the media list does not carry one`() = runTest {
         // Given - a media list item whose srcset states a width in the URL and no height anywhere
         httpClient.givenJsonResponse("page/media-list", RADIOHEAD_MEDIA_LIST_JSON)

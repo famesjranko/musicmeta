@@ -294,7 +294,8 @@ licence URL, its copyright status and its restrictions, such as `personality`, `
 `non-free`. Radiohead's lead image carries `Raph_PH` and `CC BY 4.0`, not the article's text
 licence. Wikimedia documents the licence fields as unreliable for multi-licensed files, so the
 one licence stated is passed on as stated, and no second one is guessed. Markup is removed from
-the text, and a link that is not an absolute `https` URL is left out while the other facts stay.
+the text. The description page and licence URLs are passed through as received, trimmed and
+otherwise untouched, so check a scheme before you make one a link.
 A file whose answer is missing, partial, restrictive or contradictory is returned like any
 other, and so is a photo whose `imageinfo` request failed, with `attribution` null.
 

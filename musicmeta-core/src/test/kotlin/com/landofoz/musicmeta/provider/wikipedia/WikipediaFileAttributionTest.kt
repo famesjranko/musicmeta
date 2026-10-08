@@ -107,14 +107,14 @@ class WikipediaFileAttributionTest {
     }
 
     @Test
-    fun `a licence URL that is not https is left out and the other facts stay`() = runTest {
+    fun `an http licence URL is kept verbatim beside the other facts`() = runTest {
         // Given - the live answer for a file whose LicenseUrl is an http link to gnu.org
 
         // When - it is mapped to an attribution
         val attribution = attributionOfCapture("imageinfo-multi-licensed.json")
 
-        // Then - the link is absent while the licence name, creator and description page remain
-        assertNull(attribution.licenceUrl)
+        // Then - the link is carried as the upstream wrote it, with the licence name, creator and page
+        assertEquals("http://www.gnu.org/licenses/old-licenses/fdl-1.2.html", attribution.licenceUrl)
         assertEquals("GFDL 1.2", attribution.licence)
         assertEquals("Ralf Roletschek", attribution.creator)
         assertNotNull(attribution.sourceUrl)
@@ -263,20 +263,20 @@ class WikipediaFileAttributionTest {
     }
 
     @Test
-    fun `an unsafe description page URL and licence URL are left out while the text facts stay`() = runTest {
-        // Given - a copy of the Radiohead capture with a javascript description page and a protocol-relative licence link (derived)
+    fun `an unsafe description page URL and licence URL are carried as given, trimmed`() = runTest {
+        // Given - a copy of the Radiohead capture with a javascript description page and a protocol-relative licence link, both padded with spaces (derived)
         val fields = mapOf(
             "Artist" to "Raph_PH",
             "LicenseShortName" to "CC BY 4.0",
-            "LicenseUrl" to "//creativecommons.org/licenses/by/4.0",
+            "LicenseUrl" to " //creativecommons.org/licenses/by/4.0 ",
         )
 
         // When - it is mapped to an attribution
-        val attribution = attributionOfDerived(fields, descriptionUrl = "javascript:alert(1)")
+        val attribution = attributionOfDerived(fields, descriptionUrl = " javascript:alert(1) ")
 
-        // Then - neither link is carried and the creator and licence are
-        assertNull(attribution.sourceUrl)
-        assertNull(attribution.licenceUrl)
+        // Then - each link is the upstream's text minus the padding, and the creator and licence stay
+        assertEquals("javascript:alert(1)", attribution.sourceUrl)
+        assertEquals("//creativecommons.org/licenses/by/4.0", attribution.licenceUrl)
         assertEquals("Raph_PH", attribution.creator)
         assertEquals("CC BY 4.0", attribution.licence)
     }
