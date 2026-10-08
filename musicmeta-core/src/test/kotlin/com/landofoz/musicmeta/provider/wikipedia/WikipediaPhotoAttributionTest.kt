@@ -44,7 +44,7 @@ class WikipediaPhotoAttributionTest {
         override fun debug(tag: String, message: String) {
             debugMessages.add(message)
         }
-        override fun warn(tag: String, message: String, throwable: Throwable?) {}
+        override fun warn(tag: String, message: String, throwable: Throwable?) = Unit
     }
 
     private val logger = RecordingLogger()
