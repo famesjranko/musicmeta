@@ -12,6 +12,24 @@ Two kinds of break appear here and they cost you different things:
 
 The full per-release list, additions and fixes included, is [CHANGELOG.md](../../CHANGELOG.md).
 
+## Unreleased
+
+### `ArtistProfile.similarAlbums` is removed
+
+It was always null: `SIMILAR_ALBUMS` is not in the default artist types, and the provider returns
+`NotFound` for a request that is not for an album.
+
+<!-- no-compile: reads the withdrawn `ArtistProfile.similarAlbums` property -->
+```kotlin
+val similar = artistProfile.similarAlbums   // always null
+```
+
+Read it from the album's profile, which an album request fills:
+
+```kotlin
+val similarAlbumsRead = engine.albumProfile("OK Computer", "Radiohead").similarAlbums
+```
+
 ## 0.13.0
 
 ### Six provider constants leave the published surface

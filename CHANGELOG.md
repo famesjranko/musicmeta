@@ -29,6 +29,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Breaking Changes
+- `ArtistProfile.similarAlbums` is removed: it was always null, since artist requests never ask for it; read `AlbumProfile.similarAlbums` or `EnrichmentResults.similarAlbums()` (#385)
+
 ## [0.13.0] - 2026-09-07
 
 ### Breaking Changes
