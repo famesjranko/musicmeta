@@ -35,8 +35,8 @@ val similarAlbumsRead = engine.albumProfile("OK Computer", "Radiohead").similarA
 Each gains a trailing `attribution: Attribution?` parameter, defaulted to null, so the
 constructor, `copy` and `componentN` descriptors moved. Recompile against this release. Source
 that constructs them by position still compiles; switch to named arguments so the next trailing
-parameter does not rebind anything. A destructuring declaration over any of the three binds one
-more component, so check each.
+parameter does not rebind anything. A destructuring declaration binds only the names you write,
+so it keeps compiling and does not see the new field.
 
 An entry cached by an earlier release still reads, with `attribution` null; there is no cache to
 clear. A custom `EnrichmentCache` that stores the payload whole needs no change. One that copies
