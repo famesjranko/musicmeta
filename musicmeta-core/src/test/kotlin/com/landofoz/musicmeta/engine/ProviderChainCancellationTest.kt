@@ -6,17 +6,23 @@ import com.landofoz.musicmeta.EnrichmentType
 import com.landofoz.musicmeta.http.CircuitBreaker
 import com.landofoz.musicmeta.testutil.FakeProvider
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitCancellation
+import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.withTimeout
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Assert.fail
 import org.junit.Test
+import java.util.concurrent.atomic.AtomicLong
 
 /**
  * A cancelled call is not a provider failure. (#53)
@@ -68,7 +74,7 @@ class ProviderChainCancellationTest {
 
         // When - resolving, then the provider is still healthy — cancellation said nothing about it
         assertEquals(CircuitBreaker.State.CLOSED, runCancelledInOwnScope(CancellingProvider("p1"), breaker))
-        assertTrue(breaker.allowRequest())
+        assertTrue(breaker.wouldAdmit())
     }
 
     @Test fun `resolveAll propagates cancellation and records no breaker failure`() = runTest {
@@ -190,5 +196,59 @@ class ProviderChainCancellationTest {
         // Then - reported as an Error, and the circuit opens
         assertTrue(result is EnrichmentResult.Error)
         assertEquals(CircuitBreaker.State.OPEN, breaker.state)
+    }
+
+    /** A provider that signals it has been called, then waits for a cancellation that never comes from it. */
+    private class SuspendedProvider(id: String) : FakeProvider(id = id) {
+        val entered = CompletableDeferred<Unit>()
+
+        override suspend fun enrich(request: EnrichmentRequest, type: EnrichmentType): EnrichmentResult {
+            entered.complete(Unit)
+            awaitCancellation()
+        }
+    }
+
+    /** A breaker that opened at t=0 and is half-open at t=200; the clock is the returned [AtomicLong]. */
+    private fun halfOpen(time: AtomicLong): CircuitBreaker {
+        val breaker = CircuitBreaker(failureThreshold = 1, cooldownMs = 100, clock = { time.get() })
+        breaker.recordFailure()
+        time.set(200L)
+        return breaker
+    }
+
+    @Test fun `a cancelled resolve frees the half-open probe without a new cooldown`() = runTest {
+        // Given - a half-open breaker whose probe is a call suspended in the provider
+        val time = AtomicLong(0L)
+        val breaker = halfOpen(time)
+        val provider = SuspendedProvider("p1")
+        val chain = ProviderChain(EnrichmentType.ALBUM_ART, listOf(provider), mapOf("p1" to breaker))
+        val running = launch { chain.resolve(req) }
+        provider.entered.await()
+
+        // When - the caller is cancelled before the provider answers
+        running.cancelAndJoin()
+
+        // Then - the breaker recorded nothing, so it is still half-open on the same clock, and the
+        // next caller is admitted as the probe
+        assertEquals(CircuitBreaker.State.HALF_OPEN, breaker.state)
+        assertNotNull(breaker.acquire())
+    }
+
+    @Test fun `a cancelled resolveAll frees the half-open probe without a new cooldown`() = runTest {
+        // Given - a half-open breaker whose probe is a call suspended in the provider
+        val time = AtomicLong(0L)
+        val breaker = halfOpen(time)
+        val provider = SuspendedProvider("p1")
+        val chain = ProviderChain(EnrichmentType.GENRE, listOf(provider), mapOf("p1" to breaker))
+        val running = launch { chain.resolveAll(req) }
+        provider.entered.await()
+
+        // When - the caller is cancelled before the provider answers
+        running.cancelAndJoin()
+
+        // Then - the breaker recorded nothing, so it is still half-open on the same clock, and the
+        // next caller is admitted as the probe
+        assertEquals(CircuitBreaker.State.HALF_OPEN, breaker.state)
+        assertNotNull(breaker.acquire())
     }
 }

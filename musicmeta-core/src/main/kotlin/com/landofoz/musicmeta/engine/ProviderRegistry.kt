@@ -44,6 +44,7 @@ internal class ProviderRegistry(
     providers: List<EnrichmentProvider>,
     private val priorityOverrides: Map<String, Map<EnrichmentType, Int>> = emptyMap(),
     private val logger: EnrichmentLogger = EnrichmentLogger.NoOp,
+    breakerFor: (providerId: String) -> CircuitBreaker = { CircuitBreaker() },
 ) {
 
     private val allProviders: List<EnrichmentProvider> = providers.toList()
@@ -54,7 +55,7 @@ internal class ProviderRegistry(
 
     /** One circuit breaker per provider, shared across all chains. */
     private val circuitBreakers: Map<String, CircuitBreaker> =
-        allProviders.associate { it.id to CircuitBreaker() }
+        allProviders.associate { it.id to breakerFor(it.id) }
 
     private val chains: Map<EnrichmentType, ProviderChain> = buildChains(allProviders)
 
@@ -72,13 +73,16 @@ internal class ProviderRegistry(
         allProviders.filterIsInstance<MusicBrainzProvider>().firstOrNull()
 
     /**
-     * Whether [id]'s breaker currently admits a call — the gate [ProviderChain] applies, exposed for
-     * the one caller that reaches a provider without going through a chain.
+     * Whether [id]'s breaker is closed — the best-effort gate for the one caller that reaches a
+     * provider without going through a chain. It admits only CLOSED: a half-open breaker's single
+     * probe belongs to a call whose outcome the breaker is waiting on, and this caller never reports
+     * one, so taking or spending it here would leave the breaker with no answer to settle on.
      *
      * A caller that reads this must not report its own outcome back: a breaker is opened by the
      * failures of the answers a provider owes, never by a best-effort extra asked alongside them.
      */
-    fun allowsRequest(id: String): Boolean = circuitBreakers[id]?.allowRequest() ?: true
+    fun allowsRequest(id: String): Boolean =
+        circuitBreakers[id]?.let { it.state == CircuitBreaker.State.CLOSED } ?: true
 
     fun identityProvider(): EnrichmentProvider? =
         allProviders.firstOrNull { it.isIdentityProvider }
