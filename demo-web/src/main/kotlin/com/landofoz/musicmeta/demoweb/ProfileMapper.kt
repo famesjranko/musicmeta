@@ -2,6 +2,7 @@ package com.landofoz.musicmeta.demoweb
 
 import com.landofoz.musicmeta.AlbumProfile
 import com.landofoz.musicmeta.ArtistProfile
+import com.landofoz.musicmeta.Attribution
 import com.landofoz.musicmeta.CanonicalStatus
 import com.landofoz.musicmeta.EnrichmentData
 import com.landofoz.musicmeta.EnrichmentIdentifiers
@@ -141,7 +142,7 @@ fun ArtistProfile.toDemoResponse(elapsedMs: Long, pending: Set<EnrichmentType> =
                 ?.fanartTvPreviewUrl(),
             text = bio?.text,
             textSource = bio?.source,
-            textCredit = bio?.let { r.credit(EnrichmentType.ARTIST_BIO, linker) },
+            textCredit = bio?.let { r.textCredit(EnrichmentType.ARTIST_BIO, it.attribution, linker) },
             genreCredits = linker.genreCredits(genreChips, r),
             identityResolved = r.identityResolved,
             identityVerdict = r.identityVerdict,
@@ -540,7 +541,8 @@ private class CreditLinker(
     private val artist: String?,
     private val identifiers: EnrichmentIdentifiers?,
 ) {
-    fun credit(provider: String): SourceCredit = SourceCredit(provider, linkFor(provider))
+    fun credit(provider: String, attribution: Attribution? = null): SourceCredit =
+        SourceCredit(provider, linkFor(provider), attribution)
 
     fun credits(providers: List<String>): List<SourceCredit> = providers.distinct().map { credit(it) }
 
@@ -667,13 +669,29 @@ private fun MutableList<GalleryImage>.addArtwork(
     label: String,
     linker: CreditLinker,
 ) {
-    val url = results.get<EnrichmentData.Artwork>(type)?.url ?: return
-    if (seen.add(url)) add(GalleryImage(url, label, results.credit(type, linker)))
+    val artwork = results.get<EnrichmentData.Artwork>(type) ?: return
+    if (seen.add(artwork.url)) add(GalleryImage(artwork.url, label, results.credit(type, linker, artwork.attribution)))
 }
 
 /** The credit for whichever provider answered [type], or null when nothing did. */
-private fun EnrichmentResults.credit(type: EnrichmentType, linker: CreditLinker): SourceCredit? =
-    (raw[type] as? EnrichmentResult.Success)?.provider?.let { linker.credit(it) }
+private fun EnrichmentResults.credit(
+    type: EnrichmentType,
+    linker: CreditLinker,
+    attribution: Attribution? = null,
+): SourceCredit? =
+    (raw[type] as? EnrichmentResult.Success)?.provider?.let { linker.credit(it, attribution) }
+
+/**
+ * The credit for text, linked to the page the upstream says describes it when our own identifiers
+ * name no page. [Attribution.sourceUrl] is the upstream's text, so the page decides whether it is
+ * safe to link; it is never a reason to drop the credit.
+ */
+private fun EnrichmentResults.textCredit(
+    type: EnrichmentType,
+    attribution: Attribution?,
+    linker: CreditLinker,
+): SourceCredit? =
+    credit(type, linker)?.let { it.copy(url = it.url ?: attribution?.sourceUrl) }
 
 /** Lyrics come from either lyrics type, so the credit follows whichever one answered. */
 private fun EnrichmentResults.lyricsCredit(linker: CreditLinker): SourceCredit? =
@@ -692,7 +710,9 @@ private fun EnrichmentResults.artworkCredit(
 ): SourceCredit? {
     if (url == null) return null
     val alternative = artwork?.alternatives?.firstOrNull { it.url == url }
-    return alternative?.let { linker.credit(it.provider) } ?: credit(type, linker)
+    // The facts belong to the file painted: the primary's own only when the primary is what is shown.
+    return alternative?.let { linker.credit(it.provider, it.attribution) }
+        ?: credit(type, linker, artwork?.attribution?.takeIf { artwork.url == url })
 }
 
 /**
@@ -706,7 +726,7 @@ private fun MutableList<GalleryImage>.addAlternatives(
 ) {
     artwork?.alternatives?.forEach { alt ->
         if (alt.url.isNotBlank() && seen.add(alt.url)) {
-            add(GalleryImage(alt.url, alt.provider, linker.credit(alt.provider)))
+            add(GalleryImage(alt.url, alt.provider, linker.credit(alt.provider, alt.attribution)))
         }
     }
 }

@@ -1,5 +1,6 @@
 package com.landofoz.musicmeta.demoweb
 
+import com.landofoz.musicmeta.Attribution
 import com.landofoz.musicmeta.CanonicalStatus
 import com.landofoz.musicmeta.EnrichmentCache
 import com.landofoz.musicmeta.EnrichmentData
@@ -188,6 +189,54 @@ class DiscogsFreshnessCacheTest {
 
             // Then - the delegate is empty, not just the wrapper
             assertNull(backing.get("album:hunky-dory", EnrichmentType.GENRE))
+        }
+    }
+
+    @Test fun `a Wikipedia photo whose attribution text says Discogs keeps the full TTL and is served expired`() {
+        runBlocking {
+            // Given - a Wikipedia artwork whose credit and title mention Discogs, stored on a thirty-day TTL
+            val ttl = 30L * 24 * 3600 * 1000
+            val cache = DiscogsFreshnessCache(backing())
+            val photo = EnrichmentResult.Success(
+                type = EnrichmentType.ARTIST_PHOTO,
+                data = EnrichmentData.Artwork(
+                    url = "https://upload.wikimedia.org/a.jpg",
+                    attribution = Attribution(credit = "Scan from Discogs", title = "File:Discogs logo.png"),
+                ),
+                provider = "wikipedia",
+                confidence = 0.8f,
+            )
+            cache.store(photo, ttl)
+
+            // When - the clock moves past the ceiling but inside the TTL
+            advance(DISCOGS_FRESHNESS_CEILING_MS + 3_600_000L)
+
+            // Then - the entry is still served, on both read paths
+            assertNotNull(cache.get("album:hunky-dory", EnrichmentType.ARTIST_PHOTO))
+            assertNotNull(cache.getIncludingExpired("album:hunky-dory", EnrichmentType.ARTIST_PHOTO))
+        }
+    }
+
+    @Test fun `an artwork whose provider is Discogs is still capped`() {
+        runBlocking {
+            // Given - a Discogs-provider artwork carrying an attribution, stored on a thirty-day TTL
+            val cache = DiscogsFreshnessCache(backing())
+            val cover = EnrichmentResult.Success(
+                type = EnrichmentType.ALBUM_ART,
+                data = EnrichmentData.Artwork(
+                    url = "https://i.discogs.com/a.jpg",
+                    attribution = Attribution(credit = "Some photographer"),
+                ),
+                provider = DISCOGS_ID,
+                confidence = 0.8f,
+            )
+            cache.store(cover)
+
+            // When - the clock moves past the ceiling
+            advance(DISCOGS_FRESHNESS_CEILING_MS + 3_600_000L)
+
+            // Then - the entry is gone
+            assertNull(cache.get("album:hunky-dory", EnrichmentType.ALBUM_ART))
         }
     }
 }

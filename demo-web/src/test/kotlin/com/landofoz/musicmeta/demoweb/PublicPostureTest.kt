@@ -2,6 +2,7 @@ package com.landofoz.musicmeta.demoweb
 
 import com.landofoz.musicmeta.ApiKey
 import com.landofoz.musicmeta.ApiKeyConfig
+import com.landofoz.musicmeta.Attribution
 import com.landofoz.musicmeta.EnrichmentData
 import com.landofoz.musicmeta.EnrichmentEngine
 import com.landofoz.musicmeta.EnrichmentProvider
@@ -56,6 +57,7 @@ class PublicPostureTest {
         override val id: String,
         private val url: String,
         private val confidence: Float,
+        private val attribution: Attribution? = null,
     ) : EnrichmentProvider {
         override val displayName = id
         override val requiresApiKey = false
@@ -65,7 +67,7 @@ class PublicPostureTest {
         override suspend fun enrich(request: EnrichmentRequest, type: EnrichmentType): EnrichmentResult =
             EnrichmentResult.Success(
                 type = EnrichmentType.ALBUM_ART,
-                data = EnrichmentData.Artwork(url = url),
+                data = EnrichmentData.Artwork(url = url, attribution = attribution),
                 provider = id,
                 confidence = confidence,
             )
@@ -204,6 +206,25 @@ class PublicPostureTest {
         assertEquals(200, response.statusCode())
         assertFalse(response.body().contains(discogsArt))
         assertTrue(response.body().contains(caaArt))
+    }
+
+    @Test fun `a promoted Wikipedia image keeps its file facts under the posture`() {
+        // Given - a public-posture instance where Discogs wins the merge and Wikipedia's image, with a creator, is the alternative
+        val wikipediaArt = "https://upload.wikimedia.org/wikipedia/commons/a/a1/Cover.jpg"
+        val providers = listOf(
+            ArtProvider(DISCOGS_ID, discogsArt, confidence = 0.9f),
+            ArtProvider("wikipedia", wikipediaArt, confidence = 0.5f, attribution = Attribution(creator = "Jane Doe")),
+        )
+        val port = startTestServer(providers, PublicPosture(enabled = true))
+
+        // When - an album is enriched
+        val response = get(port, "/api/enrich?kind=album&name=Hunky+Dory&artist=David+Bowie")
+
+        // Then - the promoted Wikipedia image is served with its creator, and no Discogs image is
+        assertEquals(200, response.statusCode())
+        assertFalse(response.body().contains(discogsArt))
+        assertTrue(response.body().contains(wikipediaArt))
+        assertTrue(response.body().contains("Jane Doe"))
     }
 
     @Test fun `an album enrichment carries the Discogs image without the posture`() {

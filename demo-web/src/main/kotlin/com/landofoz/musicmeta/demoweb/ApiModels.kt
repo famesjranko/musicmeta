@@ -1,5 +1,6 @@
 package com.landofoz.musicmeta.demoweb
 
+import com.landofoz.musicmeta.Attribution
 import kotlinx.serialization.Serializable
 
 @Serializable
@@ -46,11 +47,16 @@ data class StreamSnapshot(
  * upstream. [url] is that upstream's own page for this entity, and is null when the response
  * carried no identifier to address one: the page then links the provider's site rather than
  * inventing a deep link.
+ *
+ * [attribution] is what the upstream said about this one image file, passed through unjudged: the
+ * page renders whatever is present, and a null here means the upstream said nothing about the file,
+ * not that the image is unusable. Its links are the upstream's text, so the page checks them.
  */
 @Serializable
 data class SourceCredit(
     val provider: String,
     val url: String? = null,
+    val attribution: Attribution? = null,
 )
 
 @Serializable

@@ -1,5 +1,6 @@
 package com.landofoz.musicmeta.provider.wikipedia
 
+import com.landofoz.musicmeta.Attribution
 import com.landofoz.musicmeta.EnrichmentLogger
 import com.landofoz.musicmeta.EnrichmentProvider
 import com.landofoz.musicmeta.EnrichmentRequest
@@ -15,6 +16,8 @@ import com.landofoz.musicmeta.http.RateLimiter
 import com.landofoz.musicmeta.provider.wikidata.EnwikiSitelink
 import com.landofoz.musicmeta.provider.wikidata.WikidataApi
 import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.withTimeoutOrNull
 
 /**
  * Provides artist biographies, album descriptions and photos from Wikipedia articles.
@@ -32,6 +35,10 @@ import kotlinx.coroutines.currentCoroutineContext
  *
  * There is no other-language fallback: if neither yields an English title the result is `NotFound`.
  * A non-English article is never used, because its text would not be a usable English bio.
+ *
+ * `ARTIST_PHOTO` costs a second Wikipedia request: after the media list picks the file, `imageinfo`
+ * is asked for that one file and its creator and licence ride on `Artwork.attribution`. A failed
+ * `imageinfo` request never costs the photo.
  */
 public class WikipediaProvider internal constructor(
     private val api: WikipediaApi,
@@ -125,10 +132,27 @@ public class WikipediaProvider internal constructor(
             ?: return EnrichmentResult.NotFound(type, id)
         return EnrichmentResult.Success(
             type = type,
-            data = WikipediaMapper.toArtwork(bestImage),
+            data = WikipediaMapper.toArtwork(bestImage).copy(attribution = fileAttribution(bestImage)),
             provider = id,
             confidence = ConfidenceCalculator.fuzzyMatch(hasArtistMatch = false),
         )
+    }
+
+    /**
+     * The selected file's own facts, or null where none could be read. The photo is already chosen
+     * and is returned either way: a failed or slow `imageinfo` request costs the facts, never the
+     * image. A cancellation of this job still propagates (`docs/pitfalls.md` §2).
+     */
+    private suspend fun fileAttribution(file: WikipediaMediaItem): Attribution? = try {
+        // withTimeoutOrNull, not withTimeout: its expiry is this budget alone, so a caller's own
+        // deadline or cancellation is never mistaken for it (`docs/pitfalls.md` §6).
+        val info = withTimeoutOrNull(IMAGEINFO_BUDGET_MS) { api.getFileInfo(file.title) }
+        if (info == null) logger.debug(TAG, "imageinfo gave no facts for ${file.title}")
+        info?.toFileAttribution()
+    } catch (e: Exception) {
+        currentCoroutineContext().ensureActive()
+        logger.debug(TAG, "imageinfo failed for ${file.title}: ${e.message}")
+        null
     }
 
     /**
@@ -163,5 +187,9 @@ public class WikipediaProvider internal constructor(
 
     private companion object {
         private const val TAG = "WikipediaProvider"
+
+        // The photo is already chosen when imageinfo is asked, so this lookup may cost the facts but
+        // never the image; 5 s sits well inside the default enrichTimeoutMs, which it must not spend.
+        private const val IMAGEINFO_BUDGET_MS = 5_000L
     }
 }

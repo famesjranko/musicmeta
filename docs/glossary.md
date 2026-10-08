@@ -113,7 +113,7 @@ Wikimedia licenses each file on its own.
 
 | This library | Wikipedia article text | Wikimedia Commons file (`extmetadata`) |
 |---|---|---|
-| `title` | `title` (the article) | `ObjectName` (the file title) |
+| `title` | `title` (the article) | the `imageinfo` page title (`query.pages[0].title`, `File:…`), not `ObjectName` |
 | `language` | the wiki's language code (`en`) | — |
 | `sourceUrl` | the article URL, built from `title` | `descriptionurl` (the file's description page) |
 | `creator` | — (the page history lists contributors) | `Artist` |
@@ -121,7 +121,7 @@ Wikimedia licenses each file on its own.
 | `credit` | — | `Credit` |
 | `licence` | CC BY-SA 4.0, from Wikipedia's terms of use | `LicenseShortName` |
 | `licenceUrl` | the Creative Commons deed for it | `LicenseUrl` |
-| `otherLicences` | — | further licences when a file names several |
+| `otherLicences` | — | never filled: `extmetadata` carries one licence and no marker for a second |
 | `copyrightStatus` | — | `Copyrighted` |
 | `restrictions` | — | `Restrictions` |
 | `modification` | — | none: Commons has no field for it |

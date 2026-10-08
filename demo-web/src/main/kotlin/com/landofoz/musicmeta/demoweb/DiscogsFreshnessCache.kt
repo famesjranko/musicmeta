@@ -7,6 +7,9 @@ import com.landofoz.musicmeta.EnrichmentData
 import com.landofoz.musicmeta.EnrichmentResult
 import com.landofoz.musicmeta.EnrichmentType
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.JsonObject
 
 /** Discogs' API terms forbid displaying their content more than six hours behind their own copy. */
 internal const val DISCOGS_FRESHNESS_CEILING_MS = 6L * 60 * 60 * 1000
@@ -92,7 +95,18 @@ private val attributionScan = Json { encodeDefaults = false }
  *
  * Deliberately over-broad: a payload that merely links to Discogs is capped too, which costs a
  * refetch, where missing one costs a term of the licence.
+ *
+ * `attribution` objects are skipped: they are an upstream's prose about a work (a file title, a
+ * credit line), not provider-derived data, and a Wikipedia photo credited "Scan from Discogs"
+ * is not Discogs content.
  */
 internal fun EnrichmentResult.Success.namesDiscogs(): Boolean =
     provider.contains(DISCOGS_ID, ignoreCase = true) ||
-        attributionScan.encodeToString(EnrichmentData.serializer(), data).contains(DISCOGS_ID, ignoreCase = true)
+        attributionScan.encodeToJsonElement(EnrichmentData.serializer(), data).withoutAttribution().toString()
+            .contains(DISCOGS_ID, ignoreCase = true)
+
+private fun JsonElement.withoutAttribution(): JsonElement = when (this) {
+    is JsonObject -> JsonObject(filterKeys { it != "attribution" }.mapValues { it.value.withoutAttribution() })
+    is JsonArray -> JsonArray(map { it.withoutAttribution() })
+    else -> this
+}

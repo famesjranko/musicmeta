@@ -10,6 +10,7 @@ import {
 import {
   escapeHtml as esc,
   creditLineHtml,
+  imageCreditBadgeHtml,
   standingNotices,
 } from '/attribution.js';
 
@@ -639,7 +640,7 @@ function render(data, wasForceRefresh, stream) {
     ? `<div class="backdrop" style="background-image:url('${esc(summary.backgroundImageUrl)}')"></div>`
     : '';
   const img = summary.imageUrl
-    ? `<img src="${esc(summary.imageUrl)}" alt="" onerror="this.remove()" />`
+    ? `<div class="hero"><img src="${esc(summary.imageUrl)}" alt="" onerror="this.closest('.hero').remove()" />${imageCreditBadgeHtml(summary.imageCredit)}</div>`
     : pendingSlots.includes('image')
       ? '<div class="skeleton skeleton-img" aria-hidden="true"></div>'
       : '';
@@ -699,16 +700,15 @@ function render(data, wasForceRefresh, stream) {
   const totalItems = data.sections.reduce((n, s) => n + s.items.length, 0);
 
   // A gallery entry's label is often the provider's own id (an artwork alternative is labelled by
-  // whoever supplied it), so the credit replaces the caption there rather than repeating it.
+  // whoever supplied it), so the caption drops it; the credit sits in the image's own "i" control.
   const galleryCaption = (g) => {
-    const credit = g.credit ? creditLineHtml([g.credit]) : '';
     const label = g.label && !(g.credit && g.credit.provider === g.label) ? esc(g.label) : '';
-    return label || credit ? `<figcaption>${label}${credit}</figcaption>` : '';
+    return label ? `<figcaption>${label}</figcaption>` : '';
   };
   const gallery = (data.gallery && data.gallery.length)
     ? `<div class="card gallery${unverified ? ' unverified' : ''}">${data.gallery.map((g) => `
       <figure>
-        <img src="${esc(g.url)}" alt="${esc(g.label || '')}" onerror="this.closest('figure').remove()" />
+        <div class="hero"><img src="${esc(g.url)}" alt="${esc(g.label || '')}" onerror="this.closest('figure').remove()" />${imageCreditBadgeHtml(g.credit)}</div>
         ${galleryCaption(g)}
       </figure>`).join('')}</div>`
     : '';
@@ -777,7 +777,6 @@ function render(data, wasForceRefresh, stream) {
         ${subtitle}
         ${genres}
         ${text}
-        ${creditLineHtml([summary.imageCredit], 'Photo')}
         ${creditLineHtml(summary.genreCredits, 'Genres')}
       </div>
     </div>
@@ -1281,3 +1280,24 @@ cacheModeInputs.forEach((input) => {
       .catch(() => setCacheModeRadio(lastConfirmed));
   });
 });
+
+// The "i" credit control opens on hover or focus by CSS alone. A click or tap pins it open so its
+// links can be reached on touch and by pointer; a click anywhere else, or Escape, unpins it.
+function unpinImageCredits(except) {
+  document.querySelectorAll('.img-credit.pinned').forEach((el) => {
+    if (el === except) return;
+    el.classList.remove('pinned');
+    el.querySelector('.img-credit-btn').setAttribute('aria-expanded', 'false');
+  });
+}
+document.addEventListener('click', (e) => {
+  const btn = e.target.closest('.img-credit-btn');
+  unpinImageCredits(btn && btn.parentElement);
+  if (!btn) return;
+  const pinned = btn.parentElement.classList.toggle('pinned');
+  btn.setAttribute('aria-expanded', String(pinned));
+});
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') unpinImageCredits(null);
+});
+export { render };
