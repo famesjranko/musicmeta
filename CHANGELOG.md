@@ -33,7 +33,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `ArtistProfile.similarAlbums` is removed: it was always null, since artist requests never ask for it; read `AlbumProfile.similarAlbums` or `EnrichmentResults.similarAlbums()` (#385)
 
 ### Fixed
-- A provider whose circuit breaker is half-open now gets one test request after its cooldown, not every request in flight; other calls skip it until it answers (#382)
+- A half-open circuit breaker now allows one test request; other calls to that provider, even other types in one `enrich()`, get an uncached transient error until it answers (#382)
 - `markManuallySelected` is advisory: refresh overwrites a selected entry, so check `isManuallySelected` first; the demo CLI `pin` message no longer claims the value persists (#381)
 
 ## [0.13.0] - 2026-09-07
