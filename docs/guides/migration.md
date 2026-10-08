@@ -42,6 +42,11 @@ An entry cached by an earlier release still reads, with `attribution` null; ther
 clear. A custom `EnrichmentCache` that stores the payload whole needs no change. One that copies
 fields by hand into its own schema must add `attribution`.
 
+A downgrade to 0.13.0 after this release wrote rows is the one catch: a custom `EnrichmentCache`
+that decodes the payload with a strict `Json` (no `ignoreUnknownKeys`) fails on the new
+`attribution` key. The shipped Room cache sets `ignoreUnknownKeys = true` and is unaffected.
+Upgrading is safe either way.
+
 Positional construction still compiles:
 
 ```kotlin
