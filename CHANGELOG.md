@@ -29,6 +29,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.14.0] - 2026-10-08
+
 ### Breaking Changes
 - `ArtistProfile.similarAlbums` is removed: it was always null, since artist requests never ask for it; read `AlbumProfile.similarAlbums` or `EnrichmentResults.similarAlbums()` (#385)
 - `Artwork`, `Biography` and `ArtworkSource` gain a trailing `attribution` parameter, so their constructor, `copy` and `componentN` descriptors move: recompile; cached entries read with it null (#384)

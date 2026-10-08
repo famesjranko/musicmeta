@@ -12,7 +12,7 @@ Two kinds of break appear here and they cost you different things:
 
 The full per-release list, additions and fixes included, is [CHANGELOG.md](../../CHANGELOG.md).
 
-## Unreleased
+## 0.14.0
 
 ### `ArtistProfile.similarAlbums` is removed
 
