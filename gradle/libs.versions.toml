@@ -36,7 +36,7 @@ okhttp = "4.12.0"
 vanniktech-publish = "0.30.0"
 
 # Public API compatibility (ABI baselines under each module's api/ directory)
-binary-compatibility-validator = "0.18.1"
+binary-compatibility-validator = "0.18.2"
 
 # Formatting and style. Not stock: `.editorconfig` selects the `intellij_idea` code style over
 # ktlint's own default and disables the wrapping rules, each with its reasoning next to it.
@@ -55,7 +55,7 @@ detekt = "1.23.8"
 # Testing
 junit = "4.13.2"
 turbine = "1.2.1"
-robolectric = "4.16.1"
+robolectric = "4.17"
 androidx-test-core = "1.7.0"
 androidx-test-runner = "1.7.0"
 androidx-test-ext-junit = "1.3.0"
