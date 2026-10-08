@@ -1,5 +1,6 @@
 package com.landofoz.musicmeta.http
 
+import com.sun.net.httpserver.HttpExchange
 import com.sun.net.httpserver.HttpServer
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.withContext
@@ -8,7 +9,9 @@ import org.junit.Assert.*
 import org.junit.Before
 import org.junit.Test
 import java.io.IOException
+import java.net.HttpURLConnection
 import java.net.InetSocketAddress
+import java.net.URL
 import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executors
@@ -49,8 +52,13 @@ class DefaultHttpClientTimeoutRetryTest {
         // or every test here reads as "timed out twice" whatever the client did.
         server.executor = Executors.newCachedThreadPool { r -> Thread(r).apply { isDaemon = true } }
         server.createContext("/") { exchange ->
-            requests.incrementAndGet()
-            if (scripted.poll() == true) released.await(10, TimeUnit.SECONDS)
+            // A loopback port is open to every process on the machine, and some probe each new one
+            // (an IDE or agent host looking for a dev server). A stranger's request is answered
+            // but is neither an attempt nor a turn at the script.
+            if (isFromClientUnderTest(exchange)) {
+                requests.incrementAndGet()
+                if (scripted.poll() == true) released.await(10, TimeUnit.SECONDS)
+            }
             val body =
                 if (exchange.requestURI.path.endsWith("array")) """[{"ok":true}]""" else """{"ok":true}"""
             // The client that timed out is gone by now, so writing to it throws; that is the
@@ -68,11 +76,14 @@ class DefaultHttpClientTimeoutRetryTest {
         server.stop(0)
     }
 
+    private fun isFromClientUnderTest(exchange: HttpExchange) =
+        exchange.requestHeaders.getFirst("User-Agent") == USER_AGENT
+
     private fun url() = "http://127.0.0.1:${server.address.port}/data"
 
     private fun arrayUrl() = "http://127.0.0.1:${server.address.port}/data/array"
 
-    private fun client(timeoutMs: Int) = DefaultHttpClient("musicmeta-test", timeoutMs = timeoutMs)
+    private fun client(timeoutMs: Int) = DefaultHttpClient(USER_AGENT, timeoutMs = timeoutMs)
 
     @Test fun `a read timeout is retried and the retry's success is returned`() = runTest {
         // Given - one request that hangs past the read timeout, then a normal response
@@ -160,6 +171,24 @@ class DefaultHttpClientTimeoutRetryTest {
         assertTrue("expected IOException, got $thrown", thrown is IOException)
     }
 
+    @Test fun `a request from another program is not counted as an attempt`() = runTest {
+        // Given - one hung request scripted for the client, and a stranger that reaches the port first
+        scripted += true
+        val stranger = URL(url()).openConnection() as HttpURLConnection
+        stranger.setRequestProperty("User-Agent", "port-scanner")
+        stranger.readTimeout = 2_000
+        val strangerStatus = stranger.responseCode
+
+        // When - the client fetches the JSON result
+        val result = client(timeoutMs = 200).fetchJsonResult(url())
+
+        // Then - the stranger was answered without taking the hang, and the client's own two
+        // attempts are the only ones counted
+        assertEquals(200, strangerStatus)
+        assertTrue("expected Ok, got $result", result is HttpResult.Ok)
+        assertEquals(2, requests.get())
+    }
+
     @Test fun `a body that is not JSON is returned on the first attempt`() = runTest {
         // Given - a 200 whose body does not parse. It reaches the caller as NetworkError, the same
         // type a timeout does, but the transport worked: a second identical request buys a second
@@ -167,7 +196,7 @@ class DefaultHttpClientTimeoutRetryTest {
         val html = HttpServer.create(InetSocketAddress("127.0.0.1", 0), 0)
         var htmlRequests = 0
         html.createContext("/") { exchange ->
-            htmlRequests++
+            if (isFromClientUnderTest(exchange)) htmlRequests++
             val body = "<html>not json</html>"
             exchange.sendResponseHeaders(200, body.length.toLong())
             exchange.responseBody.use { it.write(body.toByteArray()) }
@@ -188,5 +217,9 @@ class DefaultHttpClientTimeoutRetryTest {
             (result as HttpResult.NetworkError).message.startsWith("JSON parse error"),
         )
         assertEquals("a body that will not parse must not be retried", 1, htmlRequests)
+    }
+
+    private companion object {
+        const val USER_AGENT = "musicmeta-test"
     }
 }
