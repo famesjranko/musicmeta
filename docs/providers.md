@@ -282,8 +282,26 @@ reading Last.fm's response headers; a consumer relying on the cache to stay unde
 nothing in musicmeta enforcing it.
 
 **Wikipedia's text is CC BY-SA and asks for a licence notice plus a link, a stable copy, or an
-author list per reuse.** musicmeta caches and serves the text with no such notice, article URL, or
-author list retained anywhere a consumer could render it.
+author list per reuse.** A Wikipedia `Biography` carries the article's title, its
+`en.wikipedia.org` URL and `CC BY-SA 4.0` with that licence's URL in `attribution`. The author
+list is not carried; the article URL leads to it.
+
+**A Wikipedia photo is a different file with its own terms, and carries them.** The text licence
+does not describe it. Each `ARTIST_PHOTO` result takes one more Wikipedia request, MediaWiki
+`imageinfo` for the chosen file, and `Artwork.attribution` holds what that answer states: the
+file's title and description page, its creator, credit and attribution line, its licence and
+licence URL, its copyright status and its restrictions, such as `personality`, `trademarked` or
+`non-free`. Radiohead's lead image carries `Raph_PH` and `CC BY 4.0`, not the article's text
+licence. Wikimedia documents the licence fields as unreliable for multi-licensed files, so the
+one licence stated is passed on as stated, and no second one is guessed. Markup is removed from
+the text, and a link that is not an absolute `https` URL is left out while the other facts stay.
+A file whose answer is missing, partial, restrictive or contradictory is returned like any
+other, and so is a photo whose `imageinfo` request failed, with `attribution` null.
+
+**musicmeta states these facts and does not judge them.** The library never withholds, ranks,
+caches differently or merges differently on what they say, and none of them says that a reuse is
+allowed. Whether to show a photo, how to credit it and whether to link anything is for the
+consumer.
 
 **Cover Art Archive images are copyrighted per image by their respective rights holders**, and the
 API carries no licence field to propagate even if musicmeta wanted to surface one.

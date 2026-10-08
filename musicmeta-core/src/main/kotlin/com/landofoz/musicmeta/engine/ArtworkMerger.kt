@@ -35,6 +35,7 @@ internal class ArtworkMerger(override val type: EnrichmentType) : ResultMerger {
                     url = art.url,
                     thumbnailUrl = art.thumbnailUrl,
                     sizes = art.sizes,
+                    attribution = art.attribution,
                 )
             }
             .filter { it.url != primaryArtwork.url }

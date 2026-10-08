@@ -288,7 +288,7 @@ Measured 2026-09-07 over 347 distinct Wikidata ids taken from MusicBrainz `wikid
 relation after a merge, so the stale id arrives from a consumer or an aged cache rather than from
 the lookup that filled it.
 
-**Wikipedia.** Two surfaces. The bio comes from the Action API
+**Wikipedia.** Three surfaces. The bio comes from the Action API
 (`action=query&prop=extracts|pageimages|pageprops&exintro&explaintext`), one request carrying the
 lead text, the ~320px thumbnail and the page properties. Parsed and dropped from it:
 `wikibase-shortdesc` (the "English rock band" gloss), `wikibase_item` (the Q-id, which would skip a
@@ -301,6 +301,37 @@ height** — only rendered thumbnails — so `Artwork.url` is the largest scale 
 lists every scale, and `Artwork.height` is always null. Scales are chosen by each entry's own
 `scale` field, not by array position. Where no item is flagged `leadImage`, the first surviving
 image in article order wins. `utm_*` tracking parameters are stripped from every URL we ship.
+
+The third surface is the Action API's `prop=imageinfo&iiprop=url|extmetadata`, asked once for the
+file the media list selected, after the selection. It is where a photo's creator and licence come
+from, because the media list names a file and states nothing about it. Captures are in
+`pools/wikipedia-file-attribution/` (2026-10-08). `iiextmetadatafilter` limits the answer to the
+fields read, so `Categories` and `ImageDescription` are not requested. Mapping, in
+`WikipediaFileAttribution.kt`:
+
+- `descriptionurl` is `sourceUrl`, and the resolved page title is `title`. `Artist`, `Credit`,
+  `Attribution` and `Copyrighted` are `creator`, `credit`, `attributionText` and `copyrightStatus`.
+  `Attribution` is Wikimedia's replacement for `Artist` plus `Credit`, and all three are kept.
+- `licence` is `LicenseShortName`, else `UsageTerms`, else the `License` slug. `LicenseUrl` is
+  `licenceUrl`.
+- `restrictions` are the `Restrictions` keywords (`|`-joined in the answer), plus `non-free` when
+  `NonFree` is true. Wikimedia has no field for a modification, so that stays null.
+- `Artist`, `Credit` and `UsageTerms` arrive as HTML. Tags are removed, entities decoded once and
+  whitespace collapsed. A `Credit` may be a whole gallery: the Radiohead lead image's is.
+- A multi-licensed file states one licence and no marker for the others. Wikimedia says these
+  fields are "currently unreliable" for such files, and a scan of 350 files chosen for carrying
+  several licence templates found none that named two, so `otherLicences` is never built here.
+- A `sourceUrl` or `licenceUrl` that is not an absolute `https` URL is left out. The live
+  GFDL files carry an `http://` `LicenseUrl`, so this is not a corner case.
+
+The request is the same Wikipedia rate limiter slot as the other two, so a photo costs one more
+request and the limiter's gap. Nothing here decides the photo: it is selected from the media list
+first, and an `imageinfo` that fails (a 4xx, a 5xx, a dropped connection, malformed JSON, or an
+Action API error such as `maxlag` inside a 200), names no file or has no `extmetadata` returns the
+same photo, with the facts that were read or `attribution` null. Failures are logged at debug with
+the status or the upstream error code. A cancellation during the request is not a failure and
+propagates.
+
 Never called: `/page/html/{title}` and
 `action=parse`, where the infobox lives — origin, years active, labels, members, which we take from
 Wikidata instead. Both hosts are hardcoded `en.wikipedia.org`, so no other language is ever queried.
