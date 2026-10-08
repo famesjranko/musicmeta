@@ -157,6 +157,56 @@ class AttributionRowsTest {
     }
 
     @Test
+    fun `a photo URL with an ESC prints as text with the ESC escaped and no hyperlink`() {
+        // Given - a photo whose https URL contains an ESC byte, on a styled terminal
+        val data = photo(attribution = null, url = "https://example.org/a\u001b[31mb.jpg")
+
+        // When - rendering the results block
+        val output = resultRows(EnrichmentType.ARTIST_PHOTO, data, Theme.Default)
+
+        // Then - the URL is printed with the ESC escaped and is not wrapped in an OSC 8 hyperlink
+        assertTrue(output, output.contains("https://example.org/a\\u001b[31mb.jpg"))
+        assertFalse(output, output.contains("\u001b]8;;"))
+        assertFalse(output, output.contains("a\u001b[31m"))
+    }
+
+    @Test
+    fun `URLs with a bidi override, a line separator, whitespace or userinfo are never hyperlinks`() {
+        listOf(
+            "https://example.org/a\u202Eb.jpg" to "\\u202e",
+            "https://example.org/a\u2028b.jpg" to "\\u2028",
+            "https://example.org/a\u200Bb.jpg" to "\\u200b",
+            "https://example.org/a b.jpg" to "a b.jpg",
+            "https://example.org/a\u0085b.jpg" to "\\u0085",
+            "https://upload.wikimedia.org@evil.example/a.jpg" to "upload.wikimedia.org@evil.example",
+        ).forEach { (url, shown) ->
+            // Given - a photo whose URL has an unsafe character or userinfo, on a styled terminal
+            val data = photo(attribution = null, url = url)
+
+            // When - rendering the results block
+            val output = resultRows(EnrichmentType.ARTIST_PHOTO, data, Theme.Default)
+
+            // Then - the URL is still printed as text and is not a terminal hyperlink
+            assertTrue("$url: $output", output.contains(shown))
+            assertFalse("$url: $output", output.contains("\u001b]8;;"))
+        }
+    }
+
+    @Test
+    fun `a creator with a bidi override prints it escaped and the other facts still print`() {
+        // Given - a creator containing U+202E and an ordinary licence
+        val data = photo(Attribution(creator = "ab\u202Ecd", licence = "CC BY 4.0"))
+
+        // When - rendering the results block
+        val output = resultRows(EnrichmentType.ARTIST_PHOTO, data)
+
+        // Then - the override is shown as an escape, never emitted raw, and the licence row prints
+        assertTrue(output, output.contains("creator: ab\\u202ecd"))
+        assertFalse(output, output.contains("\u202E"))
+        assertTrue(output, output.contains("licence: CC BY 4.0"))
+    }
+
+    @Test
     fun `a Wikipedia photo row carries the file's facts and never the article text licence`() {
         // Given - a photo credited to its own author under a licence other than the article's
         val data = photo(Attribution(creator = "Raph_PH", licence = "CC BY 4.0"))

@@ -292,20 +292,28 @@ object Formatter {
             ?: data.genres?.take(4)?.joinToString(", ")
 
     /**
-     * A terminal hyperlink only for an http(s) URL with no control or whitespace character on a
-     * styled terminal; otherwise the label followed by the escaped URL. The URL is printed either
-     * way; this only decides whether it is clickable.
+     * A terminal hyperlink only for an http(s) URL on a styled terminal with no whitespace, control,
+     * format (bidi, zero-width) or line-separator character and no userinfo, which a terminal can
+     * render as a different host; otherwise the label followed by the escaped URL. The URL is
+     * printed either way; this only decides whether it is clickable.
      */
     private fun safeLink(url: String, label: String, term: Terminal): String {
-        val clickable = Regex("https?://[^\\s\\p{Cntrl}\\u0080-\\u009f]+", RegexOption.IGNORE_CASE).matches(url)
+        val clickable = Regex("https?://[^/@]*(?:/.*)?", setOf(RegexOption.IGNORE_CASE, RegexOption.DOT_MATCHES_ALL))
+            .matches(url) && url.none { it.isWhitespace() || needsEscape(it) }
         val styled = term.theme.reset.isNotEmpty()
         return if (clickable && styled) term.link(url, label) else "$label ${escapeControls(url)}"
     }
 
-    /** Printable text: each control character (C0, DEL, C1) becomes a visible `\uXXXX` escape. */
+    private fun needsEscape(c: Char): Boolean =
+        c.isISOControl() || Character.getType(c) == Character.FORMAT.toInt() || c == '\u2028' || c == '\u2029'
+
+    /**
+     * Printable text: each control (C0, DEL, C1), format (bidi, zero-width) and line-separator
+     * character becomes a visible `\uXXXX` escape, so none can reorder or hide terminal output.
+     */
     internal fun escapeControls(text: String): String = buildString {
         for (c in text) {
-            if (c.isISOControl()) append(String.format(Locale.ROOT, "\\u%04x", c.code)) else append(c)
+            if (needsEscape(c)) append(String.format(Locale.ROOT, "\\u%04x", c.code)) else append(c)
         }
     }
 
