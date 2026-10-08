@@ -32,6 +32,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Breaking Changes
 - `ArtistProfile.similarAlbums` is removed: it was always null, since artist requests never ask for it; read `AlbumProfile.similarAlbums` or `EnrichmentResults.similarAlbums()` (#385)
 
+### Fixed
+- `markManuallySelected` is advisory: refresh overwrites a selected entry, so check `isManuallySelected` first; the demo CLI `pin` message no longer claims the value persists (#381)
+
 ## [0.13.0] - 2026-09-07
 
 ### Breaking Changes

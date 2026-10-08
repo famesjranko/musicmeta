@@ -250,10 +250,20 @@ public interface EnrichmentEngine {
      */
     public suspend fun invalidate(request: EnrichmentRequest, type: EnrichmentType? = null)
 
-    /** Whether the user has manually selected data for this request/type (e.g., picked artwork). */
+    /**
+     * Whether [markManuallySelected] was called for this request and type and not cleared since
+     * (e.g., the user picked artwork). The flag is advisory: nothing here or in the shipped caches
+     * reads it before a write, so check it before your own refresh. See [markManuallySelected].
+     */
     public suspend fun isManuallySelected(request: EnrichmentRequest, type: EnrichmentType): Boolean
 
-    /** Marks data as manually selected by the user, protecting it from automatic overwrites. */
+    /**
+     * Records that the user chose this request and type's data. **The mark is advisory and
+     * protects nothing**: [enrich] and the shipped caches overwrite the entry once it expires or is
+     * refreshed, and the flag survives that overwrite. A caller that wants to keep a choice checks
+     * [isManuallySelected] before its own refresh and skips it. [invalidate], `forceRefresh` and
+     * [EnrichmentCache.clear] remove the flag.
+     */
     public suspend fun markManuallySelected(request: EnrichmentRequest, type: EnrichmentType)
 
     /**
