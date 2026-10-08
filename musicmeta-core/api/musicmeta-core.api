@@ -88,7 +88,6 @@ public final class com/landofoz/musicmeta/ArtistProfile {
 	public final fun getRadio ()Lcom/landofoz/musicmeta/EnrichmentData$RadioPlaylist;
 	public final fun getRadioDiscovery ()Lcom/landofoz/musicmeta/EnrichmentData$RadioPlaylist;
 	public final fun getResults ()Lcom/landofoz/musicmeta/EnrichmentResults;
-	public final fun getSimilarAlbums ()Lcom/landofoz/musicmeta/EnrichmentData$SimilarAlbums;
 	public final fun getSimilarArtists ()Lcom/landofoz/musicmeta/EnrichmentData$SimilarArtists;
 	public final fun getSuggestions ()Ljava/util/List;
 	public final fun getTimeline ()Ljava/util/List;

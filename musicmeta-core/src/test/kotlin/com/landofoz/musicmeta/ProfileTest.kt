@@ -61,6 +61,28 @@ class ProfileTest {
         assertNotNull(profile.radio)
     }
 
+    @Test fun `artist profile exposes a wikipedia photo and bio that carry no attribution`() {
+        // Given - results holding a wikipedia ARTIST_PHOTO and ARTIST_BIO with no attribution on either
+        val results = EnrichmentResults(
+            raw = mapOf(
+                EnrichmentType.ARTIST_PHOTO to success(EnrichmentType.ARTIST_PHOTO,
+                    EnrichmentData.Artwork(url = "https://example.com/photo.jpg"), provider = "wikipedia"),
+                EnrichmentType.ARTIST_BIO to success(EnrichmentType.ARTIST_BIO,
+                    EnrichmentData.Biography(text = "A band from Oxford", source = "wikipedia", language = "en"),
+                    provider = "wikipedia"),
+            ),
+            requestedTypes = EnrichmentRequest.DEFAULT_ARTIST_TYPES,
+            identity = NOT_REQUIRED_IDENTITY,
+        )
+
+        // When - building an ArtistProfile from the results
+        val profile = ArtistProfile("Radiohead", results)
+
+        // Then - the profile exposes both the photo and the bio
+        assertEquals("https://example.com/photo.jpg", profile.photo?.url)
+        assertEquals("A band from Oxford", profile.bio?.text)
+    }
+
     @Test fun `artist profile returns empty collections for missing types`() {
         // Given - an EnrichmentResults with no raw results and no identity
         val results = EnrichmentResults(raw = emptyMap(), requestedTypes = emptySet(), identity = NOT_REQUIRED_IDENTITY)
@@ -159,6 +181,24 @@ class ProfileTest {
         assertEquals("Album", profile.releaseType)
         assertEquals(2, profile.tracks.size)
         assertEquals("Airbag", profile.tracks[0].title)
+    }
+
+    @Test fun `album profile exposes similar albums from the SIMILAR_ALBUMS result`() {
+        // Given - results holding a SIMILAR_ALBUMS payload with one similar album
+        val results = EnrichmentResults(
+            raw = mapOf(
+                EnrichmentType.SIMILAR_ALBUMS to success(EnrichmentType.SIMILAR_ALBUMS,
+                    EnrichmentData.SimilarAlbums(listOf(SimilarAlbum("Kid A", "Radiohead", artistMatchScore = 0.8f)))),
+            ),
+            requestedTypes = EnrichmentRequest.DEFAULT_ALBUM_TYPES,
+            identity = NOT_REQUIRED_IDENTITY,
+        )
+
+        // When - building an AlbumProfile from the results
+        val profile = AlbumProfile("OK Computer", "Radiohead", results)
+
+        // Then - the profile returns that payload
+        assertEquals("Kid A", profile.similarAlbums?.albums?.single()?.title)
     }
 
     // --- TrackProfile ---
