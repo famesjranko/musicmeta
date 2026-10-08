@@ -65,8 +65,7 @@ class FanOutAndSettleTest {
     }
 
     @Test fun `a wikipedia biography with no attribution settles as a stamped fresh Success`() = runBlocking {
-        // Given - a wikipedia Success for ARTIST_BIO, a stale-capable cache holding an older entry,
-        // and a catalog filter configured
+        // Given - a wikipedia Success for ARTIST_BIO, a stale-capable cache holding an older entry
         val cache = FakeEnrichmentCache()
         val key = DefaultEnrichmentEngine.entityKeyFor(req, EnrichmentType.ARTIST_BIO)
         cache.expiredStore["$key:${EnrichmentType.ARTIST_BIO}"] = EnrichmentResult.Success(

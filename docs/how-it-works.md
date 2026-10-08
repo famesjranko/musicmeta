@@ -72,7 +72,7 @@ enrich(request, types, forceRefresh)
 │     Stale fallback     ── STALE_IF_ERROR: serve expired    │
 │                           cache on Error/RateLimited       │
 └─────────────┬──────────────────────────────────────────────┘
-              │ after the last type settles, inside the deadline
+              │ only if every type settled within the deadline
               ▼
 ┌────────────────────────────┐
 │ 8. Cache Store + Alias     │── once per call: save with TTL + eligible canonical alias
