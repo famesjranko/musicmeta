@@ -257,4 +257,6 @@ test('hostile attribution text is escaped and markup in a creator is reduced to 
 
 test('plainText strips tags and decodes entities once', () => {
   assert.equal(plainText('<a href="x">Ann &amp; Bob</a>'), 'Ann & Bob');
+  // A second decode would turn this escaped markup into the live tag `<b>`.
+  assert.equal(plainText('&amp;lt;b&amp;gt;'), '&lt;b&gt;');
 });

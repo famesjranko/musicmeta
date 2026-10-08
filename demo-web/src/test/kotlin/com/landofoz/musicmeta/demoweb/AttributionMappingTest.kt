@@ -333,11 +333,11 @@ class AttributionMappingTest {
 
     private val commonsPhoto = "https://upload.wikimedia.org/wikipedia/commons/a/a1/Thom_Yorke.jpg"
 
-    private fun artistWithPhoto(
+    private fun artistProfileWithPhoto(
         photoProvider: String,
         photoAttribution: Attribution?,
         bioAttribution: Attribution? = null,
-    ): DemoResponse {
+    ): ArtistProfile {
         val photo = EnrichmentData.Artwork(url = commonsPhoto, attribution = photoAttribution)
         val bio = EnrichmentData.Biography(
             text = "Radiohead are an English rock band.",
@@ -350,8 +350,15 @@ class AttributionMappingTest {
                 Triple(EnrichmentType.ARTIST_BIO, "wikipedia", bio),
             ),
         )
-        return ArtistProfile(name = "Radiohead", results = results).toDemoResponse(elapsedMs = 0)
+        return ArtistProfile(name = "Radiohead", results = results)
     }
+
+    private fun artistWithPhoto(
+        photoProvider: String,
+        photoAttribution: Attribution?,
+        bioAttribution: Attribution? = null,
+    ): DemoResponse =
+        artistProfileWithPhoto(photoProvider, photoAttribution, bioAttribution).toDemoResponse(elapsedMs = 0)
 
     private fun assertShownWithCredit(response: DemoResponse, provider: String, expected: Attribution?) {
         assertEquals(commonsPhoto, response.summary.imageUrl)
@@ -363,8 +370,10 @@ class AttributionMappingTest {
     @Test
     fun `a Wikipedia photo with no attribution is shown and credited to Wikipedia alone`() {
         // Given - a Wikipedia photo whose upstream said nothing about the file
+        val profile = artistProfileWithPhoto("wikipedia", photoAttribution = null)
+
         // When - mapping the artist
-        val response = artistWithPhoto("wikipedia", photoAttribution = null)
+        val response = profile.toDemoResponse(elapsedMs = 0)
 
         // Then - the photo and the text are returned, and the credit carries no file facts
         assertShownWithCredit(response, "wikipedia", expected = null)
@@ -440,6 +449,116 @@ class AttributionMappingTest {
 
         // Then - the photo is returned and credited to Wikidata, with its facts
         assertShownWithCredit(response, "wikidata", facts)
+    }
+
+    private val commonsAlternative = "https://upload.wikimedia.org/wikipedia/commons/b/b2/Alt.jpg"
+    private val commonsHostAlternative = "https://commons.wikimedia.org/media/c/c3/Other.jpg"
+    private val commonsLogo = "https://upload.wikimedia.org/wikipedia/commons/d/d4/Logo.svg"
+    private val commonsBanner = "https://upload.wikimedia.org/wikipedia/commons/e/e5/Banner.jpg"
+
+    /**
+     * An artist whose primary photo is not Wikimedia's but whose gallery holds four Wikimedia
+     * images: two alternatives (one by provider, one by host only), a logo and a banner.
+     */
+    private fun artistWithWikimediaGallery(attribution: Attribution?): DemoResponse {
+        val photo = EnrichmentData.Artwork(
+            url = "https://assets.fanart.tv/photo.jpg",
+            alternatives = listOf(
+                ArtworkSource(provider = "wikipedia", url = commonsAlternative, attribution = attribution),
+                ArtworkSource(provider = "somecdn", url = commonsHostAlternative, attribution = attribution),
+            ),
+        )
+        val results = resultsWith(
+            entries = arrayOf(
+                Triple(EnrichmentType.ARTIST_PHOTO, "fanarttv", photo),
+                Triple(EnrichmentType.ARTIST_LOGO, "wikipedia", EnrichmentData.Artwork(commonsLogo, attribution = attribution)),
+                Triple(EnrichmentType.ARTIST_BANNER, "wikidata", EnrichmentData.Artwork(commonsBanner, attribution = attribution)),
+            ),
+        )
+        return ArtistProfile(name = "Radiohead", results = results).toDemoResponse(elapsedMs = 0)
+    }
+
+    private fun assertWikimediaGalleryKept(response: DemoResponse, expected: Attribution?) {
+        val byUrl = response.gallery.associateBy { it.url }
+        assertEquals(
+            setOf(commonsAlternative, commonsHostAlternative, commonsLogo, commonsBanner),
+            byUrl.keys,
+        )
+        assertEquals(
+            listOf("wikipedia", "somecdn", "wikipedia", "wikidata"),
+            listOf(commonsAlternative, commonsHostAlternative, commonsLogo, commonsBanner).map { byUrl[it]?.credit?.provider },
+        )
+        assertTrue(byUrl.values.all { it.credit?.attribution == expected })
+    }
+
+    @Test
+    fun `Wikimedia gallery images with no attribution are all kept`() {
+        // Given - an artist whose Wikimedia gallery images carry no file facts
+        // When - mapping the artist
+        val response = artistWithWikimediaGallery(attribution = null)
+
+        // Then - every alternative, the logo and the banner are in the gallery, credited to their providers
+        assertWikimediaGalleryKept(response, expected = null)
+    }
+
+    @Test
+    fun `Wikimedia gallery images with partial attribution are all kept`() {
+        // Given - Wikimedia gallery images whose upstream named only a creator and no source link
+        val partial = Attribution(creator = "Jane Doe")
+
+        // When - mapping the artist
+        val response = artistWithWikimediaGallery(partial)
+
+        // Then - every one is in the gallery and carries that creator
+        assertWikimediaGalleryKept(response, partial)
+    }
+
+    @Test
+    fun `Wikimedia gallery images with restrictive attribution are all kept`() {
+        // Given - Wikimedia gallery images under a non-commercial licence with restrictions
+        val restrictive = Attribution(
+            licence = "CC BY-NC 4.0",
+            restrictions = listOf("No commercial use", "Personality rights"),
+        )
+
+        // When - mapping the artist
+        val response = artistWithWikimediaGallery(restrictive)
+
+        // Then - every one is in the gallery and carries the restrictions
+        assertWikimediaGalleryKept(response, restrictive)
+    }
+
+    @Test
+    fun `Wikimedia gallery images with contradictory attribution are all kept`() {
+        // Given - Wikimedia gallery images naming public domain, a second licence and copyright
+        val contradictory = Attribution(
+            licence = "Public domain",
+            otherLicences = listOf("CC BY-NC 4.0"),
+            copyrightStatus = "True",
+        )
+
+        // When - mapping the artist
+        val response = artistWithWikimediaGallery(contradictory)
+
+        // Then - every one is in the gallery with all of it unreconciled
+        assertWikimediaGalleryKept(response, contradictory)
+    }
+
+    @Test
+    fun `Wikimedia gallery images with unsafe links are all kept`() {
+        // Given - Wikimedia gallery images whose description and licence links are not https
+        val unsafe = Attribution(
+            creator = "Jane Doe",
+            sourceUrl = "javascript:alert(1)",
+            licence = "CC BY 4.0",
+            licenceUrl = "http://creativecommons.org/licenses/by/4.0/",
+        )
+
+        // When - mapping the artist
+        val response = artistWithWikimediaGallery(unsafe)
+
+        // Then - every one is in the gallery, links unchanged for the page to judge
+        assertWikimediaGalleryKept(response, unsafe)
     }
 
     @Test
