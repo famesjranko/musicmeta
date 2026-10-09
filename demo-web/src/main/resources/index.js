@@ -13,6 +13,7 @@ import {
   imageCreditBadgeHtml,
   standingNotices,
 } from '/attribution.js';
+import { providerWarning, typeWarning, warningHtml } from '/reachability.js';
 
 const tabsEl = document.getElementById('kind-tabs');
 const kindTabs = Array.from(tabsEl.querySelectorAll('button[data-kind]'));
@@ -48,6 +49,10 @@ const FIELD_ROLES = {
 };
 const values = { artistName: '', albumTitle: '', trackTitle: '', mbid: '' };
 let currentKind = 'artist';
+
+// The /api/providers rows, kept so a result's status table can tell whether every provider capable
+// of a type has a warned host. Empty until the list loads, which only ever means no warning.
+let providerRows = [];
 
 // What the primary box means per kind, for the screen-reader label and the ⌕ button's name.
 const NAME_LABELS = {
@@ -728,6 +733,8 @@ function render(data, wasForceRefresh, stream) {
   const statusCell = (p) => {
     if (p.status === 'ok_stale') return 'ok <span class="stale-badge">stale fallback</span>';
     if (p.errorKind === 'TIMEOUT') return `<span class="stale-badge">timed out</span> ${esc(p.status)}`;
+    // Only a miss can be explained by a refused host; an ok row has an answer, so never a warning.
+    if (p.status.split(':')[0] === 'not_found') return esc(p.status) + warningHtml(typeWarning(p.type, providerRows));
     return esc(p.status);
   };
 
@@ -1174,7 +1181,7 @@ function providerRowHtml(provider) {
   const types = skipped ? '—' : provider.capabilities.length;
   return `<tr>
       <td><span class="pdot${provider.available ? '' : ' off'}" aria-hidden="true"></span>${esc(provider.displayName)}
-        <span class="secondary">${availability}</span></td>
+        <span class="secondary">${availability}</span>${warningHtml(providerWarning(provider))}</td>
       <td>${keyStateHtml(provider)}</td>
       <td>${types}</td>
       <td>${policy ? esc(humanizeEnum(policy.commercialUse)) : 'Not recorded'}</td>
@@ -1183,6 +1190,7 @@ function providerRowHtml(provider) {
 }
 
 function renderProviders(providers) {
+  providerRows = providers;
   providerPanel.innerHTML = `<table class="provider-table">
       <caption>Providers this instance was built with (plus any skipped for a missing key), and the terms musicmeta records for each.</caption>
       <thead><tr>

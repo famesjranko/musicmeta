@@ -66,6 +66,7 @@ internal val STATIC_PATHS = listOf(
     "/index.js",
     "/stream-protocol.js",
     "/attribution.js",
+    "/reachability.js",
     "/robots.txt",
 )
 
@@ -177,6 +178,10 @@ private val HEALTH_READY = HealthResponse(ready = true, status = "READY")
  * before dispatch, covering the SSE path (which sets its own headers directly) the same as every
  * other. Both default off, which is what keeps a `DEMO_PUBLIC`-unset process's answers unchanged.
  *
+ * [hostReachability] holds the startup check of each keyless provider's host. It is started once
+ * the socket is listening and never waited on, so health and every other endpoint answer while a
+ * probe is still out; `/api/providers` reads whatever verdicts exist at the time.
+ *
  * Returns the bound port, which is [port] unless [port] is 0 — the request for whichever port the
  * OS has free. A caller that needs to reach the server has to read it back from here, because a
  * port picked before the bind is a port some other process may already hold.
@@ -191,6 +196,7 @@ fun startServer(
     requireMaintainerSecret: Boolean = false,
     maintainerSecret: String? = null,
     securityHeaders: Boolean = false,
+    hostReachability: HostReachability = HostReachability(),
 ): Int {
     val staticFiles = STATIC_PATHS.associateWith { path ->
         ResourceAnchor::class.java.getResourceAsStream(path)?.readBytes()
@@ -245,7 +251,7 @@ fun startServer(
     upstreamContext("/api/search") { exchange -> handleSearch(exchange, engineRef.get()) }
     upstreamContext("/api/preview") { exchange -> handlePreview(exchange, engineRef.get()) }
     registerContext("/api/providers") { exchange ->
-        handleProviders(exchange, engineRef.get(), apiKeys, unregisteredProviderIds)
+        handleProviders(exchange, engineRef.get(), apiKeys, unregisteredProviderIds, hostReachability)
     }
     registerContext("/api/config") { exchange ->
         handleConfig(exchange, engineRef, cacheModeRef, rebuildEngine, requireMaintainerSecret, maintainerSecret)
@@ -253,6 +259,7 @@ fun startServer(
     registerContext("/api/health") { exchange -> exchange.respondJson(200, HEALTH_READY) }
 
     server.start()
+    hostReachability.startProbing(engineRef.get().getProviders())
     return server.address.port
 }
 
@@ -1179,13 +1186,14 @@ private fun handleProviders(
     engine: EnrichmentEngine,
     apiKeys: ApiKeyConfig,
     unregisteredProviderIds: Set<String>,
+    hostReachability: HostReachability,
 ) {
     if (exchange.requestMethod != "GET") {
         exchange.respondJson(405, ApiError("GET required"))
         return
     }
     try {
-        val rows = buildProviderRows(engine.getProviders(), apiKeys, unregisteredProviderIds)
+        val rows = buildProviderRows(engine.getProviders(), apiKeys, unregisteredProviderIds, hostReachability)
         exchange.respondJson(200, ProvidersResponse(rows))
     } catch (e: Exception) {
         exchange.respondJson(500, ApiError(e.message ?: e.javaClass.simpleName))
@@ -1215,6 +1223,7 @@ internal fun buildProviderRows(
     live: List<ProviderInfo>,
     apiKeys: ApiKeyConfig,
     unregisteredProviderIds: Set<String> = emptySet(),
+    hostReachability: HostReachability = HostReachability(),
 ): List<ProviderRow> {
     val catalogById = ProviderCatalog.entries.associateBy { it.id }
     val catalogOrder = ProviderCatalog.entries.withIndex().associate { (index, entry) -> entry.id to index }
@@ -1233,6 +1242,7 @@ internal fun buildProviderRows(
             capabilities = info.capabilities.map { it.type.name },
             policy = policyRow(info.id),
             keyStatus = keyStatus,
+            reachability = hostReachability.verdictFor(info.id),
         )
     }
 

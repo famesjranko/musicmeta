@@ -49,3 +49,13 @@ works with no secret at all, exactly as before this existed.
 `/api/health` is a **liveness** probe, not a readiness one: it reports that the process is
 accepting requests, nothing about whether any upstream provider is reachable. Do not wire an
 uptime alert to it and expect it to flap on a provider outage; it won't, by design.
+
+After the server is listening, the process sends one GET to each keyless provider's host, on
+background threads with a 5 s timeout, a single try and no retry. A 401 or 403 marks the provider
+`REFUSED`, no answer marks it `UNREACHABLE`, and any other status (404, 429 and 5xx included) marks
+it `REACHABLE`. The verdict is kept for the life of the instance and appears in `/api/providers`.
+The settings table shows an amber warning beside a refused or unreachable provider, and the results
+table shows it after a `not_found` whose every capable provider was refused. This is a notice about
+where the demo runs (a host's egress can be turned away while the library is fine), not library
+behaviour: the check reads no licence or rights data, changes no result, and bypasses the engine's
+rate limiters and circuit breakers. It runs the same under `DEMO_PUBLIC`.
