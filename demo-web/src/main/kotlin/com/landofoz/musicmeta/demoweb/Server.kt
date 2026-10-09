@@ -178,9 +178,9 @@ private val HEALTH_READY = HealthResponse(ready = true, status = "READY")
  * before dispatch, covering the SSE path (which sets its own headers directly) the same as every
  * other. Both default off, which is what keeps a `DEMO_PUBLIC`-unset process's answers unchanged.
  *
- * [hostReachability] holds the startup check of each keyless provider's host. It is started once
- * the socket is listening and never waited on, so health and every other endpoint answer while a
- * probe is still out; `/api/providers` reads whatever verdicts exist at the time.
+ * [hostReachability] holds the startup check of each keyless provider's host. It runs before the
+ * socket is bound and is waited on for at most its own cap, so by the time any request is accepted
+ * every probe has either settled or been left `UNCHECKED` for good; `/api/providers` reads those.
  *
  * Returns the bound port, which is [port] unless [port] is 0 — the request for whichever port the
  * OS has free. A caller that needs to reach the server has to read it back from here, because a
@@ -202,6 +202,11 @@ fun startServer(
         ResourceAnchor::class.java.getResourceAsStream(path)?.readBytes()
             ?: error("$path missing from demo-web resources")
     }
+
+    // Before the bind: a host that allocates CPU only while a request is in flight (Cloud Run)
+    // grants it until the port opens, and gives a thread started afterwards none until a request
+    // arrives. The wait is bounded, so a slow upstream cannot hold the instance past its cap.
+    hostReachability.probeAll(engineRef.get().getProviders())
 
     val server = HttpServer.create(InetSocketAddress(port), 0)
     // A streaming request holds its thread for the whole enrichment, not for one round trip, so the
@@ -259,7 +264,6 @@ fun startServer(
     registerContext("/api/health") { exchange -> exchange.respondJson(200, HEALTH_READY) }
 
     server.start()
-    hostReachability.startProbing(engineRef.get().getProviders())
     return server.address.port
 }
 

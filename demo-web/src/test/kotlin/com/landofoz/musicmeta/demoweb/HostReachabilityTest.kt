@@ -75,14 +75,18 @@ class HostReachabilityTest {
     }
 
     /**
-     * `/status/<code>` answers that code; `/redirect-to-403` redirects to it; `/hang` holds the
-     * connection open until teardown. The hung client is gone by then, so the write may throw.
+     * `/status/<code>` answers that code; `/delay/<ms>` answers 200 after that long;
+     * `/redirect-to-403` redirects to it; `/hang` holds the connection open until teardown. The hung client is gone by then, so the write may throw.
      */
     private fun respondAsScripted(exchange: HttpExchange) {
         val path = exchange.requestURI.path
         runCatching {
             when {
                 path == "/hang" -> released.await(10, TimeUnit.SECONDS)
+                path.startsWith("/delay/") -> {
+                    Thread.sleep(path.substringAfterLast('/').toLong())
+                    exchange.sendResponseHeaders(200, -1)
+                }
                 path == "/redirect-to-403" -> {
                     exchange.responseHeaders.add("Location", "$base/status/403")
                     exchange.sendResponseHeaders(302, -1)
@@ -224,21 +228,109 @@ class HostReachabilityTest {
         throw AssertionError("no verdict for $id within 5s")
     }
 
-    @Test fun `startup does not wait for a probe and providers reads unchecked while it is out`() {
-        // Given - a keyless provider whose probe target holds the connection open
-        val hostReachability = HostReachability(mapOf("stub-keyless" to "$base/hang"), USER_AGENT, 30_000)
+    @Test fun `startup waits at most the cap for the probes and reports UNCHECKED for one still running`() {
+        // Given - a keyless provider whose probe target holds the connection open, a 30 s request
+        // timeout, and a 600 ms cap on the startup wait
+        val lines = ConcurrentLinkedQueue<String>()
+        val hostReachability = HostReachability(
+            mapOf("stub-keyless" to "$base/hang"),
+            USER_AGENT,
+            30_000,
+            startupWaitMs = 600,
+            log = { lines.add(it) },
+        )
 
-        // When - the server starts, and the probe has reached the hanging upstream
+        // When - the server starts
         val startedAt = System.nanoTime()
         val port = startServerWith(listOf(StubProvider("stub-keyless", requiresApiKey = false)), hostReachability)
         val startupMs = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startedAt)
-        assertTrue("the probe never reached the upstream", probeArrived.await(5, TimeUnit.SECONDS))
 
-        // Then - startup returned at once, health answers, and the row is unchecked, not blocked
-        assertTrue("startServer took ${startupMs}ms", startupMs < 3_000)
+        // Then - the probe reached the upstream, startup returned at the cap, and the row is unchecked
+        assertTrue("the probe never reached the upstream", probeArrived.await(5, TimeUnit.SECONDS))
+        assertTrue("startServer took ${startupMs}ms, under the 600ms cap", startupMs >= 500)
+        assertTrue("startServer took ${startupMs}ms, over the cap", startupMs < 3_000)
         assertEquals(200, get(port, "/api/health").statusCode())
-        val reachability = reachabilityOf(port, "stub-keyless")
-        assertEquals("UNCHECKED", reachability["verdict"]!!.jsonPrimitive.content)
+        assertEquals("UNCHECKED", reachabilityOf(port, "stub-keyless")["verdict"]!!.jsonPrimitive.content)
+        assertEquals(listOf("host reachability: stub-keyless UNCHECKED (no answer within 600ms)"), lines.toList())
+    }
+
+    @Test fun `a probe that returns after the startup wait does not change the verdict`() {
+        // Given - a server started with a probe still out at its 400 ms cap
+        val hostReachability = HostReachability(mapOf("stub-keyless" to "$base/hang"), USER_AGENT, 30_000, startupWaitMs = 400)
+        val port = startServerWith(listOf(StubProvider("stub-keyless", requiresApiKey = false)), hostReachability)
+
+        // When - the upstream drops the connection after startup, which the probe reads as a failure
+        released.countDown()
+        Thread.sleep(500)
+
+        // Then - the row stays unchecked, since verdicts are fixed once the instance has started
+        assertEquals("UNCHECKED", reachabilityOf(port, "stub-keyless")["verdict"]!!.jsonPrimitive.content)
+    }
+
+    @Test fun `the first providers read right after startServer already carries a fast upstream's verdict`() {
+        // Given - a keyless provider whose probe target answers 403 at once
+        val hostReachability = HostReachability(mapOf("stub-keyless" to "$base/status/403"), USER_AGENT, 2_000)
+
+        // When - the server starts and providers is read straight away, with no waiting for a verdict
+        val port = startServerWith(listOf(StubProvider("stub-keyless", requiresApiKey = false)), hostReachability)
+        val row = reachabilityOf(port, "stub-keyless")
+
+        // Then - the verdict is already settled, because the probe ran before the server listened
+        assertEquals("REFUSED", row["verdict"]!!.jsonPrimitive.content)
+        assertEquals(403, row["httpStatus"]!!.jsonPrimitive.int)
+    }
+
+    @Test fun `the probes run in parallel, so startup takes one probe's time rather than the sum`() {
+        // Given - four keyless providers whose targets each answer after 500 ms
+        val ids = (1..4).map { "stub-$it" }
+        val hostReachability = HostReachability(ids.associateWith { "$base/delay/500" }, USER_AGENT, 2_000)
+
+        // When - the server starts
+        val startedAt = System.nanoTime()
+        val port = startServerWith(ids.map { StubProvider(it, requiresApiKey = false) }, hostReachability)
+        val startupMs = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startedAt)
+
+        // Then - startup took well under the 2000 ms that four in a row would need, and all four settled
+        assertTrue("startServer took ${startupMs}ms", startupMs < 1_500)
+        ids.forEach { id -> assertEquals(id, "REACHABLE", reachabilityOf(port, id)["verdict"]!!.jsonPrimitive.content) }
+    }
+
+    @Test fun `startup logs one line per probed provider with its verdict and the failure's exception class`() {
+        // Given - providers whose targets answer 403, answer 200 and never answer, and a keyed one
+        val lines = ConcurrentLinkedQueue<String>()
+        val hostReachability = HostReachability(
+            mapOf(
+                "stub-refused" to "$base/status/403",
+                "stub-ok" to "$base/status/200",
+                "stub-silent" to "$base/hang",
+                "stub-keyed" to "$base/status/200",
+            ),
+            USER_AGENT,
+            300,
+            log = { lines.add(it) },
+        )
+
+        // When - the server starts
+        startServerWith(
+            listOf(
+                StubProvider("stub-refused", requiresApiKey = false),
+                StubProvider("stub-ok", requiresApiKey = false),
+                StubProvider("stub-silent", requiresApiKey = false),
+                StubProvider("stub-keyed", requiresApiKey = true),
+            ),
+            hostReachability,
+        )
+
+        // Then - each probed provider has one line, naming the status or the exception, and the keyed one has none
+        assertEquals(
+            setOf(
+                "host reachability: stub-refused REFUSED (HTTP 403 from 127.0.0.1)",
+                "host reachability: stub-ok REACHABLE (HTTP 200 from 127.0.0.1)",
+                "host reachability: stub-silent UNREACHABLE (HttpTimeoutException: request timed out)",
+            ),
+            lines.toSet(),
+        )
+        assertEquals(3, lines.size)
     }
 
     @Test fun `providers carries each keyless provider's verdict as a reachability object`() {

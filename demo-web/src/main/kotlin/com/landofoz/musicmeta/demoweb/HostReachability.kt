@@ -12,6 +12,8 @@ import java.time.Clock
 import java.time.Duration
 import java.time.temporal.ChronoUnit
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
 
 /**
  * What one startup request to a provider's host told this instance. It describes where the demo
@@ -83,15 +85,29 @@ internal val KEYLESS_PROBE_URLS: Map<String, String> = mapOf(
  * The probe is its own `java.net.http.HttpClient` on its own daemon threads. It does not use the
  * library's `HttpClient` seam, so it never takes a per-host rate limiter slot or touches a circuit
  * breaker, and nothing an enrichment returns can change a verdict.
+ *
+ * [probeAll] runs the probes before the server listens and waits at most [startupWaitMs] for them.
+ * A host that gives CPU only while a request is in flight (Cloud Run) starves a thread started
+ * after the port opens until the first request arrives, by which time its 5 s timeout has already
+ * run out; before the port opens the process still has CPU. One line per probed provider goes to
+ * [log] so a hosted instance can be read from its logs.
  */
 class HostReachability(
     private val targets: Map<String, String> = emptyMap(),
     private val userAgent: String = EnrichmentConfig.DEFAULT_USER_AGENT,
     timeoutMs: Long = PROBE_TIMEOUT_MS,
     private val clock: Clock = Clock.systemUTC(),
+    // Longer than the request timeout by a grace, so a probe that times out at the limit is
+    // recorded as the UNREACHABLE it is rather than racing the cap.
+    private val startupWaitMs: Long = timeoutMs + STARTUP_GRACE_MS,
+    private val log: (String) -> Unit = ::println,
 ) {
     private val verdicts = ConcurrentHashMap<String, ReachabilityRow>()
     private val timeout = Duration.ofMillis(timeoutMs)
+
+    // Set once the startup wait is over. A probe that returns after that is dropped, so a verdict
+    // never changes after the instance has started serving.
+    private var settled = false
 
     // Redirects are not followed: the first answer is the verdict, and a redirect target on a
     // second host would be a verdict about that host.
@@ -103,43 +119,79 @@ class HostReachability(
     fun verdictFor(providerId: String): ReachabilityRow = verdicts[providerId] ?: ReachabilityRow.UNCHECKED
 
     /**
-     * Starts one daemon thread per registered provider that needs no key and has a target, and
-     * returns at once. A keyed provider is never probed, so a configured key is never sent anywhere
-     * but the engine's own requests.
+     * Probes every registered provider that needs no key and has a target, all at once on daemon
+     * threads, and returns when they have all answered or [startupWaitMs] has passed, whichever
+     * comes first. A provider still out at the cap keeps [ReachabilityVerdict.UNCHECKED] for good.
+     * A keyed provider is never probed, so a configured key is never sent anywhere but the
+     * engine's own requests.
      */
-    fun startProbing(providers: List<ProviderInfo>) {
-        providers
+    fun probeAll(providers: List<ProviderInfo>) {
+        val probed = providers
             .filterNot { it.requiresApiKey }
-            .forEach { provider ->
-                val url = targets[provider.id] ?: return@forEach
-                Thread({ verdicts[provider.id] = probe(url) }, "host-reachability-${provider.id}")
-                    .apply { isDaemon = true }
-                    .start()
+            .mapNotNull { provider -> targets[provider.id]?.let { provider.id to it } }
+        val done = CountDownLatch(probed.size)
+        val details = ConcurrentHashMap<String, String>()
+        probed.forEach { (id, url) ->
+            Thread({
+                try {
+                    val outcome = probeDetailed(url)
+                    details[id] = outcome.detail
+                    synchronized(this) { if (!settled) verdicts[id] = outcome.row }
+                } finally {
+                    done.countDown()
+                }
+            }, "host-reachability-$id")
+                .apply { isDaemon = true }
+                .start()
+        }
+        done.await(startupWaitMs, TimeUnit.MILLISECONDS)
+        synchronized(this) { settled = true }
+        probed.forEach { (id, _) ->
+            val row = verdictFor(id)
+            val detail = if (row.verdict == ReachabilityVerdict.UNCHECKED) {
+                "no answer within ${startupWaitMs}ms"
+            } else {
+                details[id]
             }
+            log("host reachability: $id ${row.verdict} ($detail)")
+        }
     }
 
-    internal fun probe(url: String): ReachabilityRow {
+    internal fun probe(url: String): ReachabilityRow = probeDetailed(url).row
+
+    private class Probed(val row: ReachabilityRow, val detail: String)
+
+    private fun probeDetailed(url: String): Probed {
         val uri = URI.create(url)
         val request = HttpRequest.newBuilder(uri)
             .GET()
             .header("User-Agent", userAgent)
             .timeout(timeout)
             .build()
+        var failure: IOException? = null
         val status = try {
             client.send(request, HttpResponse.BodyHandlers.discarding()).statusCode()
         } catch (e: IOException) {
+            failure = e
             null
         }
-        return ReachabilityRow(
+        val row = ReachabilityRow(
             verdict = classify(status),
             httpStatus = status,
             host = uri.host,
             checkedAt = clock.instant().truncatedTo(ChronoUnit.SECONDS).toString(),
         )
+        val detail = if (failure == null) {
+            "HTTP $status from ${uri.host}"
+        } else {
+            listOfNotNull(failure.javaClass.simpleName, failure.message).joinToString(": ")
+        }
+        return Probed(row, detail)
     }
 
     internal companion object {
         const val PROBE_TIMEOUT_MS = 5_000L
+        const val STARTUP_GRACE_MS = 250L
 
         /** 401 and 403 are a refusal; every other answer, throttling and server errors included, is not. */
         fun classify(httpStatus: Int?): ReachabilityVerdict = when (httpStatus) {
