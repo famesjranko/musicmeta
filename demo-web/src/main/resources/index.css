@@ -1129,6 +1129,26 @@ footer a:hover { color: var(--text); border-color: var(--text); }
 .img-credit:focus-within .img-credit-pop,
 .img-credit.pinned .img-credit-pop { display: block; }
 .img-credit-row { display: block; }
+
+/* Host-reachability warning: an amber symbol whose panel is the image credit's popover, moved below. */
+.host-warn {
+  position: relative;
+  display: inline-block;
+  margin-left: 0.35rem;
+  color: var(--warn);
+  line-height: 1;
+  text-decoration: underline dotted;
+  text-underline-offset: 3px;
+  cursor: help;
+}
+.host-warn:focus-visible { outline: 2px solid var(--warn); outline-offset: 2px; border-radius: 2px; }
+.host-warn-pop { right: auto; bottom: auto; top: calc(100% + 8px); left: 0; z-index: 5; font-weight: 400; text-decoration: none; cursor: auto; }
+.host-warn-pop::after { top: -8px; bottom: auto; }
+/* Flipped by index.js when the panel would not fit below the symbol inside its scrolling table. */
+.host-warn-pop.above { top: auto; bottom: calc(100% + 8px); }
+.host-warn-pop.above::after { top: auto; bottom: -8px; }
+.host-warn:hover .host-warn-pop,
+.host-warn:focus .host-warn-pop { display: block; }
 .img-credit-pop a { color: var(--text-soft); border-bottom: 1px dotted rgba(146, 169, 255, 0.4); text-decoration: none; }
 .img-credit-pop a:hover { color: var(--text); }
 
