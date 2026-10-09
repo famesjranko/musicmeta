@@ -219,6 +219,7 @@ private fun EnrichmentResult.withoutDiscogsImages(): EnrichmentResult {
             url = promoted.url,
             thumbnailUrl = promoted.thumbnailUrl,
             sizes = promoted.sizes,
+            attribution = promoted.attribution,
             alternatives = kept.drop(1).takeIf { it.isNotEmpty() },
         ),
     )

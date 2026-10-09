@@ -1589,3 +1589,23 @@ The generalisation is the same one, one level up: a gate is a claim about a rang
 as capable of being empty as the matcher is of being wrong. Test the emptiness, not only the match —
 and when a gate's own documentation says a surface cannot be reached, check whether that is a fact
 about the surface or about the range you chose.
+
+## 42. Two checks that read the same files can each be right and still contradict
+
+`check_migration_guide.py` forbids `## Unreleased` in the migration guide unless `[Unreleased]` has a `### Breaking Changes` heading, while `test_pin_release.py` once required it whenever `[Unreleased]` pinned. Both passed on `main` only because `[Unreleased]` was empty, so the first PR adding a `### Fixed` line failed CI. A self-test that reads live files must state the same rule as the check that gates them.
+
+## 43. A test server's request counter counts everything that reaches the port
+
+`DefaultHttpClientTimeoutRetryTest` read "attempts" off a counter incremented by every request the
+`HttpServer` on `127.0.0.1:<ephemeral>` received, and took each turn of its hang script from every
+request too. On a host where an agent or IDE service probes each new loopback port (`GET /` with
+`User-Agent: node`, then a TLS hello), the probe landed inside the test and the counter read one
+too high: `must not retry into a certain timeout expected:<1> but was:<2>`, in whichever test it hit.
+The probe could also take the scripted hang for itself, so the client's request was answered at
+once. CI had no such neighbour and passed. The same probe corrupted Gradle's own test-executor
+socket (`Unexpected type tag 71 found` is `G`, `22` a TLS record), which is not ours to fix.
+
+A loopback port belongs to the machine, not to the test. Count and script only the requests the
+client under test sent — the test sets a `User-Agent` of its own — and answer the rest without
+counting. A count of "requests the server saw" is a claim about the machine; a count of "attempts
+the client made" is the claim the test means.

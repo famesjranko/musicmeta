@@ -44,7 +44,6 @@ public data class ArtistProfile(val name: String, val results: EnrichmentResults
     val radio: EnrichmentData.RadioPlaylist? get() = results.radio()
     val radioDiscovery: EnrichmentData.RadioPlaylist? get() =
         results.get<EnrichmentData.RadioPlaylist>(EnrichmentType.ARTIST_RADIO_DISCOVERY)
-    val similarAlbums: EnrichmentData.SimilarAlbums? get() = results.similarAlbums()
     val timeline: List<TimelineEvent> get() =
         results.get<EnrichmentData.ArtistTimeline>(EnrichmentType.ARTIST_TIMELINE)?.events.orEmpty()
     val genreDiscovery: List<GenreAffinity> get() =

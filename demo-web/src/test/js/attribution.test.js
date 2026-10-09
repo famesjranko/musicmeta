@@ -4,6 +4,9 @@ import assert from 'node:assert/strict';
 import {
   escapeHtml,
   creditLineHtml,
+  imageCreditBadgeHtml,
+  plainText,
+  safeHref,
   standingNotices,
 } from '../../main/resources/attribution.js';
 
@@ -116,4 +119,144 @@ test('a page that can reach Deezer states the private-use notice for as long as 
 
 test('a page with no Deezer provider owes no Deezer notice', () => {
   assert.deepEqual(standingNotices(['musicbrainz', 'wikipedia']), []);
+});
+
+// --- Safe links ----------------------------------------------------------------------------
+
+test('only a plain https link with no userinfo is safe to click', () => {
+  assert.equal(safeHref('https://commons.wikimedia.org/wiki/File:A.jpg'), 'https://commons.wikimedia.org/wiki/File:A.jpg');
+  for (const unsafe of [
+    'http://commons.wikimedia.org/wiki/File:A.jpg',
+    'javascript:alert(1)',
+    'java\tscript:alert(1)',
+    'data:text/html,hi',
+    'https://user:pw@commons.wikimedia.org/',
+    'https://user@commons.wikimedia.org/',
+    'https://commons.wikimedia.org/\u202Eevil',
+    'https://commons.wikimedia.org/\u0000',
+    '//commons.wikimedia.org/wiki/File:A.jpg',
+    '',
+    null,
+  ]) {
+    assert.equal(safeHref(unsafe), null, String(unsafe));
+  }
+});
+
+test('an unsafe text-credit link renders the provider as plain text and keeps the licence', () => {
+  const html = creditLineHtml([{ provider: 'wikipedia', url: 'javascript:alert(1)' }]);
+  assert.doesNotMatch(html, /javascript/);
+  assert.match(html, /Text from Wikipedia/);
+  assert.match(html, /CC BY-SA 4\.0/);
+});
+
+// --- Image credit --------------------------------------------------------------------------
+// The "i" control describes the one file beside it. It renders what the response carried and
+// decides nothing: every state of the metadata still gets a control, and the image is not its call.
+
+const FILE = {
+  title: 'File:Thom Yorke.jpg',
+  sourceUrl: 'https://commons.wikimedia.org/wiki/File:Thom_Yorke.jpg',
+  creator: '<a href="//commons.wikimedia.org/wiki/User:X">Jane Doe</a>',
+  licence: 'CC BY-SA 4.0',
+  licenceUrl: 'https://creativecommons.org/licenses/by-sa/4.0/',
+};
+
+test('no image credit renders no control', () => {
+  assert.equal(imageCreditBadgeHtml(null), '');
+  assert.equal(imageCreditBadgeHtml(undefined), '');
+});
+
+test('a control is a button a keyboard reaches, with the popover beside it', () => {
+  const html = imageCreditBadgeHtml({ provider: 'wikipedia', attribution: FILE });
+  assert.match(html, /<button type="button" class="img-credit-btn" aria-label="Image credit" aria-expanded="false">i<\/button>/);
+  assert.match(html, /class="img-credit-pop"/);
+});
+
+test('a Wikipedia photo with file facts shows its creator, description page and licence, not the text credit', () => {
+  const html = imageCreditBadgeHtml({ provider: 'wikipedia', attribution: FILE });
+  assert.match(html, /By Jane Doe/);
+  assert.match(html, /href="https:\/\/commons\.wikimedia\.org\/wiki\/File:Thom_Yorke\.jpg"[^>]*>File:Thom Yorke\.jpg</);
+  assert.match(html, /Licence: <a href="https:\/\/creativecommons\.org\/licenses\/by-sa\/4\.0\/"[^>]*>CC BY-SA 4\.0<\/a>/);
+  assert.doesNotMatch(html, /Text from/);
+});
+
+test('a Wikipedia photo with no file facts names the provider and claims no licence', () => {
+  const html = imageCreditBadgeHtml({ provider: 'wikipedia', url: 'https://en.wikipedia.org/wiki/Radiohead' });
+  assert.match(html, /Image via <a href="https:\/\/en\.wikipedia\.org\/wiki\/Radiohead"[^>]*>Wikipedia<\/a>/);
+  assert.doesNotMatch(html, /Text from|CC BY|[Ll]icen[cs]e/);
+});
+
+test('a Wikidata image with no file facts is credited to Wikidata, not to Wikipedia text', () => {
+  const html = imageCreditBadgeHtml({ provider: 'wikidata' });
+  assert.match(html, /Image via <a href="https:\/\/www\.wikidata\.org\/"[^>]*>Wikidata<\/a>/);
+  assert.doesNotMatch(html, /Wikipedia|CC BY|[Ll]icen[cs]e/);
+});
+
+test('a partial attribution shows the facts it has and nothing it lacks', () => {
+  const html = imageCreditBadgeHtml({ provider: 'wikipedia', attribution: { creator: 'Jane Doe' } });
+  assert.match(html, /By Jane Doe/);
+  assert.match(html, /Image via/);
+  assert.doesNotMatch(html, /[Ll]icen[cs]e|Modified|Restrictions|Copyright/);
+});
+
+test('the upstream preferred credit text comes ahead of the creator and a differing credit line is kept', () => {
+  const html = imageCreditBadgeHtml({
+    provider: 'wikipedia',
+    attribution: { creator: 'J. Doe', attributionText: 'Photo: Jane Doe / Agency', credit: 'Agency archive' },
+  });
+  assert.match(html, /By Photo: Jane Doe \/ Agency/);
+  assert.doesNotMatch(html, /J\. Doe/);
+  assert.match(html, /Credit: Agency archive/);
+});
+
+test('restrictive and contradictory facts are shown as the upstream gave them, none dropped', () => {
+  const html = imageCreditBadgeHtml({
+    provider: 'wikipedia',
+    attribution: {
+      licence: 'Public domain',
+      otherLicences: ['CC BY-NC 4.0'],
+      copyrightStatus: 'True',
+      modification: 'Cropped',
+      restrictions: ['No commercial use', 'Personality rights'],
+    },
+  });
+  assert.match(html, /Licence: Public domain, CC BY-NC 4\.0/);
+  assert.match(html, /Copyright: True/);
+  assert.match(html, /Modified: Cropped/);
+  assert.match(html, /Restrictions: No commercial use; Personality rights/);
+});
+
+test('unsafe links render as plain text and every other fact still shows', () => {
+  const html = imageCreditBadgeHtml({
+    provider: 'wikipedia',
+    url: 'javascript:alert(1)',
+    attribution: {
+      title: 'File:A.jpg',
+      sourceUrl: 'http://commons.wikimedia.org/wiki/File:A.jpg',
+      creator: 'Jane Doe',
+      licence: 'CC BY 4.0',
+      licenceUrl: 'https://user:pw@creativecommons.org/licenses/by/4.0/',
+    },
+  });
+  assert.doesNotMatch(html, /<a |href|javascript/);
+  assert.match(html, /File:A\.jpg/);
+  assert.match(html, /By Jane Doe/);
+  assert.match(html, /Licence: CC BY 4\.0/);
+  assert.match(html, /Image via Wikipedia/);
+});
+
+test('hostile attribution text is escaped and markup in a creator is reduced to its words', () => {
+  const html = imageCreditBadgeHtml({
+    provider: '<b>p</b>',
+    attribution: { creator: '<img src=x onerror=alert(1)>Eve &amp; Co', licence: '&lt;script&gt;alert(1)&lt;/script&gt;' },
+  });
+  assert.doesNotMatch(html, /<img|<script|<b>/);
+  assert.match(html, /By Eve &amp; Co/);
+  assert.match(html, /&lt;script&gt;/);
+});
+
+test('plainText strips tags and decodes entities once', () => {
+  assert.equal(plainText('<a href="x">Ann &amp; Bob</a>'), 'Ann & Bob');
+  // A second decode would turn this escaped markup into the live tag `<b>`.
+  assert.equal(plainText('&amp;lt;b&amp;gt;'), '&lt;b&gt;');
 });

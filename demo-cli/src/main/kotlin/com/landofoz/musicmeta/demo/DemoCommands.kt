@@ -516,7 +516,7 @@ private fun overrideType(name: String, term: Terminal): EnrichmentType? = resolv
 }
 
 /**
- * Protects one type's data for one entity from being replaced by a later automatic result. The type
+ * Marks one type's data for one entity as pinned. The mark is advisory: a later refresh still replaces the data. The type
  * name is the last word, so everything before it is the entity: `pin album OK Computer by Radiohead art`.
  */
 fun handlePin(input: String, state: DemoState, term: Terminal) {
@@ -533,7 +533,8 @@ fun handlePin(input: String, state: DemoState, term: Terminal) {
         return
     }
     runBlocking { state.engine.markManuallySelected(request, type) }
-    term.info("Pinned ${Formatter.typeName(type)} — later enrichments of this ${entityKind(request)} keep it.")
+    val kind = entityKind(request)
+    term.info("Marked ${Formatter.typeName(type)} as pinned — advisory only, a refresh of this $kind replaces it.")
 }
 
 /**

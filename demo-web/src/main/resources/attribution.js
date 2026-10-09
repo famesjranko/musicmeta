@@ -50,15 +50,40 @@ const PROVIDER_CREDITS = {
 // Same upstream, same terms, second provider id.
 PROVIDER_CREDITS['deezer-similar-albums'] = PROVIDER_CREDITS.deezer;
 
+/**
+ * The URL if it is safe to make clickable, else null. Upstreams pass link fields through as text,
+ * so the page checks them here: https only, no control or format characters (which a parser
+ * silently strips, turning `java\tscript:` into a real scheme), and no userinfo. A null never
+ * hides the content it sat beside; the caller renders that as plain text.
+ */
+export function safeHref(url) {
+  if (typeof url !== 'string' || url === '') return null;
+  if (/[\p{Cc}\p{Cf}\s]/u.test(url)) return null;
+  let parsed;
+  try {
+    parsed = new URL(url);
+  } catch {
+    return null;
+  }
+  if (parsed.protocol !== 'https:' || parsed.username !== '' || parsed.password !== '') return null;
+  return parsed.href;
+}
+
 function linkHtml(href, text) {
   return `<a href="${escapeHtml(href)}" target="_blank" rel="noopener">${escapeHtml(text)}</a>`;
+}
+
+// A link when the target is safe, otherwise the same words as plain text.
+function maybeLinkHtml(url, text) {
+  const href = safeHref(url);
+  return href ? linkHtml(href, text) : escapeHtml(text);
 }
 
 function creditHtml(credit) {
   const entry = PROVIDER_CREDITS[credit.provider];
   if (!entry) return `<span class="credit-item">${escapeHtml(credit.provider)}</span>`;
-  const href = credit.url || entry.site;
-  const body = linkHtml(href, entry.label || entry.name);
+  const text = entry.label || entry.name;
+  const body = credit.url ? maybeLinkHtml(credit.url, text) : linkHtml(entry.site, text);
   return `<span class="credit-item">${escapeHtml(entry.prefix || '')}${body}` +
     `${escapeHtml(entry.suffix || '')}${entry.extraHtml || ''}</span>`;
 }
@@ -92,4 +117,62 @@ export function standingNotices(providerIds) {
     .filter((entry) => entry && entry.standingNotice)
     .map((entry) => entry.standingNotice)
     .filter((notice) => !seen.has(notice) && seen.add(notice));
+}
+
+// --- Image credit --------------------------------------------------------------------------
+// A small "i" in the image corner. Hover or focus shows the credit; a click pins it open (index.js
+// owns the pinning). It only describes the file: whatever the upstream said is shown as said, and
+// nothing here decides whether the image is shown.
+
+/** Upstream credit text may carry markup (Commons wraps names in anchors); show only its words. */
+export function plainText(markup) {
+  return String(markup ?? '')
+    .replace(/<[^>]*>/g, '')
+    .replace(/&(amp|lt|gt|quot|#39);/g, (m, e) => ({ amp: '&', lt: '<', gt: '>', quot: '"', '#39': "'" }[e]))
+    .trim();
+}
+
+const present = (v) => typeof v === 'string' && plainText(v) !== '';
+
+function imageCreditRows(attribution) {
+  const a = attribution || {};
+  const rows = [];
+  const byline = present(a.attributionText) ? a.attributionText : a.creator;
+  if (present(byline)) rows.push(`By ${escapeHtml(plainText(byline))}`);
+  if (present(a.credit) && plainText(a.credit) !== plainText(byline)) {
+    rows.push(`Credit: ${escapeHtml(plainText(a.credit))}`);
+  }
+  if (present(a.sourceUrl)) {
+    rows.push(maybeLinkHtml(a.sourceUrl, present(a.title) ? plainText(a.title) : 'File description page'));
+  }
+  const licences = [a.licence, ...(a.otherLicences || [])].filter(present).map(plainText);
+  if (licences.length > 0) {
+    const first = maybeLinkHtml(a.licenceUrl, licences[0]);
+    rows.push(`Licence: ${[first, ...licences.slice(1).map(escapeHtml)].join(', ')}`);
+  } else if (present(a.licenceUrl)) {
+    rows.push(maybeLinkHtml(a.licenceUrl, 'Licence page'));
+  }
+  if (present(a.copyrightStatus)) rows.push(`Copyright: ${escapeHtml(plainText(a.copyrightStatus))}`);
+  if (present(a.modification)) rows.push(`Modified: ${escapeHtml(plainText(a.modification))}`);
+  const restrictions = (a.restrictions || []).filter(present).map(plainText);
+  if (restrictions.length > 0) rows.push(`Restrictions: ${escapeHtml(restrictions.join('; '))}`);
+  return rows;
+}
+
+/**
+ * The "i" control and its popover for one image, or '' when the response named no credit. With no
+ * file facts the popover names the provider and says nothing about a licence. `credit` is a
+ * `SourceCredit`: `{provider, url?, attribution?}`.
+ */
+export function imageCreditBadgeHtml(credit) {
+  if (!credit || !credit.provider) return '';
+  const entry = PROVIDER_CREDITS[credit.provider];
+  const name = entry ? entry.name : credit.provider;
+  const site = credit.url ? credit.url : entry && entry.site;
+  const via = `Image via ${maybeLinkHtml(site, name)}`;
+  const rows = [...imageCreditRows(credit.attribution), via];
+  return '<span class="img-credit">' +
+    '<button type="button" class="img-credit-btn" aria-label="Image credit" aria-expanded="false">i</button>' +
+    `<span class="img-credit-pop" role="note">${rows.map((r) => `<span class="img-credit-row">${r}</span>`).join('')}</span>` +
+    '</span>';
 }

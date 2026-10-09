@@ -29,7 +29,7 @@ Call `engine.close()` when you are done with the engine. It releases the scope t
 ### With OkHttp (recommended for Android)
 
 ```kotlin
-// Add: implementation("io.github.famesjranko:musicmeta-okhttp:0.13.0")
+// Add: implementation("io.github.famesjranko:musicmeta-okhttp:0.14.0")
 val engine = EnrichmentEngine.Builder()
     .httpClient(OkHttpEnrichmentClient(myOkHttpClient, "MyApp/1.0 ( https://example.com/myapp )"))
     .withDefaultProviders()
@@ -81,7 +81,6 @@ profile.popularity?.listenCount      // total listens (ListenBrainz)
 profile.popularity?.listenerCount    // unique listeners
 profile.topTracks?.tracks            // List<TopTrack> merged from Last.fm, ListenBrainz and Deezer
 profile.similarArtists?.artists      // List<SimilarArtist> with matchScore and sources
-profile.similarAlbums?.albums        // List<SimilarAlbum>
 profile.radio?.tracks                // List<RadioTrack> — Deezer artist radio playlist
 profile.radioDiscovery?.tracks       // List<RadioTrack> — ListenBrainz community radio
 profile.timeline                     // List<TimelineEvent> — formed, albums, milestones

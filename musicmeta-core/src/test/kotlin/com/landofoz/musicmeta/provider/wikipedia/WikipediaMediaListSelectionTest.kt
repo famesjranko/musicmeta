@@ -6,6 +6,7 @@ import com.landofoz.musicmeta.EnrichmentRequest
 import com.landofoz.musicmeta.EnrichmentResult
 import com.landofoz.musicmeta.EnrichmentType
 import com.landofoz.musicmeta.http.RateLimiter
+import com.landofoz.musicmeta.testkit.UpstreamPools
 import com.landofoz.musicmeta.testutil.FakeHttpClient
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
@@ -128,6 +129,27 @@ class WikipediaMediaListSelectionTest {
     }
 
     @Test
+    fun `enrich keeps and selects a rendering whose URL is plain http`() = runTest {
+        // Given - the Radiohead media list with every protocol-relative source rewritten to http:// (derived)
+        val httpOnly = RADIOHEAD_MEDIA_LIST_JSON.replace("\"src\": \"//upload", "\"src\": \"http://upload")
+        httpClient.givenJsonResponse("page/media-list", httpOnly)
+
+        // When - enriching for artist photo
+        val result = provider.enrich(photoRequest(), EnrichmentType.ARTIST_PHOTO)
+
+        // Then - the http rendering is selected at its largest scale and still listed in sizes
+        assertTrue("expected Success but was $result", result is EnrichmentResult.Success)
+        val artwork = (result as EnrichmentResult.Success).data as EnrichmentData.Artwork
+        assertEquals(
+            "http://upload.wikimedia.org/wikipedia/commons/thumb/a/a1/RadioheadO2211125_composite.jpg" +
+                "/1280px-RadioheadO2211125_composite.jpg",
+            artwork.url,
+        )
+        assertTrue(artwork.sizes.orEmpty().all { it.url.startsWith("http://") })
+        assertEquals(listOf(1280, 500), artwork.sizes.orEmpty().map { it.width })
+    }
+
+    @Test
     fun `enrich reports no height because the media list does not carry one`() = runTest {
         // Given - a media list item whose srcset states a width in the URL and no height anywhere
         httpClient.givenJsonResponse("page/media-list", RADIOHEAD_MEDIA_LIST_JSON)
@@ -151,6 +173,28 @@ class WikipediaMediaListSelectionTest {
         // Then - the lead image wins on its flag, not on its position
         val artwork = (result as EnrichmentResult.Success).data as EnrichmentData.Artwork
         assertTrue(artwork.url.contains("Metallica_March_2024.jpg"))
+    }
+
+    @Test
+    fun `enrich keeps the lead image when imageinfo calls it non-free and a later image is public domain`() = runTest {
+        // Given - the live Radiohead media list, a non-free answer for its lead and a public domain one for the next image
+        httpClient.givenJsonResponse("page/media-list", UpstreamPools.body(FILE_POOL, "radiohead-media-list.json"))
+        httpClient.givenJsonResponse(
+            "titles=File%3ARadioheadO2211125_composite.jpg",
+            UpstreamPools.body(FILE_POOL, "imageinfo-non-free.json"),
+        )
+        httpClient.givenJsonResponse(
+            "titles=File%3AAbingdon_School",
+            UpstreamPools.body(FILE_POOL, "imageinfo-public-domain.json"),
+        )
+
+        // When - enriching for artist photo
+        val result = provider.enrich(photoRequest(), EnrichmentType.ARTIST_PHOTO)
+
+        // Then - the lead image is still the photo, because rights do not take part in the selection
+        val artwork = (result as EnrichmentResult.Success).data as EnrichmentData.Artwork
+        assertTrue(artwork.url.contains("RadioheadO2211125_composite.jpg"))
+        assertEquals("Fair use", artwork.attribution?.licence)
     }
 
     @Test
@@ -191,6 +235,8 @@ class WikipediaMediaListSelectionTest {
     }
 
     private companion object {
+        const val FILE_POOL = "wikipedia-file-attribution"
+
         // captured 2026-08-12: GET /api/rest_v1/page/media-list/Radiohead, trimmed to the lead
         // image, one SVG-sourced icon and one audio item; other 21 items dropped.
         val RADIOHEAD_MEDIA_LIST_JSON = """{

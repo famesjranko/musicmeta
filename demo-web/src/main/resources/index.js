@@ -10,8 +10,16 @@ import {
 import {
   escapeHtml as esc,
   creditLineHtml,
+  imageCreditBadgeHtml,
   standingNotices,
 } from '/attribution.js';
+import {
+  providerWarning,
+  typeWarning,
+  warningHtml,
+  placeWarningPanel,
+  resetWarningPanel,
+} from '/reachability.js';
 
 const tabsEl = document.getElementById('kind-tabs');
 const kindTabs = Array.from(tabsEl.querySelectorAll('button[data-kind]'));
@@ -47,6 +55,10 @@ const FIELD_ROLES = {
 };
 const values = { artistName: '', albumTitle: '', trackTitle: '', mbid: '' };
 let currentKind = 'artist';
+
+// The /api/providers rows, kept so a result's status table can tell whether every provider capable
+// of a type has a warned host. Empty until the list loads, which only ever means no warning.
+let providerRows = [];
 
 // What the primary box means per kind, for the screen-reader label and the ⌕ button's name.
 const NAME_LABELS = {
@@ -639,7 +651,7 @@ function render(data, wasForceRefresh, stream) {
     ? `<div class="backdrop" style="background-image:url('${esc(summary.backgroundImageUrl)}')"></div>`
     : '';
   const img = summary.imageUrl
-    ? `<img src="${esc(summary.imageUrl)}" alt="" onerror="this.remove()" />`
+    ? `<div class="hero"><img src="${esc(summary.imageUrl)}" alt="" onerror="this.closest('.hero').remove()" />${imageCreditBadgeHtml(summary.imageCredit)}</div>`
     : pendingSlots.includes('image')
       ? '<div class="skeleton skeleton-img" aria-hidden="true"></div>'
       : '';
@@ -699,16 +711,15 @@ function render(data, wasForceRefresh, stream) {
   const totalItems = data.sections.reduce((n, s) => n + s.items.length, 0);
 
   // A gallery entry's label is often the provider's own id (an artwork alternative is labelled by
-  // whoever supplied it), so the credit replaces the caption there rather than repeating it.
+  // whoever supplied it), so the caption drops it; the credit sits in the image's own "i" control.
   const galleryCaption = (g) => {
-    const credit = g.credit ? creditLineHtml([g.credit]) : '';
     const label = g.label && !(g.credit && g.credit.provider === g.label) ? esc(g.label) : '';
-    return label || credit ? `<figcaption>${label}${credit}</figcaption>` : '';
+    return label ? `<figcaption>${label}</figcaption>` : '';
   };
   const gallery = (data.gallery && data.gallery.length)
     ? `<div class="card gallery${unverified ? ' unverified' : ''}">${data.gallery.map((g) => `
       <figure>
-        <img src="${esc(g.url)}" alt="${esc(g.label || '')}" onerror="this.closest('figure').remove()" />
+        <div class="hero"><img src="${esc(g.url)}" alt="${esc(g.label || '')}" onerror="this.closest('figure').remove()" />${imageCreditBadgeHtml(g.credit)}</div>
         ${galleryCaption(g)}
       </figure>`).join('')}</div>`
     : '';
@@ -728,6 +739,8 @@ function render(data, wasForceRefresh, stream) {
   const statusCell = (p) => {
     if (p.status === 'ok_stale') return 'ok <span class="stale-badge">stale fallback</span>';
     if (p.errorKind === 'TIMEOUT') return `<span class="stale-badge">timed out</span> ${esc(p.status)}`;
+    // Only a miss can be explained by a refused host; an ok row has an answer, so never a warning.
+    if (p.status.split(':')[0] === 'not_found') return esc(p.status) + warningHtml(typeWarning(p.type, providerRows));
     return esc(p.status);
   };
 
@@ -777,7 +790,6 @@ function render(data, wasForceRefresh, stream) {
         ${subtitle}
         ${genres}
         ${text}
-        ${creditLineHtml([summary.imageCredit], 'Photo')}
         ${creditLineHtml(summary.genreCredits, 'Genres')}
       </div>
     </div>
@@ -1175,7 +1187,7 @@ function providerRowHtml(provider) {
   const types = skipped ? '—' : provider.capabilities.length;
   return `<tr>
       <td><span class="pdot${provider.available ? '' : ' off'}" aria-hidden="true"></span>${esc(provider.displayName)}
-        <span class="secondary">${availability}</span></td>
+        <span class="secondary">${availability}</span>${warningHtml(providerWarning(provider))}</td>
       <td>${keyStateHtml(provider)}</td>
       <td>${types}</td>
       <td>${policy ? esc(humanizeEnum(policy.commercialUse)) : 'Not recorded'}</td>
@@ -1184,6 +1196,7 @@ function providerRowHtml(provider) {
 }
 
 function renderProviders(providers) {
+  providerRows = providers;
   providerPanel.innerHTML = `<table class="provider-table">
       <caption>Providers this instance was built with (plus any skipped for a missing key), and the terms musicmeta records for each.</caption>
       <thead><tr>
@@ -1281,3 +1294,40 @@ cacheModeInputs.forEach((input) => {
       .catch(() => setCacheModeRadio(lastConfirmed));
   });
 });
+
+// The "i" credit control opens on hover or focus by CSS alone. A click or tap pins it open so its
+// links can be reached on touch and by pointer; a click anywhere else, or Escape, unpins it.
+function unpinImageCredits(except) {
+  document.querySelectorAll('.img-credit.pinned').forEach((el) => {
+    if (el === except) return;
+    el.classList.remove('pinned');
+    el.querySelector('.img-credit-btn').setAttribute('aria-expanded', 'false');
+  });
+}
+document.addEventListener('click', (e) => {
+  const btn = e.target.closest('.img-credit-btn');
+  unpinImageCredits(btn && btn.parentElement);
+  if (!btn) return;
+  const pinned = btn.parentElement.classList.toggle('pinned');
+  btn.setAttribute('aria-expanded', String(pinned));
+});
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') unpinImageCredits(null);
+});
+
+// A host-reachability panel opens by CSS alone; these only choose which side of the symbol and how
+// far along it, because the table's scroll container would clip a panel opening past its edge.
+const hostWarnFrom = (e) => (e.target.closest ? e.target.closest('.host-warn') : null);
+for (const open of ['mouseover', 'focusin']) {
+  document.addEventListener(open, (e) => {
+    const symbol = hostWarnFrom(e);
+    if (symbol) placeWarningPanel(symbol);
+  });
+}
+for (const close of ['mouseout', 'focusout']) {
+  document.addEventListener(close, (e) => {
+    const symbol = hostWarnFrom(e);
+    if (symbol && !symbol.contains(e.relatedTarget)) resetWarningPanel(symbol);
+  });
+}
+export { render };

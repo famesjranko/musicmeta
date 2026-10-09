@@ -42,3 +42,16 @@ internal data class WikipediaMediaItem(
     val renderings: List<WikipediaRendering>,
     val isLeadImage: Boolean,
 )
+
+/**
+ * One file's `imageinfo` answer: its description page and its `extmetadata`, field name to raw
+ * value.
+ *
+ * Values are the upstream's own text and may be HTML; [toFileAttribution] turns them into plain
+ * text. [title] is the page title the wiki resolved the request to, with its `File:` prefix.
+ */
+internal data class WikipediaFileInfo(
+    val title: String?,
+    val descriptionUrl: String?,
+    val extmetadata: Map<String, String>,
+)

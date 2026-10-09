@@ -187,6 +187,37 @@ same caveat `matchScore` carries. A lookup by an identifier you supplied is dete
 answers the other question, and `CanonicalStatus.CONTRADICTED` is the only value that reports it
 disagreeing.
 
+## Attribution on a result
+
+`Biography`, `Artwork` and `ArtworkSource` carry an optional `attribution`: the facts the upstream
+gave about who made the content, where it is described, and which licence it names. For Wikipedia
+text it holds the article title, language, article URL and `CC BY-SA 4.0` with its URL.
+
+```kotlin
+val bio = results.biography()
+val credit = bio?.attribution
+if (credit?.sourceUrl != null && credit.licence != null) {
+    println("Text from Wikipedia (${credit.licence}): ${credit.sourceUrl}")
+}
+```
+
+**The library does not act on it.** Attribution is descriptive data. A result is `Success` whether
+its attribution is missing, partial, restrictive, contradictory or carries a link that is unsafe to
+render, and the cache stores and returns it as it stores the rest of the payload. Nothing in it
+decides whether content is served, merged, ranked or refetched, and nothing in it states that a
+reuse is allowed. Whether to show content, and how to credit it, is your decision.
+
+- Every field is optional. `null` means the upstream did not state it, not that nothing is owed.
+- `Biography.attribution` describes the text. `thumbnailUrl` is a separate file with its own terms.
+- Each `ArtworkSource` in `Artwork.alternatives` describes its own image. Its attribution is that
+  image's, not the primary's.
+- Values are the upstream's text. Check a URL's scheme before you make it a link, and escape text
+  before you place it in markup.
+- Entries cached before this field existed still read; their `attribution` is `null`. There is no
+  cache to clear.
+- A custom `EnrichmentCache` keeps the field by storing the payload whole. One that copies fields
+  by hand into its own schema must add it.
+
 ---
 
 ## ErrorKind enum

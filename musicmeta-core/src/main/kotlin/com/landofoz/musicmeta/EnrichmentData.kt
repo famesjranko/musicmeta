@@ -19,6 +19,12 @@ public sealed class EnrichmentData {
         val sizes: List<ArtworkSize>? = null,
         /** Images from other providers, available when artwork is merged from multiple sources. */
         val alternatives: List<ArtworkSource>? = null,
+        /**
+         * What the upstream says about this image's origin and terms. Describes the image at
+         * [url] only; each entry of [alternatives] carries its own. Null when the upstream said
+         * nothing. Descriptive only: see [Attribution].
+         */
+        val attribution: Attribution? = null,
     ) : EnrichmentData()
 
     @Serializable
@@ -74,6 +80,12 @@ public sealed class EnrichmentData {
         val source: String,
         val language: String = "en",
         val thumbnailUrl: String? = null,
+        /**
+         * What the upstream says about the origin and terms of [text]. It describes the text and
+         * not [thumbnailUrl], which is a separate file with its own terms. Null when the upstream
+         * said nothing. Descriptive only: see [Attribution].
+         */
+        val attribution: Attribution? = null,
     ) : EnrichmentData()
 
     @Serializable
@@ -179,6 +191,8 @@ public data class ArtworkSource(
     val url: String,
     val thumbnailUrl: String? = null,
     val sizes: List<ArtworkSize>? = null,
+    /** What the upstream says about this image's origin and terms. Descriptive only: see [Attribution]. */
+    val attribution: Attribution? = null,
 )
 
 @Serializable
