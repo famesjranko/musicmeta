@@ -66,6 +66,7 @@ internal val STATIC_PATHS = listOf(
     "/index.js",
     "/stream-protocol.js",
     "/attribution.js",
+    "/reachability.js",
     "/robots.txt",
 )
 
@@ -177,6 +178,10 @@ private val HEALTH_READY = HealthResponse(ready = true, status = "READY")
  * before dispatch, covering the SSE path (which sets its own headers directly) the same as every
  * other. Both default off, which is what keeps a `DEMO_PUBLIC`-unset process's answers unchanged.
  *
+ * [hostReachability] holds the startup check of each keyless provider's host. It runs before the
+ * socket is bound and is waited on for at most its own cap, so by the time any request is accepted
+ * every probe has either settled or been left `UNCHECKED` for good; `/api/providers` reads those.
+ *
  * Returns the bound port, which is [port] unless [port] is 0 — the request for whichever port the
  * OS has free. A caller that needs to reach the server has to read it back from here, because a
  * port picked before the bind is a port some other process may already hold.
@@ -191,11 +196,17 @@ fun startServer(
     requireMaintainerSecret: Boolean = false,
     maintainerSecret: String? = null,
     securityHeaders: Boolean = false,
+    hostReachability: HostReachability = HostReachability(),
 ): Int {
     val staticFiles = STATIC_PATHS.associateWith { path ->
         ResourceAnchor::class.java.getResourceAsStream(path)?.readBytes()
             ?: error("$path missing from demo-web resources")
     }
+
+    // Before the bind: a host that allocates CPU only while a request is in flight (Cloud Run)
+    // grants it until the port opens, and gives a thread started afterwards none until a request
+    // arrives. The wait is bounded, so a slow upstream cannot hold the instance past its cap.
+    hostReachability.probeAll(engineRef.get().getProviders())
 
     val server = HttpServer.create(InetSocketAddress(port), 0)
     // A streaming request holds its thread for the whole enrichment, not for one round trip, so the
@@ -245,7 +256,7 @@ fun startServer(
     upstreamContext("/api/search") { exchange -> handleSearch(exchange, engineRef.get()) }
     upstreamContext("/api/preview") { exchange -> handlePreview(exchange, engineRef.get()) }
     registerContext("/api/providers") { exchange ->
-        handleProviders(exchange, engineRef.get(), apiKeys, unregisteredProviderIds)
+        handleProviders(exchange, engineRef.get(), apiKeys, unregisteredProviderIds, hostReachability)
     }
     registerContext("/api/config") { exchange ->
         handleConfig(exchange, engineRef, cacheModeRef, rebuildEngine, requireMaintainerSecret, maintainerSecret)
@@ -1179,13 +1190,14 @@ private fun handleProviders(
     engine: EnrichmentEngine,
     apiKeys: ApiKeyConfig,
     unregisteredProviderIds: Set<String>,
+    hostReachability: HostReachability,
 ) {
     if (exchange.requestMethod != "GET") {
         exchange.respondJson(405, ApiError("GET required"))
         return
     }
     try {
-        val rows = buildProviderRows(engine.getProviders(), apiKeys, unregisteredProviderIds)
+        val rows = buildProviderRows(engine.getProviders(), apiKeys, unregisteredProviderIds, hostReachability)
         exchange.respondJson(200, ProvidersResponse(rows))
     } catch (e: Exception) {
         exchange.respondJson(500, ApiError(e.message ?: e.javaClass.simpleName))
@@ -1215,6 +1227,7 @@ internal fun buildProviderRows(
     live: List<ProviderInfo>,
     apiKeys: ApiKeyConfig,
     unregisteredProviderIds: Set<String> = emptySet(),
+    hostReachability: HostReachability = HostReachability(),
 ): List<ProviderRow> {
     val catalogById = ProviderCatalog.entries.associateBy { it.id }
     val catalogOrder = ProviderCatalog.entries.withIndex().associate { (index, entry) -> entry.id to index }
@@ -1233,6 +1246,7 @@ internal fun buildProviderRows(
             capabilities = info.capabilities.map { it.type.name },
             policy = policyRow(info.id),
             keyStatus = keyStatus,
+            reachability = hostReachability.verdictFor(info.id),
         )
     }
 

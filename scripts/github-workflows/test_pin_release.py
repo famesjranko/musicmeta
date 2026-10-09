@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Runnable self-check: `python3 test_pin_release.py` (no framework needed)."""
 
+import re
 from pathlib import Path
 
 from build_release_notes import extract_section, released_versions
@@ -130,6 +131,31 @@ assert "## 0.10.0" in pinned_guide_heading, "older sections are untouched"
 GUIDE_NO_UNRELEASED = "# Migration guide\n\n## 0.10.0\n\n### An older break\n"
 assert pin_migration_guide(GUIDE_NO_UNRELEASED, "0.11.0") == GUIDE_NO_UNRELEASED
 
+
+# --- the guide heads Unreleased only when there is a break -----------------------------------------
+# check_migration_guide.py forbids `## Unreleased` in the guide unless [Unreleased] has a
+# `### Breaking Changes` heading, so this self-test must expect the same or the two contradict.
+def assert_guide_matches_unreleased(changelog: str, guide: str) -> None:
+    breaking = "### Breaking Changes" in extract_section(pin_changelog(changelog, "9.9.9", "2026-01-01"), "9.9.9")
+    heads_unreleased = re.search(r"^## Unreleased\s*$", guide, re.MULTILINE) is not None
+    assert heads_unreleased == breaking, (
+        "the migration guide should head its newest group Unreleased exactly when the pinned "
+        f"section has Breaking Changes (breaking={breaking}, guide heads Unreleased={heads_unreleased})"
+    )
+
+
+FIXED_ONLY = "# C\n\n## [Unreleased]\n\n### Fixed\n- x (#1)\n\n## [0.10.1] - 2026\n"
+BREAKING_ONLY = "# C\n\n## [Unreleased]\n\n### Breaking Changes\n- x (#1)\n\n## [0.10.1] - 2026\n"
+OLD_ONLY = "# G\n\n## 0.10.0\n\n### Older\n"
+assert_guide_matches_unreleased(FIXED_ONLY, OLD_ONLY)
+assert_guide_matches_unreleased(BREAKING_ONLY, GUIDE_UNRELEASED)
+for changelog, guide in ((FIXED_ONLY, GUIDE_UNRELEASED), (BREAKING_ONLY, OLD_ONLY)):
+    try:
+        assert_guide_matches_unreleased(changelog, guide)
+    except AssertionError:
+        continue
+    raise AssertionError("a guide that disagrees with [Unreleased] about a break should be refused")
+
 # --- against the real files ---------------------------------------------------------------------
 # State-agnostic on purpose: this runs on every commit, including the release branch (target
 # version freshly pinned, [Unreleased] empty) and main right after a release merges. A hard-coded
@@ -147,10 +173,11 @@ try:
     roadmap = pin_roadmap((root / "ROADMAP.md").read_text(encoding="utf-8"), next_minor)
     assert f"## Where We Are (v{next_minor})" in roadmap
     migration = (root / "docs" / "guides" / "migration.md").read_text(encoding="utf-8")
-    assert "## Unreleased" in migration, "the live migration guide should still head its newest group Unreleased"
+    assert_guide_matches_unreleased(live, migration)
     pinned_migration = pin_migration_guide(migration, next_minor)
-    assert f"## {next_minor}" in pinned_migration
     assert "## Unreleased" not in pinned_migration
+    if "### Breaking Changes" in extract_section(real, next_minor):
+        assert f"## {next_minor}" in pinned_migration
 except PinError as e:
     assert "empty" in str(e), f"live CHANGELOG refused to pin for an unexpected reason: {e}"
 

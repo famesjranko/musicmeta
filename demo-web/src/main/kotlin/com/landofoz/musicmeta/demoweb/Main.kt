@@ -116,6 +116,10 @@ fun main() {
         requireMaintainerSecret = posture.enabled,
         maintainerSecret = maintainerSecret,
         securityHeaders = posture.enabled,
+        hostReachability = HostReachability(
+            targets = KEYLESS_PROBE_URLS,
+            userAgent = EnrichmentConfig.userAgentWithContact(CONTACT),
+        ),
     )
     println("musicmeta web demo running at http://localhost:$bound")
 }

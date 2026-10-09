@@ -2,6 +2,7 @@ package com.landofoz.musicmeta.provider.wikipedia
 
 import com.landofoz.musicmeta.drift.SchemaTarget
 import com.landofoz.musicmeta.http.HttpClient
+import com.landofoz.musicmeta.http.HttpResult
 import com.landofoz.musicmeta.http.RateLimiter
 import com.landofoz.musicmeta.http.bodyOrThrowTransient
 import com.landofoz.musicmeta.provider.encodePathSegment
@@ -13,7 +14,8 @@ import java.io.IOException
  * The extract comes from the Action API (`action=query&prop=extracts|pageimages|pageprops`), which
  * answers with the lead text, the page thumbnail and the page properties in one request. Images
  * come from the REST `page/media-list` endpoint, whose items carry rendered `srcset` thumbnails —
- * there is no original-file URL or original dimensions on that response.
+ * there is no original-file URL or original dimensions on that response. What a file's creator and
+ * licence are comes from a third route, the Action API's `imageinfo` ([getFileInfo]).
  */
 internal class WikipediaApi(
     private val httpClient: HttpClient,
@@ -30,11 +32,7 @@ internal class WikipediaApi(
         val json = httpClient.fetchJsonResult(pageExtractUrl(title)).bodyOrThrowTransient()
             ?: return@execute null
 
-        // The Action API reports its own failures inside a 200 (`maxlag` is the one this call can
-        // provoke), so an error body must not read as an article that does not exist.
-        json.optJSONObject("error")?.let { error ->
-            throw IOException("Wikipedia Action API error: ${error.optString("code")}")
-        }
+        throwIfActionApiError(json)
 
         val page = json.optJSONObject("query")
             ?.optJSONArray("pages")
@@ -57,6 +55,54 @@ internal class WikipediaApi(
                 ?.let(::shippableUrl),
             wikibaseItem = pageProps?.optString("wikibase_item")?.takeIf { it.isNotBlank() },
         )
+    }
+
+    /**
+     * What `imageinfo` says about one file: its description page and its `extmetadata` fields.
+     *
+     * Returns null when the answer names no such file (a title the wiki does not know carries no
+     * `imageinfo`). Any other failure throws, the 4xx included: unlike a search, this route has no
+     * "nothing here" of its own, so a 4xx is a statement about the request and the caller needs to
+     * be able to log it.
+     *
+     * One request costs one slot of the Wikipedia limiter, so it adds to a photo's latency.
+     */
+    suspend fun getFileInfo(fileTitle: String): WikipediaFileInfo? = rateLimiter.execute {
+        val result = httpClient.fetchJsonResult(fileInfoUrl(fileTitle))
+        if (result is HttpResult.ClientError) throw IOException("HTTP ${result.statusCode}: client error")
+        val json = result.bodyOrThrowTransient() ?: return@execute null
+        throwIfActionApiError(json)
+
+        val page = json.optJSONObject("query")?.optJSONArray("pages")?.optJSONObject(0)
+            ?: return@execute null
+        val info = page.optJSONArray("imageinfo")?.optJSONObject(0) ?: return@execute null
+        WikipediaFileInfo(
+            title = page.optString("title").takeIf { it.isNotBlank() },
+            descriptionUrl = info.optString("descriptionurl").takeIf { it.isNotBlank() },
+            extmetadata = extmetadataValues(info.optJSONObject("extmetadata")),
+        )
+    }
+
+    /**
+     * Each `extmetadata` field's `value` as text. A field whose value is absent or JSON `null` is
+     * left out, because `optString` would read the second as the string `"null"`.
+     */
+    private fun extmetadataValues(extmetadata: org.json.JSONObject?): Map<String, String> {
+        if (extmetadata == null) return emptyMap()
+        val values = mutableMapOf<String, String>()
+        for (name in extmetadata.keys()) {
+            val value = extmetadata.optJSONObject(name)?.opt("value")
+            if (value != null && value != org.json.JSONObject.NULL) values[name] = value.toString()
+        }
+        return values
+    }
+
+    // The Action API reports its own failures inside a 200 (`maxlag` is the one these calls can
+    // provoke), so an error body must not read as an article or a file that does not exist.
+    private fun throwIfActionApiError(json: org.json.JSONObject) {
+        json.optJSONObject("error")?.let { error ->
+            throw IOException("Wikipedia Action API error: ${error.optString("code")}")
+        }
     }
 
     suspend fun getPageMediaList(title: String): List<WikipediaMediaItem> = rateLimiter.execute {
@@ -165,11 +211,28 @@ internal class WikipediaApi(
                 "&piprop=thumbnail&pithumbsize=$THUMBNAIL_SIZE&titles=${encodePathSegment(title)}"
 
         /**
-         * Schema-pin target, mirroring [getPageExtract]'s parse.
+         * The URL [getFileInfo] requests. `extmetadatafilter` names only the fields
+         * [toFileAttribution] reads, so the answer omits the file's categories and description.
+         */
+        fun fileInfoUrl(fileTitle: String): String =
+            "$ACTION_API?action=query&format=json&formatversion=2&redirects=1&prop=imageinfo" +
+                "&iiprop=url%7Cextmetadata&iiextmetadatalanguage=en" +
+                "&iiextmetadatafilter=$EXTMETADATA_FIELDS&titles=${encodePathSegment(fileTitle)}"
+
+        private const val EXTMETADATA_FIELDS =
+            "Artist%7CCredit%7CAttribution%7CLicenseShortName%7CLicenseUrl%7CUsageTerms" +
+                "%7CLicense%7CCopyrighted%7CRestrictions%7CNonFree"
+
+        /**
+         * Schema-pin targets, mirroring [getPageExtract]'s and [getFileInfo]'s parses.
          *
          * `pages` is an array only because the URL asks for `formatversion=2`; under the default
          * it is an object keyed by page id, and the same paths would read as absent. That is the
-         * reason this target takes its URL from [pageExtractUrl] rather than naming a route.
+         * reason these targets take their URLs from builders rather than naming a route.
+         *
+         * The file pin names Radiohead's lead image, whose creator and licence the issue behind
+         * this route quotes. It lists the fields every file carries, not `Attribution`, which only
+         * some do.
          */
         val SCHEMA_PIN_TARGETS: List<SchemaTarget> = listOf(
             SchemaTarget(
@@ -181,6 +244,16 @@ internal class WikipediaApi(
                     "query.pages[0].title",
                     "query.pages[0].extract",
                     "query.pages[0].thumbnail.source",
+                ),
+            ),
+            SchemaTarget(
+                provider = "wikipedia",
+                route = "file info",
+                url = fileInfoUrl("File:RadioheadO2211125_composite.jpg"),
+                requiredPaths = listOf(
+                    "query.pages[0].imageinfo[0].descriptionurl",
+                    "query.pages[0].imageinfo[0].extmetadata.Artist.value",
+                    "query.pages[0].imageinfo[0].extmetadata.LicenseShortName.value",
                 ),
             ),
         )

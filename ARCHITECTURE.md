@@ -103,16 +103,20 @@ flowchart TD
     cacheread --> anyleft{"any type still<br/>uncached?"}
     anyleft -->|no| results
     anyleft -->|yes| ident{"identity resolution<br/>enabled and needed?"}
-    ident -->|no| regular
+    ident -->|no| fanout
     ident -->|yes| resolve["resolveIdentity:<br/>canonical ids + names,<br/>may answer types itself"]
-    resolve --> regular
 
-    regular["fan-out, under one deadline:<br/>regular + composite subs<br/>concurrent, one chain each"]
-    regular --> mergeable["then mergeable types<br/>all providers, merged"]
-    mergeable --> composite["then composite types<br/>from the settlement board"]
-
-    composite --> settle["settle, per type as it lands:<br/>catalog filter, provenance,<br/>STALE_IF_ERROR substitution"]
-    settle --> deadline{"deadline held?"}
+    resolve --> fanout
+    fanout["one fan-out, one scope, one deadline:<br/>every uncached type launched at once"]
+    fanout --> regular["regular type:<br/>one chain, first answer,<br/>confidence gate"]
+    fanout --> mergeable["mergeable type:<br/>all providers, merged,<br/>confidence gate"]
+    fanout --> composite["composite type:<br/>awaits only its own<br/>dependencies"]
+    regular --> settle
+    mergeable --> settle
+    composite --> settle
+    settle["settle, per type as it lands:<br/>catalog filter, provenance,<br/>STALE_IF_ERROR substitution"]
+    settle -.->|"board: a dependency landed"| composite
+    settle --> deadline{"all types settled<br/>within the deadline?"}
     deadline -->|"no"| timedout["unresolved becomes<br/>Error TIMEOUT,<br/>same per-type settle,<br/>nothing cached"]
     deadline -->|yes| writeback["writeBack:<br/>positive or negative,<br/>canonical-name aliased"]
     timedout --> results
@@ -120,16 +124,17 @@ flowchart TD
 ```
 
 Every result is gated as it is produced — `filterByConfidence`, then `demoteUnanswered`, then catalog
-filtering, provenance stamping and `STALE_IF_ERROR` substitution — inside whichever stage produced
-it, rather than in one pass over the finished set. Confidence runs first because it scores the
+filtering, provenance stamping and `STALE_IF_ERROR` substitution — inside whichever coroutine
+produced it, rather than in one pass over the finished set. The cache write is the only step that
+runs once per call, after the last type has settled. Confidence runs first because it scores the
 identification, not the payload (`docs/pitfalls.md` §8): a perfect identity match can still carry a
 payload that answers nothing.
 
 Three things this ordering is load-bearing about. **The cache is read before identity resolution**,
 so a fully cached call never touches an upstream — unless `forceRefresh` skips both reads, which is
-the only way to make one. **Composites are last because they read the settlement board the earlier
-stages have already written into** — they depend on resolved types, so the stages are ordered, not
-merely parallel. And **a timed-out run returns what it has but persists none of it**, because the
+the only way to make one. **Composites wait only on their own dependencies, through the settlement
+board** — they are launched with every other type, so nothing is ordered by stage: a composite
+whose dependencies land early settles early, and never queues behind an unrelated slow type. And **a timed-out run returns what it has but persists none of it**, because the
 deadline can fire part-way through a step that rewrites entries, so what survives is a mix of
 finished and unfinished work.
 

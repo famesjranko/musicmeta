@@ -97,6 +97,48 @@ is stored under (`how-it-works.md`, Step 8).
 **Discogs `master_id` is optional.** A Discogs release may have no master, so the album-level
 identifier is absent rather than derivable — treat it as a miss, not as a release id to reuse.
 
+## Attribution
+
+**attribution** is the record an upstream gives of who made a piece of content, where it is
+described, and which licence the upstream names for it. It is `Attribution`, carried as the last
+field of `Biography`, `Artwork` and `ArtworkSource`. It is descriptive data and nothing in the
+library acts on it: no field decides whether content is returned, cached, merged or ranked, and no
+field says that a reuse is allowed. A payload with no attribution, a partial one, or one that
+contradicts itself is returned exactly like a complete one. Every field is optional, so the facts an
+upstream did state survive when the others are missing.
+
+`ProviderPolicy.attribution` is a different thing: the *provider's* terms, one fixed answer for the
+whole provider. `Attribution` is per payload, and per file for an image, because an upstream such as
+Wikimedia licenses each file on its own.
+
+| This library | Wikipedia article text | Wikimedia Commons file (`extmetadata`) |
+|---|---|---|
+| `title` | `title` (the article) | the `imageinfo` page title (`query.pages[0].title`, `File:…`), not `ObjectName` |
+| `language` | the wiki's language code (`en`) | — |
+| `sourceUrl` | the article URL, built from `title` | `descriptionurl` (the file's description page) |
+| `creator` | — (the page history lists contributors) | `Artist` |
+| `attributionText` | — | `Attribution`, which overrides `Artist` and `Credit` |
+| `credit` | — | `Credit` |
+| `licence` | CC BY-SA 4.0, from Wikipedia's terms of use | `LicenseShortName` |
+| `licenceUrl` | the Creative Commons deed for it | `LicenseUrl` |
+| `otherLicences` | — | never filled: `extmetadata` carries one licence and no marker for a second |
+| `copyrightStatus` | — | `Copyrighted` |
+| `restrictions` | — | `Restrictions` |
+| `modification` | — | none: Commons has no field for it |
+
+The Commons column was read from a live response on 2026-10-07; the Wikipedia column is the
+mapping in `WikipediaMapper.toBiography`. A dash means the upstream has no word for it, so the
+field stays null.
+
+**`Biography.attribution` describes `text`, not `thumbnailUrl`.** The thumbnail is a separate file
+with its own author and licence. Reading the article's licence as the picture's is the mistake this
+split exists to prevent.
+
+**Link fields are the upstream's text, not safe links.** `sourceUrl` and `licenceUrl` are passed
+through as received, so a consumer checks the scheme before it makes either one clickable. An
+unsafe link is the consumer's reason not to render a link, never a reason to drop the content or the
+other facts.
+
 ## The rule on the published surface
 
 An upstream's word for a concept this library already names may appear in a public identifier

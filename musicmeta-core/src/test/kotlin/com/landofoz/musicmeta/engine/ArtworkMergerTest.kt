@@ -1,6 +1,7 @@
 package com.landofoz.musicmeta.engine
 
 import com.landofoz.musicmeta.ArtworkSize
+import com.landofoz.musicmeta.Attribution
 import com.landofoz.musicmeta.EnrichmentData
 import com.landofoz.musicmeta.EnrichmentIdentifiers
 import com.landofoz.musicmeta.EnrichmentResult
@@ -20,9 +21,10 @@ class ArtworkMergerTest {
         thumbnailUrl: String? = null,
         sizes: List<ArtworkSize>? = null,
         identifiers: EnrichmentIdentifiers? = null,
+        attribution: Attribution? = null,
     ) = EnrichmentResult.Success(
         type = EnrichmentType.ARTIST_PHOTO,
-        data = EnrichmentData.Artwork(url = url, thumbnailUrl = thumbnailUrl, sizes = sizes),
+        data = EnrichmentData.Artwork(url = url, thumbnailUrl = thumbnailUrl, sizes = sizes, attribution = attribution),
         provider = provider,
         confidence = confidence,
         resolvedIdentifiers = identifiers,
@@ -159,5 +161,66 @@ class ArtworkMergerTest {
         val alts = (success.data as EnrichmentData.Artwork).alternatives!!
         assertEquals(1, alts.size)
         assertEquals("deezer", alts[0].provider)
+    }
+
+    @Test fun `an alternative keeps the attribution its provider returned`() {
+        // Given - a losing provider whose artwork carries its own creator and licence
+        val loserAttribution = Attribution(creator = "Raph_PH", licence = "CC BY 4.0")
+        val results = listOf(
+            artwork("wikidata", "https://commons.wikimedia.org/winner.jpg", confidence = 1.0f),
+            artwork(
+                "wikipedia", "https://upload.wikimedia.org/loser.jpg", confidence = 0.4f,
+                attribution = loserAttribution,
+            ),
+        )
+
+        // When - merging the two results
+        val result = merger.merge(results)
+
+        // Then - the alternative carries that attribution beside its url
+        val alternatives = ((result as EnrichmentResult.Success).data as EnrichmentData.Artwork).alternatives!!
+        assertEquals("https://upload.wikimedia.org/loser.jpg", alternatives.single().url)
+        assertEquals(loserAttribution, alternatives.single().attribution)
+    }
+
+    @Test fun `the primary keeps the attribution its provider returned`() {
+        // Given - a winning provider whose artwork carries its own creator and licence
+        val winnerAttribution = Attribution(creator = "Raph_PH", licence = "CC BY 4.0")
+        val results = listOf(
+            artwork(
+                "wikidata", "https://commons.wikimedia.org/winner.jpg", confidence = 1.0f,
+                attribution = winnerAttribution,
+            ),
+            artwork("deezer", "https://deezer.com/loser.jpg", confidence = 0.4f),
+        )
+
+        // When - merging the two results
+        val result = merger.merge(results)
+
+        // Then - the primary artwork still carries that attribution
+        val primary = (result as EnrichmentResult.Success).data as EnrichmentData.Artwork
+        assertEquals(winnerAttribution, primary.attribution)
+    }
+
+    @Test fun `attribution does not change which provider wins or which urls are listed`() {
+        // Given - the same three results twice, once with attributions on the losers and once without
+        val attributed = Attribution(creator = "Raph_PH", licence = "CC BY 4.0", licenceUrl = "http://example.com/l")
+        fun results(attribution: Attribution?) = listOf(
+            artwork("deezer", "https://deezer.com/a.jpg", confidence = 0.8f),
+            artwork("wikidata", "https://commons.wikimedia.org/b.jpg", confidence = 1.0f),
+            artwork("wikipedia", "https://upload.wikimedia.org/c.jpg", confidence = 0.8f, attribution = attribution),
+            artwork("lastfm", "https://deezer.com/a.jpg", confidence = 0.5f, attribution = attribution),
+        )
+
+        // When - merging both sets
+        val attributedMerge = merger.merge(results(attributed)) as EnrichmentResult.Success
+        val plainMerge = merger.merge(results(null)) as EnrichmentResult.Success
+
+        // Then - the winning provider, primary url and the alternatives' providers and urls are identical
+        assertEquals(plainMerge.provider, attributedMerge.provider)
+        val withArt = attributedMerge.data as EnrichmentData.Artwork
+        val withoutArt = plainMerge.data as EnrichmentData.Artwork
+        assertEquals(withoutArt.url, withArt.url)
+        assertEquals(withoutArt.alternatives!!.map { it.provider to it.url }, withArt.alternatives!!.map { it.provider to it.url })
     }
 }

@@ -1,5 +1,6 @@
 package com.landofoz.musicmeta.demoweb
 
+import com.landofoz.musicmeta.Attribution
 import kotlinx.serialization.Serializable
 
 @Serializable
@@ -46,11 +47,16 @@ data class StreamSnapshot(
  * upstream. [url] is that upstream's own page for this entity, and is null when the response
  * carried no identifier to address one: the page then links the provider's site rather than
  * inventing a deep link.
+ *
+ * [attribution] is what the upstream said about this one image file, passed through unjudged: the
+ * page renders whatever is present, and a null here means the upstream said nothing about the file,
+ * not that the image is unusable. Its links are the upstream's text, so the page checks them.
  */
 @Serializable
 data class SourceCredit(
     val provider: String,
     val url: String? = null,
+    val attribution: Attribution? = null,
 )
 
 @Serializable
@@ -261,6 +267,8 @@ data class ProviderRow(
      * registered and answers everything except `ARTIST_RADIO_DISCOVERY`. null otherwise.
      */
     val keyStatus: String? = null,
+    /** What a startup request to this provider's host found; `UNCHECKED` for a keyed provider. */
+    val reachability: ReachabilityRow = ReachabilityRow.UNCHECKED,
 )
 
 /** The renderable subset of a `ProviderPolicy`: enum fields as bare enum names, notice text as-is. */

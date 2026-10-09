@@ -12,6 +12,54 @@ Two kinds of break appear here and they cost you different things:
 
 The full per-release list, additions and fixes included, is [CHANGELOG.md](../../CHANGELOG.md).
 
+## 0.14.0
+
+### `ArtistProfile.similarAlbums` is removed
+
+It was always null: `SIMILAR_ALBUMS` is not in the default artist types, and the provider returns
+`NotFound` for a request that is not for an album.
+
+<!-- no-compile: reads the withdrawn `ArtistProfile.similarAlbums` property -->
+```kotlin
+val similar = artistProfile.similarAlbums   // always null
+```
+
+Read it from the album's profile, which an album request fills:
+
+```kotlin
+val similarAlbumsRead = engine.albumProfile("OK Computer", "Radiohead").similarAlbums
+```
+
+### `Artwork`, `Biography` and `ArtworkSource` gain `attribution`
+
+Each gains a trailing `attribution: Attribution?` parameter, defaulted to null, so the
+constructor, `copy` and `componentN` descriptors moved. Recompile against this release. Source
+that constructs them by position still compiles; switch to named arguments so the next trailing
+parameter does not rebind anything. A destructuring declaration binds only the names you write,
+so it keeps compiling and does not see the new field.
+
+An entry cached by an earlier release still reads, with `attribution` null; there is no cache to
+clear. A custom `EnrichmentCache` that stores the payload whole needs no change. One that copies
+fields by hand into its own schema must add `attribution`.
+
+A downgrade to 0.13.0 after this release wrote rows is the one catch: a custom `EnrichmentCache`
+that decodes the payload with a strict `Json` (no `ignoreUnknownKeys`) fails on the new
+`attribution` key. The shipped Room cache sets `ignoreUnknownKeys = true` and is unaffected.
+Upgrading is safe either way.
+
+Positional construction still compiles:
+
+```kotlin
+val positionalBio = EnrichmentData.Biography("Text", "Wikipedia", "en")
+```
+
+Name the arguments instead, and read the new field where you display the text:
+
+```kotlin
+val bio = EnrichmentData.Biography(text = "Text", source = "Wikipedia", language = "en")
+val credit = bio.attribution?.title
+```
+
 ## 0.13.0
 
 ### Six provider constants leave the published surface

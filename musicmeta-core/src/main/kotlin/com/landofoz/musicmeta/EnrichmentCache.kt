@@ -88,8 +88,10 @@ public interface EnrichmentCache {
     public suspend fun isManuallySelected(entityKey: String, type: EnrichmentType): Boolean
 
     /**
-     * Records that a caller chose this key and type's data itself, so an implementation preserving
-     * selections does not overwrite it automatically. **A selection may be marked before anything
+     * Records that a caller chose this key and type's data itself. **The mark is advisory**: the
+     * engine and the shipped caches overwrite the entry on refresh and keep the flag, and a caller
+     * checks [isManuallySelected] before its own refresh. An implementation owes nothing beyond
+     * storing and reporting the flag. **A selection may be marked before anything
      * is stored for the key** — a caller can choose from candidates it has not cached — so an
      * implementation holding the marker on the cached row must still record one when no row exists.
      */

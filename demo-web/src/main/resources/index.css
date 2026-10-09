@@ -1081,6 +1081,77 @@ footer a:hover { color: var(--text); border-color: var(--text); }
 
 .summary .source .credit-line { margin: 0; font-size: 0.7rem; }
 
+/* Image credit: a small "i" in the image's corner. Hover or focus shows the popover, a click pins it. */
+.hero { position: relative; flex: none; min-width: 0; }
+.img-credit { position: absolute; right: 5px; bottom: 5px; z-index: 3; }
+.img-credit-btn {
+  width: 20px;
+  height: 20px;
+  min-height: 0;
+  padding: 0;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  border-radius: 50%;
+  background: rgba(11, 14, 20, 0.72);
+  color: var(--text-soft);
+  font: italic 700 0.7rem/1 Georgia, serif;
+  cursor: pointer;
+  box-shadow: none;
+}
+.img-credit-btn:hover:not(:disabled),
+.img-credit-btn:focus-visible {
+  background: rgba(11, 14, 20, 0.95);
+  color: var(--text);
+  transform: none;
+  filter: none;
+  box-shadow: none;
+}
+.img-credit-pop {
+  display: none;
+  position: absolute;
+  right: 0;
+  bottom: 26px;
+  width: max-content;
+  max-width: min(260px, 70vw);
+  padding: 0.5rem 0.6rem;
+  border: 1px solid var(--panel-border-soft);
+  border-radius: 8px;
+  background: #0b0e14;
+  color: var(--text-soft);
+  font-size: 0.68rem;
+  line-height: 1.45;
+  text-align: left;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.45);
+}
+.img-credit-pop::after { content: ""; position: absolute; left: 0; right: 0; bottom: -8px; height: 8px; }
+.img-credit:hover .img-credit-pop,
+.img-credit:focus-within .img-credit-pop,
+.img-credit.pinned .img-credit-pop { display: block; }
+.img-credit-row { display: block; }
+
+/* Host-reachability warning: an amber symbol whose panel is the image credit's popover, moved below. */
+.host-warn {
+  position: relative;
+  display: inline-block;
+  margin-left: 0.35rem;
+  color: var(--warn);
+  line-height: 1;
+  text-decoration: underline dotted;
+  text-underline-offset: 3px;
+  cursor: help;
+}
+.host-warn:focus-visible { outline: 2px solid var(--warn); outline-offset: 2px; border-radius: 2px; }
+.host-warn-pop { right: auto; bottom: auto; top: calc(100% + 8px); left: 0; z-index: 5; font-weight: 400; text-decoration: none; cursor: auto; }
+.host-warn-pop::after { top: -8px; bottom: auto; }
+/* Flipped by index.js when the panel would not fit below the symbol inside its scrolling table. */
+.host-warn-pop.above { top: auto; bottom: calc(100% + 8px); }
+.host-warn-pop.above::after { top: auto; bottom: -8px; }
+.host-warn:hover .host-warn-pop,
+.host-warn:focus .host-warn-pop { display: block; }
+.img-credit-pop a { color: var(--text-soft); border-bottom: 1px dotted rgba(146, 169, 255, 0.4); text-decoration: none; }
+.img-credit-pop a:hover { color: var(--text); }
+
 /* Attribution credits: owed content, so no card chrome — a hairline separates it from the footer. */
 .credits-footer {
   margin-top: 1.5rem;

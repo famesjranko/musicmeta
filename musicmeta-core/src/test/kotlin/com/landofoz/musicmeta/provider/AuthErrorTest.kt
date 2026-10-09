@@ -129,6 +129,6 @@ class AuthErrorTest {
 
         // Then - the breaker opened. A NotFound would have recorded a success and left it closed.
         assertEquals(CircuitBreaker.State.OPEN, breaker.state)
-        assertFalse(breaker.allowRequest())
+        assertFalse(breaker.wouldAdmit())
     }
 }
