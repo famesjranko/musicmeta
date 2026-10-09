@@ -267,6 +267,8 @@ data class ProviderRow(
      * registered and answers everything except `ARTIST_RADIO_DISCOVERY`. null otherwise.
      */
     val keyStatus: String? = null,
+    /** What a startup request to this provider's host found; `UNCHECKED` for a keyed provider. */
+    val reachability: ReachabilityRow = ReachabilityRow.UNCHECKED,
 )
 
 /** The renderable subset of a `ProviderPolicy`: enum fields as bare enum names, notice text as-is. */
