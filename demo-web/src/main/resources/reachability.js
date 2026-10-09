@@ -64,3 +64,62 @@ export function warningHtml(sentence) {
   return `<span class="host-warn" role="img" tabindex="0" aria-label="${esc(sentence)}">⚠` +
     `<span class="img-credit-pop host-warn-pop" aria-hidden="true">${esc(sentence)}</span></span>`;
 }
+
+// The gap between symbol and panel, matching `.host-warn-pop`'s `top: calc(100% + 8px)`.
+const PANEL_GAP = 8;
+
+/**
+ * Which side of the symbol the panel opens on. Below is the default; it flips above when the panel
+ * would not fit under the symbol inside `container` and there is more room over it. All arguments
+ * are viewport rects (`{top, bottom}` and, for the container, the same).
+ */
+export function panelSide({ symbol, panelHeight, container }) {
+  const below = container.bottom - symbol.bottom - PANEL_GAP;
+  if (panelHeight <= below) return 'below';
+  const above = symbol.top - container.top - PANEL_GAP;
+  return above > below ? 'above' : 'below';
+}
+
+/**
+ * The `left` offset in px for a panel that opens flush with the symbol's left edge (offset 0), moved
+ * the least that keeps it inside `container` (`{left, right}`). A panel wider than the container
+ * keeps its left edge inside it, so the start of the sentence is never the part that is cut off.
+ */
+export function panelShift({ symbol, panelWidth, container }) {
+  const overflow = symbol.left + panelWidth - container.right;
+  const shift = overflow > 0 ? -overflow : 0;
+  return Math.max(shift, container.left - symbol.left);
+}
+
+// The nearest ancestor that scrolls vertically clips the panel; with none, the viewport does.
+function clippingRect(symbol) {
+  for (let el = symbol.parentElement; el; el = el.parentElement) {
+    const { overflowY } = getComputedStyle(el);
+    if (overflowY === 'auto' || overflowY === 'scroll') return el.getBoundingClientRect();
+  }
+  return { top: 0, bottom: window.innerHeight, left: 0, right: window.innerWidth };
+}
+
+/** Measures `symbol`'s panel against its clipping ancestor and flips or shifts it to stay visible. */
+export function placeWarningPanel(symbol) {
+  const panel = symbol.querySelector('.host-warn-pop');
+  if (!panel) return;
+  resetWarningPanel(symbol);
+  // The panel is display:none until the hover or focus style applies; show it only to measure it.
+  panel.style.display = 'block';
+  const box = panel.getBoundingClientRect();
+  panel.style.display = '';
+  const anchor = symbol.getBoundingClientRect();
+  const container = clippingRect(symbol);
+  const side = panelSide({ symbol: anchor, panelHeight: box.height, container });
+  panel.classList.toggle('above', side === 'above');
+  panel.style.left = `${panelShift({ symbol: anchor, panelWidth: box.width, container })}px`;
+}
+
+/** Puts `symbol`'s panel back below it, so the next open measures from the default. */
+export function resetWarningPanel(symbol) {
+  const panel = symbol.querySelector('.host-warn-pop');
+  if (!panel) return;
+  panel.classList.remove('above');
+  panel.style.left = '';
+}

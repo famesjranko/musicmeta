@@ -2,7 +2,15 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 
-import { providerWarning, typeWarning, warningHtml } from '../../main/resources/reachability.js';
+import {
+  panelShift,
+  panelSide,
+  placeWarningPanel,
+  providerWarning,
+  resetWarningPanel,
+  typeWarning,
+  warningHtml,
+} from '../../main/resources/reachability.js';
 import { loadPage } from './page-harness.js';
 
 const REFUSED_DEEZER = {
@@ -184,4 +192,104 @@ test('the symbol is a keyboard-focusable image named by the sentence', () => {
   // Then - it is focusable, has the image role, escapes the sentence, and is empty for no sentence
   assert.match(html, /role="img" tabindex="0" aria-label="Deezer &lt;b&gt; &amp; &quot;friends&quot;"/);
   assert.equal(warningHtml(null), '');
+});
+
+// --- Panel placement -----------------------------------------------------------------------
+
+const TABLE = { top: 0, bottom: 855, left: 0, right: 600 };
+
+test('the panel opens below its symbol when it fits inside the scrolling container', () => {
+  // Given - a symbol mid-table and an 81 px panel
+  const symbol = { top: 300, bottom: 316 };
+
+  // When - choosing the side
+  const side = panelSide({ symbol, panelHeight: 81, container: TABLE });
+
+  // Then - below
+  assert.equal(side, 'below');
+});
+
+test('the panel flips above a symbol on the last row, where below would start at the container edge', () => {
+  // Given - a symbol 1 px above the container's bottom edge and an 81 px panel
+  const symbol = { top: 620, bottom: 636 };
+
+  // When - choosing the side
+  const side = panelSide({ symbol, panelHeight: 81, container: { ...TABLE, bottom: 644 } });
+
+  // Then - above, since below would be clipped
+  assert.equal(side, 'above');
+});
+
+test('with room on neither side the panel takes the roomier one', () => {
+  // Given - a container shorter than the panel, with the symbol nearer its bottom
+  const tall = { top: 0, bottom: 100, left: 0, right: 600 };
+
+  // When - choosing the side for symbols near each end
+  const nearBottom = panelSide({ symbol: { top: 70, bottom: 86 }, panelHeight: 81, container: tall });
+  const nearTop = panelSide({ symbol: { top: 10, bottom: 26 }, panelHeight: 81, container: tall });
+
+  // Then - each opens toward the larger gap
+  assert.equal(nearBottom, 'above');
+  assert.equal(nearTop, 'below');
+});
+
+test('the panel is shifted left just enough to stay inside the container', () => {
+  // Given - a 260 px panel and a symbol 100 px from the container's right edge
+  const container = { top: 0, bottom: 800, left: 0, right: 400 };
+
+  // When - computing the offset for that symbol, and for one with room
+  const crowded = panelShift({ symbol: { left: 300 }, panelWidth: 260, container });
+  const roomy = panelShift({ symbol: { left: 50 }, panelWidth: 260, container });
+
+  // Then - the crowded one moves 160 px left; the roomy one stays flush with its symbol
+  assert.equal(crowded, -160);
+  assert.equal(roomy, 0);
+});
+
+test('a panel wider than the container keeps its left edge inside it', () => {
+  // Given - a 260 px panel in a 200 px container, symbol 30 px in
+  const container = { top: 0, bottom: 800, left: 10, right: 210 };
+
+  // When - computing the offset
+  const shift = panelShift({ symbol: { left: 40 }, panelWidth: 260, container });
+
+  // Then - the left edge lands on the container's left edge
+  assert.equal(shift, -30);
+});
+
+// A symbol in a scrolling table, with just enough DOM for placeWarningPanel to measure and write to.
+function fakeSymbolInTable(symbolRect, tableRect, panelBox) {
+  const classes = new Set();
+  const panel = {
+    style: {},
+    classList: {
+      remove: (c) => classes.delete(c),
+      toggle: (c, on) => (on ? classes.add(c) : classes.delete(c)),
+      contains: (c) => classes.has(c),
+    },
+    getBoundingClientRect: () => panelBox,
+  };
+  const table = { parentElement: null, style: { overflowY: 'auto' }, getBoundingClientRect: () => tableRect };
+  const symbol = { parentElement: table, querySelector: () => panel, getBoundingClientRect: () => symbolRect };
+  globalThis.getComputedStyle = (el) => el.style;
+  return { symbol, panel };
+}
+
+test('placing the panel flips it above on the last row, and resetting puts it back below', () => {
+  // Given - a symbol 8 px from the bottom of its scrolling table, and an 81 by 260 px panel
+  const { symbol, panel } = fakeSymbolInTable(
+    { top: 620, bottom: 636, left: 20 },
+    { top: 0, bottom: 644, left: 0, right: 600 },
+    { height: 81, width: 260 },
+  );
+
+  // When - the panel opens, and then closes
+  placeWarningPanel(symbol);
+  const whileOpen = panel.classList.contains('above');
+  resetWarningPanel(symbol);
+
+  // Then - it was flipped above while open and is back below after
+  assert.equal(whileOpen, true);
+  assert.equal(panel.classList.contains('above'), false);
+  assert.equal(panel.style.left, '');
 });

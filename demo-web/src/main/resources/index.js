@@ -13,7 +13,13 @@ import {
   imageCreditBadgeHtml,
   standingNotices,
 } from '/attribution.js';
-import { providerWarning, typeWarning, warningHtml } from '/reachability.js';
+import {
+  providerWarning,
+  typeWarning,
+  warningHtml,
+  placeWarningPanel,
+  resetWarningPanel,
+} from '/reachability.js';
 
 const tabsEl = document.getElementById('kind-tabs');
 const kindTabs = Array.from(tabsEl.querySelectorAll('button[data-kind]'));
@@ -1308,4 +1314,20 @@ document.addEventListener('click', (e) => {
 document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape') unpinImageCredits(null);
 });
+
+// A host-reachability panel opens by CSS alone; these only choose which side of the symbol and how
+// far along it, because the table's scroll container would clip a panel opening past its edge.
+const hostWarnFrom = (e) => (e.target.closest ? e.target.closest('.host-warn') : null);
+for (const open of ['mouseover', 'focusin']) {
+  document.addEventListener(open, (e) => {
+    const symbol = hostWarnFrom(e);
+    if (symbol) placeWarningPanel(symbol);
+  });
+}
+for (const close of ['mouseout', 'focusout']) {
+  document.addEventListener(close, (e) => {
+    const symbol = hostWarnFrom(e);
+    if (symbol && !symbol.contains(e.relatedTarget)) resetWarningPanel(symbol);
+  });
+}
 export { render };
