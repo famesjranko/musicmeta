@@ -31,22 +31,17 @@ jdk_problem() {
     fi
 }
 
-# sdk_problem: the Android SDK location Gradle would use must be a directory. Gradle reads
-# `sdk.dir` from local.properties first and ANDROID_HOME only when that line is absent, so a stale
-# `sdk.dir` fails the build even beside a good ANDROID_HOME. Run from the repository root.
+# sdk_problem: one of local.properties' `sdk.dir`, ANDROID_HOME or ~/Android/Sdk must name a
+# directory. Any one is enough: AGP warns about a stale `sdk.dir` and falls back to ANDROID_HOME.
+# Run from the repository root.
 sdk_problem() {
-    local dir
-    dir="$(sed -n 's/^sdk\.dir[[:space:]]*=[[:space:]]*//p' local.properties 2>/dev/null | tail -n 1 || true)"
-    if [ -n "$dir" ]; then
-        if [ ! -d "$dir" ]; then
-            echo "local.properties sdk.dir=$dir is not a directory"
-            return 1
+    local dir props
+    props="$(sed -n 's/^sdk\.dir[[:space:]]*=[[:space:]]*//p' local.properties 2>/dev/null | tail -n 1 || true)"
+    for dir in "$props" "${ANDROID_HOME:-}" "$HOME/Android/Sdk"; do
+        if [ -n "$dir" ] && [ -d "$dir" ]; then
+            return 0
         fi
-        return 0
-    fi
-    dir="${ANDROID_HOME:-$HOME/Android/Sdk}"
-    if [ ! -d "$dir" ]; then
-        echo "not found: ${ANDROID_HOME:+ANDROID_HOME=$ANDROID_HOME is not a directory; }set ANDROID_HOME, install it at ~/Android/Sdk, or put sdk.dir in local.properties"
-        return 1
-    fi
+    done
+    echo "not found: set ANDROID_HOME to an SDK directory, install it at ~/Android/Sdk, or put sdk.dir in local.properties"
+    return 1
 }

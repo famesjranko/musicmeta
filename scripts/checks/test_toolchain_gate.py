@@ -223,11 +223,19 @@ class ToolchainGateTest(unittest.TestCase):
         # Then the SDK is found
         self.assert_sdk_accepted(result)
 
-    def test_local_properties_sdk_dir_naming_a_missing_directory_is_refused(self) -> None:
-        # Given a stale sdk.dir, which Gradle prefers over a good ANDROID_HOME
+    def test_stale_sdk_dir_beside_a_valid_android_home_is_accepted(self) -> None:
+        # Given a stale sdk.dir and an ANDROID_HOME naming a directory, which AGP falls back to
         (self.root / "local.properties").write_text("sdk.dir=/no/such/sdk\n", encoding="utf-8")
         # When ./check runs
         result = self.run_check(java="17", android_home=self.sdk())
+        # Then the SDK is found
+        self.assert_sdk_accepted(result)
+
+    def test_stale_sdk_dir_with_nothing_else_is_refused(self) -> None:
+        # Given a stale sdk.dir, no ANDROID_HOME and no ~/Android/Sdk
+        (self.root / "local.properties").write_text("sdk.dir=/no/such/sdk\n", encoding="utf-8")
+        # When ./check runs
+        result = self.run_check(java="17")
         # Then it is refused
         self.assert_sdk_refused(result)
 
