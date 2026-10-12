@@ -31,13 +31,15 @@ jdk_problem() {
     fi
 }
 
-# sdk_problem: one of local.properties' `sdk.dir`, ANDROID_HOME or ~/Android/Sdk must name a
-# directory. Any one is enough: AGP warns about a stale `sdk.dir` and falls back to ANDROID_HOME.
+# sdk_problem: local.properties' `sdk.dir` or the effective ANDROID_HOME must name a directory.
+# Either is enough: AGP warns about a stale `sdk.dir` and falls back to ANDROID_HOME. ~/Android/Sdk
+# counts only while ANDROID_HOME is unset, because that is when ./check exports it; AGP never
+# looks there itself.
 # Run from the repository root.
 sdk_problem() {
     local dir props
     props="$(sed -n 's/^sdk\.dir[[:space:]]*=[[:space:]]*//p' local.properties 2>/dev/null | tail -n 1 || true)"
-    for dir in "$props" "${ANDROID_HOME:-}" "$HOME/Android/Sdk"; do
+    for dir in "$props" "${ANDROID_HOME:-$HOME/Android/Sdk}"; do
         if [ -n "$dir" ] && [ -d "$dir" ]; then
             return 0
         fi

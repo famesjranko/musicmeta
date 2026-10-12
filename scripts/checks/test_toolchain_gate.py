@@ -215,6 +215,31 @@ class ToolchainGateTest(unittest.TestCase):
         # Then the SDK is found
         self.assert_sdk_accepted(result)
 
+    def test_missing_android_home_beside_home_android_sdk_is_refused(self) -> None:
+        # Given the conventional ~/Android/Sdk and an ANDROID_HOME naming a missing directory
+        (self.home / "Android" / "Sdk").mkdir(parents=True)
+        # When ./check runs
+        result = self.run_check(java="17", android_home=self.base / "gone")
+        # Then it is refused, because a set ANDROID_HOME replaces the fallback and AGP finds no SDK
+        self.assert_sdk_refused(result)
+
+    def test_sdk_problem_finds_home_android_sdk_without_the_check_export(self) -> None:
+        # Given the conventional ~/Android/Sdk, no ANDROID_HOME, and no ./check to export it first
+        (self.home / "Android" / "Sdk").mkdir(parents=True)
+
+        # When sdk_problem runs on its own, as bootstrap.sh calls it
+        result = subprocess.run(
+            [str(self.bin / "bash"), "-c", ". scripts/toolchain.sh && sdk_problem"],
+            cwd=self.root,
+            env={"PATH": str(self.bin), "HOME": str(self.home)},
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+
+        # Then the SDK is found
+        self.assertEqual(0, result.returncode, result.stdout)
+
     def test_local_properties_sdk_dir_is_accepted(self) -> None:
         # Given an sdk.dir line in local.properties naming a directory, and no ANDROID_HOME
         (self.root / "local.properties").write_text(f"sdk.dir={self.sdk()}\n", encoding="utf-8")
