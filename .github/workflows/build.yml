@@ -88,8 +88,8 @@ jobs:
       - name: Compile, lint and test demo-cli composite build
         # demo-cli/ has no wrapper of its own — it borrows the root one via ../gradlew.
         #
-        # The task list is `./check`'s demo canary line, so a demo that merges green here also passes
-        # `make check`. ktlintCheck before test, so a formatting failure reports first.
+        # The task list mirrors `./check`'s demo canary line, so a demo that merges green here also
+        # passes `make check`.
         #
         # -Pmusicmeta.rerunTests for the reason the root build carries it: setup-gradle restores
         # ~/.gradle's build cache from one run into the next, so without it this job can report a

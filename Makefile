@@ -62,8 +62,8 @@ test-e2e: ## E2E tests against live third-party APIs — never merge-gating, nee
 
 .PHONY: demo
 demo: ## Compile, lint and test demo-cli/ and demo-web/, matching CI's demo-canary job
-	cd demo-cli && ../gradlew compileKotlin ktlintCheck test
-	cd demo-web && ../gradlew compileKotlin ktlintCheck test
+	cd demo-cli && ../gradlew compileKotlin ktlintCheck test -Pmusicmeta.rerunTests
+	cd demo-web && ../gradlew compileKotlin ktlintCheck test -Pmusicmeta.rerunTests
 
 .PHONY: demo-cli-run
 demo-cli-run: ## Run the demo CLI (interactive if ARGS unset, else ARGS="artist Radiohead")
