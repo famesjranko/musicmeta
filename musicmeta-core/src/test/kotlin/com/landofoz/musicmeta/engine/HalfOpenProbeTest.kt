@@ -54,13 +54,19 @@ class HalfOpenProbeTest {
     private fun chainOf(provider: FakeProvider, breaker: CircuitBreaker) =
         ProviderChain(type, listOf(provider), mapOf(provider.id to breaker))
 
-    /** A provider that holds every call it receives until [release] completes, then answers [answer]. */
+    /**
+     * A provider that holds every call it receives until [release] completes, then answers [answer].
+     * [onEnter] runs as each call enters, after [entered] counts it.
+     */
     private class HoldingProvider(id: String, val release: CompletableDeferred<Unit>, val answer: EnrichmentResult) :
         FakeProvider(id = id) {
         val entered = AtomicInteger()
 
+        @Volatile var onEnter: () -> Unit = {}
+
         override suspend fun enrich(request: EnrichmentRequest, type: EnrichmentType): EnrichmentResult {
             entered.incrementAndGet()
+            onEnter()
             release.await()
             return answer
         }
@@ -71,8 +77,11 @@ class HalfOpenProbeTest {
      * answered is the probe, one that comes back refused is counted. Returns how many were admitted
      * into the provider while the probe was unsettled, and how many answered after it was released.
      *
-     * The bound on the wait is a guard sized for a hang only: with every caller admitted, none is
-     * refused, so the count never completes.
+     * The admitted count is read once every caller is accounted for: refused, or inside the provider.
+     * The probe is admitted before it enters the provider, so refusals alone do not say it has arrived.
+     *
+     * The bound on the wait is a guard sized for a hang only: it is reached only if a caller is never
+     * refused and never reaches the provider.
      */
     private fun admittedWhileUnsettled(
         provider: HoldingProvider,
@@ -80,18 +89,20 @@ class HalfOpenProbeTest {
         call: suspend () -> Boolean,
     ): Pair<Int, Int> {
         val barrier = CyclicBarrier(callers)
-        val refused = CountDownLatch(callers - 1)
+        val accountedFor = CountDownLatch(callers)
+        provider.onEnter = { accountedFor.countDown() }
         val answered = CopyOnWriteArrayList<Boolean>()
         val threads = List(callers) {
             thread {
                 barrier.await()
                 val wasAnswered = runBlocking { call() }
                 answered.add(wasAnswered)
-                if (!wasAnswered) refused.countDown()
+                if (!wasAnswered) accountedFor.countDown()
             }
         }
         try {
-            assertTrue("all but one caller should be refused", refused.await(GUARD_SECONDS, TimeUnit.SECONDS))
+            val allAccountedFor = accountedFor.await(GUARD_SECONDS, TimeUnit.SECONDS)
+            assertTrue("every caller should be refused or reach the provider", allAccountedFor)
             val admitted = provider.entered.get()
             provider.release.complete(Unit)
             threads.forEach { it.join() }
