@@ -16,6 +16,7 @@ because the config is the thing that fails.
 
 | Step | Tool | Covers |
 |---|---|---|
+| Toolchain prerequisites | `JDK_MAJOR` in `scripts/bootstrap.sh`, tested by `scripts/checks/test_toolchain_gate.py` | the `java` that `./gradlew` would run reports specification version **17 exactly**, and, outside `--fast`, an Android SDK directory is found. Exact because Kotlin reads JDK classes from the running JDK, so a newer one compiles an API CI's 17 then rejects; `--fast` still needs the JDK because it runs ktlint through Gradle, but no SDK because it compiles no Android module. An SDK is found at `local.properties`'s `sdk.dir` when that line is present (Gradle prefers it, so a stale one fails even beside a good `ANDROID_HOME`), else `ANDROID_HOME`, else `~/Android/Sdk`. Like node, both are the machine's: `bootstrap.sh` reports a missing or wrong one and installs neither. It reads the version a JDK reports and that a directory exists, never that the SDK holds the platforms the build asks for — Gradle reports that, later |
 | Python format and lint | ruff | `scripts/**` |
 | Python types | mypy | `scripts/**` |
 | Shell | shellcheck | `scripts/**`, `check`, `demo-cli/run.sh`, `demo-web/run.sh` |
