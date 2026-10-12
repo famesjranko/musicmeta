@@ -207,8 +207,7 @@ python3 scripts/checks/check_pom_dependencies.py
 #
 # --skip-demo exists for CI only, where `demo-canary` is a separate required status check and
 # would otherwise compile this twice. Locally the default runs it, so one command still covers
-# everything and a green local run stays a superset of what CI verifies (CI's demo-canary job
-# runs `test` but not `ktlintCheck`).
+# everything. demo-canary runs the same task list as the two lines below; keep them in step.
 if [ "$SKIP_DEMO" = 1 ]; then
     printf '\n\033[1m--skip-demo: demo canary left to its own CI job\033[0m\n'
 else
