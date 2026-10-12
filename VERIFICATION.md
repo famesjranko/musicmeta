@@ -100,11 +100,11 @@ than it looks like, each learned the hard way.
   is exactly why it can sit a release behind and nobody notice. `docs/project/release.md`'s gate 3
   checklist carries the bump instead, which is a person remembering, not a mechanism.
 
-- **CI's `demo-canary` job compiles and tests the demos; it does not lint them.** It runs
-  `../gradlew compileKotlin test` in each demo, while `make check` also runs the demos' ktlint.
-  A demo style violation therefore merges green and breaks `make check` on `main` for whoever
-  pulls next — PR #285 did exactly that, fixed by #290. A green `demo-canary` is not evidence the
-  demo tree passes `make check`.
+- **CI's `demo-canary` job and `./check`'s demo canary are two hand-kept copies of one task
+  list.** Each runs `compileKotlin ktlintCheck test` in both demos, and nothing compares them. A
+  task added to one and not the other lets a demo merge green and fail `make check` on `main`, or
+  the reverse. A green `demo-canary` is evidence for `make check`'s demo step only while the two
+  still match.
 
 - **The daily schema pin gates nothing, and covers 19 routes across the 11 providers.** It runs on
   a schedule in `provider-drift.yml`, so a merge never waits on it and a provider outage can never
