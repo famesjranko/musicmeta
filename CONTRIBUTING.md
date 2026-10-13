@@ -37,9 +37,12 @@ on your machine and fails in CI. `musicmeta-core/build.gradle.kts` records why t
 pinned for you.
 
 `make check` also needs **Node 22 or newer** (the demo's browser tests run on node's own test
-runner; `bootstrap.sh` deliberately does not install it) and an **Android SDK** at `ANDROID_HOME` or
-`~/Android/Sdk`, because the build compiles `musicmeta-android`. Without either, `check` refuses to
-start rather than skipping the layer.
+runner) and an **Android SDK** (the build compiles `musicmeta-android`), found at `ANDROID_HOME`
+(or `~/Android/Sdk` when `ANDROID_HOME` is unset), or the `sdk.dir` line of a `local.properties` at
+the repo root. `bootstrap.sh`
+installs none of Java, node or the SDK; it reports which is missing. Without a JDK 17, `check`
+refuses to start in every mode. Without the SDK it refuses to start unless run with `--fast`, which
+compiles no Android module.
 
 You do not need API keys: eight of the eleven providers work without them, and the test suite
 needs none at all.

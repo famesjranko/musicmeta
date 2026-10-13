@@ -64,6 +64,20 @@ elif ! command -v node >/dev/null 2>&1; then
 elif [ "$(node --version | sed 's/^v\([0-9]*\).*/\1/')" -lt "$node_min" ]; then
     bad="$bad node($(node --version), want >=$node_min)"
 fi
+
+# java is the machine's runtime too, and exact rather than a minimum: CONTRIBUTING.md says why. It
+# is checked in every mode because even --fast runs ktlint through Gradle. The check lives in
+# toolchain.sh so bootstrap.sh reports the same thing.
+# shellcheck source=scripts/toolchain.sh
+. scripts/toolchain.sh
+jdk_want="$(pin JDK_MAJOR)"
+if [ -z "$jdk_want" ]; then
+    bad="$bad java(no pin in scripts/bootstrap.sh)"
+elif jdk_reason="$(jdk_problem "$jdk_want")"; then
+    :
+else
+    bad="$bad java($jdk_reason — install it; bootstrap.sh does not)"
+fi
 if [ -n "$bad" ]; then
     echo "tooling mismatch:$bad" >&2
     echo "run ./scripts/bootstrap.sh to install the pinned versions" >&2
@@ -74,6 +88,12 @@ fi
 # Gradle failure into a working run on a normally-configured machine.
 if [ -z "${ANDROID_HOME:-}" ] && [ -d "$HOME/Android/Sdk" ]; then
     export ANDROID_HOME="$HOME/Android/Sdk"
+fi
+# --fast compiles no Android module, so it needs no SDK; every other mode fails here instead of
+# at the first Android task, minutes into Gradle.
+if [ "$FAST" -eq 0 ] && ! sdk_reason="$(sdk_problem)"; then
+    echo "Android SDK $sdk_reason" >&2
+    exit 127
 fi
 
 step() { printf '\n\033[1m==> %s\033[0m\n' "$1"; }
@@ -90,7 +110,8 @@ step "shell lint (shellcheck)"
 # prototypes, agent worktrees under `.claude/` — so it failed locally on scripts CI cannot see,
 # and a permanently red gate is one nobody reads. A new script is linted once it is `git add`ed,
 # which is the same moment it becomes something CI runs.
-git ls-files -z '*.sh' | sort -z | xargs -0 shellcheck check
+# -x follows `. scripts/toolchain.sh`, which has no other caller to lint it through.
+git ls-files -z '*.sh' | sort -z | xargs -0 shellcheck -x check
 
 step "python types (mypy)"
 mypy

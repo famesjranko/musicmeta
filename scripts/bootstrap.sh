@@ -19,6 +19,10 @@ SHELLCHECK_VERSION="0.11.0"
 # back and fails when node is absent or older, because the demo's browser tests run on node's own
 # test runner and a skipped gate reports green while checking nothing.
 NODE_MIN_MAJOR="22"
+# Exact, not a minimum, and not installed here: the machine provides the JDK. CI builds on 17 and
+# the published artifacts target it, but Kotlin reads JDK classes from the running JDK, so a newer
+# one compiles an API CI then rejects. ./check reads this back and fails on any other major.
+JDK_MAJOR="17"
 # Read from the catalogue rather than pinned again here: this script and the gate disagreeing is
 # what made format-on-write silently no-op on every .kt edit. A bump there now makes the download
 # below fail its digest check until KTLINT_SHA256 is updated in the same commit — which is what the
@@ -134,6 +138,21 @@ elif [ "$(node --version | sed 's/^v\([0-9]*\).*/\1/')" -lt "$NODE_MIN_MAJOR" ];
     echo "node $(node --version) is older than the required $NODE_MIN_MAJOR — ./check will fail until it is upgraded"
 else
     echo "node $(node --version) satisfies the required major $NODE_MIN_MAJOR"
+fi
+
+# --- java and the Android SDK: reported, not installed. Gradle needs both and ./check requires them. ---
+# shellcheck source=scripts/toolchain.sh
+. "$(dirname "${BASH_SOURCE[0]}")/toolchain.sh"
+if jdk_reason="$(jdk_problem "$JDK_MAJOR")"; then
+    echo "java $JDK_MAJOR found — satisfies the required major"
+else
+    echo "java $jdk_reason — ./check will fail until a JDK $JDK_MAJOR is on PATH or JAVA_HOME; install it from your platform"
+fi
+# The repository root is where local.properties lives.
+if sdk_reason="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && sdk_problem)"; then
+    echo "Android SDK found"
+else
+    echo "Android SDK $sdk_reason — a full ./check will fail until one is found"
 fi
 
 echo
