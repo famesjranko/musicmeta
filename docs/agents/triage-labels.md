@@ -14,16 +14,12 @@ When a skill mentions a role (e.g. "apply the AFK-ready triage label"), use the 
 
 ## Where the label goes
 
-The tracker is local markdown (`docs/agents/issue-tracker.md`), so there is nothing to apply a label
-to — write the role string on the `Status:` line near the top of the issue file:
+Apply the label to the GitHub issue (`docs/agents/issue-tracker.md`), and remove the role it
+replaces, so an issue carries one triage role at a time:
 
-```markdown
-Status: ready-for-agent
+```bash
+gh issue edit <n> --add-label ready-for-agent --remove-label needs-triage
 ```
 
-The same five strings exist as GitHub labels on `famesjranko/musicmeta` — all except
-`needs-triage`, which has no label yet — and GitHub is the inbound door for outside reports, which
-the skills do not write to. Keeping one vocabulary across both is deliberate: an issue mirrored
-between GitHub and `.scratch/` keeps its state in either direction. Until `needs-triage` exists as a
-label, the issue templates asking for it have no effect: GitHub drops a label a template names but
-the repo lacks, silently and without failing the issue.
+All five exist as labels on `famesjranko/musicmeta`. GitHub silently drops a label that an issue
+template names but the repo lacks, so create a label before a template uses it.
