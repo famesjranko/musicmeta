@@ -9,6 +9,9 @@ Issues and specs (you may know a spec as a PRD) for this repo live in GitHub Iss
 > it with a closing keyword. `provider-drift.yml` files nothing: a failed scheduled run emails the
 > maintainer, and that email is the drift signal.
 
+> **Issues are public.** A vulnerability or a leaked credential never becomes an issue, including a
+> finding of your own: it goes through the private security policy in `SECURITY.md`.
+
 ## Conventions
 
 - One issue per work item. A spec is an issue too, and its implementation tickets are sub-issues of
@@ -22,8 +25,8 @@ Issues and specs (you may know a spec as a PRD) for this repo live in GitHub Iss
 - Write the body for a reader who has not seen the conversation: the problem, the evidence with
   `file:line` or a permalink, and the acceptance criteria. Pass long bodies with `--body-file`.
 
-`.scratch/` stays gitignored, alongside `.planning/`. It holds local working files, such as
-prototype arms and probe scripts (`CLAUDE.md`), but no tickets.
+`.scratch/` stays gitignored. It holds local working files, such as prototype arms and probe
+scripts (`CLAUDE.md`), but no tickets.
 
 ## When a skill says "publish to the issue tracker"
 
