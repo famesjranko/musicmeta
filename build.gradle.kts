@@ -28,6 +28,14 @@ subprojects {
     // formats to a style the gate never asked for. See `ktlint-cli` in libs.versions.toml.
     extensions.configure<org.jlleitschuh.gradle.ktlint.KtlintExtension> {
         version.set(ktlintVersion)
+        // Paths in a report are relative to the root, so they read the same from any checkout.
+        relative.set(true)
+    }
+    // The lint task's cached findings hold absolute paths, and the build cache is shared by every
+    // checkout on the machine, so a cache hit reports violations in another checkout's copy of the
+    // file. Up-to-date checks within one checkout still skip unchanged sources.
+    tasks.withType<org.jlleitschuh.gradle.ktlint.tasks.KtLintCheckTask>().configureEach {
+        outputs.cacheIf { false }
     }
 
     extensions.configure<io.gitlab.arturbosch.detekt.extensions.DetektExtension> {

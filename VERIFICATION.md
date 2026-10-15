@@ -19,7 +19,7 @@ because the config is the thing that fails.
 | Toolchain prerequisites | `JDK_MAJOR` in `scripts/bootstrap.sh`, tested by `scripts/checks/test_toolchain_gate.py` | the `java` that `./gradlew` would run reports specification version **17 exactly**, and, outside `--fast`, an Android SDK directory is found. Exact because Kotlin reads JDK classes from the running JDK, so a newer one compiles an API CI's 17 then rejects; `--fast` still needs the JDK because it runs ktlint through Gradle, but no SDK because it compiles no Android module. An SDK is found when `local.properties`'s `sdk.dir` or `ANDROID_HOME` names a directory, with `~/Android/Sdk` standing in for `ANDROID_HOME` only while it is unset, as `./check` exports it; a stale `sdk.dir` beside a good `ANDROID_HOME` passes, because AGP warns and falls back, and a set but missing `ANDROID_HOME` fails even beside `~/Android/Sdk`, because AGP does not look there. Like node, both are the machine's: `bootstrap.sh` reports a missing or wrong one and installs neither. It reads the version a JDK reports and that a directory exists, never that the SDK holds the platforms the build asks for — Gradle reports that, later |
 | Python format and lint | ruff | `scripts/**` |
 | Python types | mypy | `scripts/**` |
-| Shell | shellcheck | `scripts/**`, `check`, `demo-cli/run.sh`, `demo-web/run.sh` |
+| Shell | shellcheck | `scripts/**` including the extensionless `scripts/hooks/*`, `check`, `demo-cli/run.sh`, `demo-web/run.sh` |
 | Conventions | `scripts/checks/check_conventions.py` | no `!!` and no `@Serializable` under `provider/`/`http/` in main sources; only `*Provider` public under `provider/` in the committed `api/*.api`; conflict markers anywhere |
 | Private companion constants | `scripts/checks/check_private_companion_consts.py` | no bare `const val` inside a `private companion object` in the published modules' main sources. Kotlin honours the private companion and the JVM does not, so one compiles to a `public static final field` on the enclosing class: the dump publishes a constant no Kotlin caller can see, and deleting it later is a break. `private const val` in the same companion does not leak and reads the same at every call site. Nothing else catches it — `apiCheck` freezes the leaked line rather than objecting to it, detekt has no rule keyed on companion visibility, and `explicitApi()` is already satisfied. It reads modifiers, never intent: a constant that *should* be published is written in a public companion and is invisible to this |
 | Pitfall citations | `scripts/checks/check_pitfall_citations.py` | every `§N` reference to `docs/pitfalls.md` resolves to a `## N.` heading in it — catches a renumbered or deleted section orphaning its citers silently |
@@ -60,6 +60,17 @@ writes formatting the gate never asked for, and nothing fails to say so. A missi
 ktlint is reported to the writer on every Kotlin edit, so the no-op is never silent. It does not skip
 `demo-cli/` or `demo-web/`: formatting is shared with the parent build even though house
 conventions are not.
+
+The pre-commit hook (`scripts/hooks/pre-commit`, enabled by `make bootstrap` through
+`core.hooksPath`) is also not a gate: `git commit --no-verify` skips it, and CI does not run it. It
+runs `./check --commit` — `--fast` plus a Kotlin compile of every published module's main, test and
+test-fixture sources — against the staged tree, checked out into one snapshot worktree per clone
+under `~/.cache/musicmeta-hooks/`. So a partly staged file, an unstaged fix or an untracked source
+neither passes nor fails a commit. The snapshot is kept between commits, so its Gradle build stays
+incremental: about 15–60 s for the first commit in a clone and about 25 s after a small Kotlin change
+on the machine it was measured on. It shares an idle Gradle daemon; a commit made while another
+build is running starts a second one, which raised peak memory use by about 2.3 GB when measured. It does not compile
+`demo-cli/` or `demo-web/`, run tests, or run detekt.
 
 ## Known gaps
 
@@ -281,7 +292,8 @@ than it looks like, each learned the hard way.
   about the other 15 — still a human's job.
 - **Bash-written Kotlin is not formatted on write.** The hook only sees files an `Edit`/`Write`
   payload names. Sweeping everything dirty at end of turn was built and deleted: it reformats
-  uncommitted work the agent never touched. `ktlintCheck` catches it, one `./check` later.
+  uncommitted work the agent never touched. `ktlintCheck` catches it at the next commit where the
+  pre-commit hook is enabled, and at the next `./check` either way.
 
 - **`demo-cli/` is exempt from house conventions, not from formatting.** It is a separate composite
   build, never compiled by `./gradlew build`, so a green build says nothing about it — that is what

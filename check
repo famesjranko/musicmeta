@@ -10,6 +10,8 @@
 #   ./check --fast       skip detekt, the build, the core dependency baseline, the demo canary and
 #                        doc samples — edit loop, not a push
 #   ./check --skip-demo  CI only: the demo canary is a separate required check there
+#   ./check --commit     --fast plus a Kotlin compile of every source set, so type errors fail too —
+#                        what scripts/hooks/pre-commit runs against the staged snapshot
 set -euo pipefail
 cd "$(dirname "$0")"
 
@@ -19,13 +21,20 @@ RUN_START=$(date +%s)
 
 FAST=0
 SKIP_DEMO=0
+COMMIT=0
 for arg in "$@"; do
     case "$arg" in
         --fast) FAST=1 ;;
         --skip-demo) SKIP_DEMO=1 ;;
-        *) echo "usage: ./check [--fast] [--skip-demo]" >&2; exit 64 ;;
+        --commit) COMMIT=1 ;;
+        *) echo "usage: ./check [--fast] [--skip-demo] [--commit]" >&2; exit 64 ;;
     esac
 done
+# --commit compiles the Android module, so it needs the SDK gate --fast skips.
+if [ "$FAST" = 1 ] && [ "$COMMIT" = 1 ]; then
+    echo "usage: --fast and --commit are separate modes; pick one" >&2
+    exit 64
+fi
 
 # A gate whose tool is missing must fail, not skip. Skipping reports green while checking nothing,
 # which is worse than having no gate at all — VERIFICATION.md would then assert something false.
@@ -110,8 +119,9 @@ step "shell lint (shellcheck)"
 # prototypes, agent worktrees under `.claude/` — so it failed locally on scripts CI cannot see,
 # and a permanently red gate is one nobody reads. A new script is linted once it is `git add`ed,
 # which is the same moment it becomes something CI runs.
-# -x follows `. scripts/toolchain.sh`, which has no other caller to lint it through.
-git ls-files -z '*.sh' | sort -z | xargs -0 shellcheck -x check
+# -x follows `. scripts/toolchain.sh`, which has no other caller to lint it through. Git hooks have
+# no extension either, so their directory is named rather than globbed by suffix.
+git ls-files -z '*.sh' 'scripts/hooks/*' | sort -z | xargs -0 shellcheck -x check
 
 step "python types (mypy)"
 mypy
@@ -191,7 +201,29 @@ step "test shape (given/when/then)"
 python3 scripts/checks/check_test_shape.py
 
 step "kotlin format (ktlint)"
-./gradlew ktlintCheck --quiet
+# --quiet hides the violations themselves and leaves only the path of a report, so on failure the
+# reports this run wrote are printed: the line and rule are what the writer needs to act.
+ktlint_marker="$(mktemp)"
+if ! ./gradlew ktlintCheck --quiet; then
+    find . -path '*/build/reports/ktlint/*.txt' -newer "$ktlint_marker" -size +0 -exec cat {} +
+    rm -f "$ktlint_marker"
+    echo "fix: make format, then rerun" >&2
+    exit 1
+fi
+rm -f "$ktlint_marker"
+
+if [ "$COMMIT" = 1 ]; then
+    step "kotlin types (compile)"
+    # Main, test and test-fixture sources, so a type error anywhere fails the commit that made it.
+    # The Android module compiles its debug variant only: release differs in minification, not types.
+    ./gradlew --quiet \
+        :musicmeta-core:compileKotlin :musicmeta-core:compileTestKotlin \
+        :musicmeta-core:compileTestFixturesKotlin \
+        :musicmeta-okhttp:compileKotlin :musicmeta-okhttp:compileTestKotlin \
+        :musicmeta-android:compileDebugKotlin :musicmeta-android:compileDebugUnitTestKotlin
+    printf '\n\033[1m--commit: skipped detekt, tests, the core dependency baseline, the demo canary and doc samples\033[0m\n'
+    exit 0
+fi
 
 if [ "$FAST" = 1 ]; then
     printf '\n\033[1m--fast: skipped detekt, the build, the core dependency baseline, the demo canary and doc samples\033[0m\n'

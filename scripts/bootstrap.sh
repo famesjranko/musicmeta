@@ -155,5 +155,19 @@ else
     echo "Android SDK $sdk_reason — a full ./check will fail until one is found"
 fi
 
+# --- git hooks: scripts/hooks/pre-commit runs ./check --commit on the staged snapshot. ---
+# core.hooksPath is repository config, so this enables the hook in every worktree of this clone. A
+# path someone already set is theirs, so it is reported rather than replaced.
+root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+if git -C "$root" rev-parse --git-dir >/dev/null 2>&1; then
+    hooks_path="$(git -C "$root" config --local --get core.hooksPath || true)"
+    if [ -z "$hooks_path" ] || [ "$hooks_path" = "scripts/hooks" ]; then
+        git -C "$root" config --local core.hooksPath scripts/hooks
+        echo "git hooks enabled (core.hooksPath=scripts/hooks)"
+    else
+        echo "core.hooksPath is already $hooks_path — left alone; set it to scripts/hooks to enable this repo's hooks"
+    fi
+fi
+
 echo
 echo "done. run ./check"

@@ -1,0 +1,57 @@
+#!/usr/bin/env bash
+# Runs `./check --commit` against exactly what is being committed, so formatting, lint, the custom
+# checks and Kotlin type errors fail at the commit that introduced them rather than in CI.
+# Enabled by `make bootstrap`, which sets core.hooksPath. An accelerator, not the gate: `./check`
+# and CI are.
+#
+# The staged tree, not the working tree: a partly staged file, an unstaged fix or an untracked
+# source must neither pass nor fail this commit. So the tree is checked out into one snapshot
+# worktree per clone, kept between commits so Gradle there stays warm and incremental. A lock
+# serialises commits from different worktrees, which all share the snapshot.
+set -euo pipefail
+
+# write-tree honours GIT_INDEX_FILE, which is how `git commit -a` and `git commit <paths>` hand the
+# hook the index they are about to commit. Read it before unsetting the variables below.
+tree="$(git write-tree)"
+parent="$(git rev-parse -q --verify HEAD || true)"
+top="$(git rev-parse --show-toplevel)"
+common="$(cd "$(git rev-parse --git-common-dir)" && pwd)"
+
+# Every git call below targets the snapshot. Left set, these would point it at the commit's index.
+unset GIT_INDEX_FILE GIT_DIR GIT_WORK_TREE
+
+snap="${XDG_CACHE_HOME:-$HOME/.cache}/musicmeta-hooks/$(printf '%s' "$common" | sha1sum | cut -c1-12)"
+mkdir -p "$(dirname "$snap")"
+exec 9>"$snap.lock"
+flock 9
+
+# A commit object, because ./check reads history: the attribution check walks the branch's commits.
+commit="$(git commit-tree "$tree" ${parent:+-p "$parent"} -m "pre-commit snapshot")"
+if [ -d "$snap" ] && git -C "$snap" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+    git -C "$snap" checkout -q --detach -f "$commit"
+    # Untracked files only; ignored build output stays, which is what keeps Gradle incremental.
+    git -C "$snap" clean -fdq
+else
+    rm -rf "$snap"
+    git worktree prune
+    git worktree add -q --detach "$snap" "$commit"
+fi
+# Untracked, so not in the tree, but it is where some machines name their Android SDK.
+if [ -f "$top/local.properties" ]; then
+    cp "$top/local.properties" "$snap/local.properties"
+fi
+
+if (cd "$snap" && ./check --commit); then
+    exit 0
+fi
+
+cat >&2 <<EOF
+
+pre-commit: the staged changes fail ./check --commit (output above). Nothing was committed.
+  - Paths under $snap are the staged copies. Fix the same paths in $top.
+  - Formatting (ktlint, ruff format): run \`make format\`.
+  - Anything else: fix what the failed step names.
+  - Then \`git add\` the fixed files and commit again. An unstaged fix does not count.
+  - Do not bypass this with --no-verify. CI runs the same checks and will fail the PR.
+EOF
+exit 1
