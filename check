@@ -10,8 +10,9 @@
 #   ./check --fast       skip detekt, the build, the core dependency baseline, the demo canary and
 #                        doc samples — edit loop, not a push
 #   ./check --skip-demo  CI only: the demo canary is a separate required check there
-#   ./check --commit     --fast plus a Kotlin compile of every source set, so type errors fail too —
-#                        what scripts/hooks/pre-commit runs against the staged snapshot
+#   ./check --commit     --fast without the commit attribution check, plus a Kotlin compile of the
+#                        main, test and test-fixture sources (Android: debug only), so type errors
+#                        fail too — what scripts/hooks/pre-commit runs against the staged snapshot
 set -euo pipefail
 cd "$(dirname "$0")"
 
@@ -169,10 +170,15 @@ step "migration guide headings"
 # they already have, or a guide heading naming a version the changelog has no section for.
 python3 scripts/checks/check_migration_guide.py
 
-step "commit attribution"
 # Reads commits, not the tree, so it needs real history: it refuses on a shallow clone rather than
 # resolving a base and reading an empty range. Why prose could not hold this rule: pitfalls §41.
-python3 scripts/checks/check_commit_attribution.py
+#
+# --commit skips it. Staging cannot change history, so once a bad commit is on the branch every
+# later commit would fail here, including the amend that removes it. CI still runs it.
+if [ "$COMMIT" = 0 ]; then
+    step "commit attribution"
+    python3 scripts/checks/check_commit_attribution.py
+fi
 
 step "script self-tests"
 # Unguarded, a regression in a release script surfaces only as a release check that silently passes.
@@ -205,7 +211,7 @@ step "kotlin format (ktlint)"
 # reports this run wrote are printed: the line and rule are what the writer needs to act.
 ktlint_marker="$(mktemp)"
 if ! ./gradlew ktlintCheck --quiet; then
-    find . -path '*/build/reports/ktlint/*.txt' -newer "$ktlint_marker" -size +0 -exec cat {} +
+    find musicmeta-* -path '*/build/reports/ktlint/*.txt' -newer "$ktlint_marker" -size +0 -exec cat {} +
     rm -f "$ktlint_marker"
     echo "fix: make format, then rerun" >&2
     exit 1

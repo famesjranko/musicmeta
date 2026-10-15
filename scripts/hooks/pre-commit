@@ -25,16 +25,30 @@ mkdir -p "$(dirname "$snap")"
 exec 9>"$snap.lock"
 flock 9
 
-# A commit object, because ./check reads history: the attribution check walks the branch's commits.
+# Snapshots whose clone is gone: the worktree's .git file names a directory that no longer exists.
+# No hook can be running for them, because the repository it would run in is deleted.
+for other in "$(dirname "$snap")"/*/; do
+    other="${other%/}"
+    gitdir="$(sed -n 's/^gitdir: //p' "$other/.git" 2>/dev/null || true)"
+    if [ "$other" != "$snap" ] && [ -n "$gitdir" ] && [ ! -e "$gitdir" ]; then
+        rm -rf "$other" "$other.lock"
+    fi
+done
+
+# A commit object, because a worktree checks out commits and ./check finds shell scripts with
+# `git ls-files`, which needs the snapshot's index to match its files.
 commit="$(git commit-tree "$tree" ${parent:+-p "$parent"} -m "pre-commit snapshot")"
-if [ -d "$snap" ] && git -C "$snap" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+# This clone's snapshot only. A bare `rev-parse` would also accept a directory inside an enclosing
+# repository, such as a home directory under version control.
+if [ "$(git -C "$snap" rev-parse --path-format=absolute --git-common-dir 2>/dev/null)" = "$common" ]; then
     git -C "$snap" checkout -q --detach -f "$commit"
     # Untracked files only; ignored build output stays, which is what keeps Gradle incremental.
     git -C "$snap" clean -fdq
 else
     rm -rf "$snap"
-    git worktree prune
-    git worktree add -q --detach "$snap" "$commit"
+    # -f re-registers a path git still lists for a deleted snapshot, without pruning other
+    # worktrees whose directories are only temporarily missing.
+    git worktree add -q -f --detach "$snap" "$commit"
 fi
 # Untracked, so not in the tree, but it is where some machines name their Android SDK.
 if [ -f "$top/local.properties" ]; then

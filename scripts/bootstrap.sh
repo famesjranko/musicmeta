@@ -157,10 +157,11 @@ fi
 
 # --- git hooks: scripts/hooks/pre-commit runs ./check --commit on the staged snapshot. ---
 # core.hooksPath is repository config, so this enables the hook in every worktree of this clone. A
-# path someone already set is theirs, so it is reported rather than replaced.
+# path someone already set, here or in their global config, is theirs, so it is reported rather
+# than replaced.
 root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 if git -C "$root" rev-parse --git-dir >/dev/null 2>&1; then
-    hooks_path="$(git -C "$root" config --local --get core.hooksPath || true)"
+    hooks_path="$(git -C "$root" config --get core.hooksPath || true)"
     if [ -z "$hooks_path" ] || [ "$hooks_path" = "scripts/hooks" ]; then
         git -C "$root" config --local core.hooksPath scripts/hooks
         echo "git hooks enabled (core.hooksPath=scripts/hooks)"

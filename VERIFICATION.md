@@ -63,13 +63,19 @@ conventions are not.
 
 The pre-commit hook (`scripts/hooks/pre-commit`, enabled by `make bootstrap` through
 `core.hooksPath`) is also not a gate: `git commit --no-verify` skips it, and CI does not run it. It
-runs `./check --commit` — `--fast` plus a Kotlin compile of every published module's main, test and
-test-fixture sources — against the staged tree, checked out into one snapshot worktree per clone
-under `~/.cache/musicmeta-hooks/`. So a partly staged file, an unstaged fix or an untracked source
-neither passes nor fails a commit. The snapshot is kept between commits, so its Gradle build stays
-incremental: about 15–60 s for the first commit in a clone and about 25 s after a small Kotlin change
-on the machine it was measured on. It shares an idle Gradle daemon; a commit made while another
-build is running starts a second one, which raised peak memory use by about 2.3 GB when measured. It does not compile
+runs `./check --commit` against the staged tree. That is `--fast` without the commit attribution
+check, plus a Kotlin compile of the published modules' main, test and test-fixture sources (Android:
+debug only). Attribution is left out because a pre-commit hook cannot see the message being
+written, and a bad commit already on the branch would otherwise fail every later commit, including
+the amend that removes it.
+
+The staged tree is checked out into one snapshot worktree per clone under
+`~/.cache/musicmeta-hooks/`, so a partly staged file, an unstaged fix or an untracked source
+neither passes nor fails a commit. The snapshot appears in `git worktree list`, and its throwaway
+commits appear in `git log --all`. It is kept between commits so its Gradle build stays
+incremental: on the machine it was measured on, the first commit in a fresh clone took 59 s and
+raised peak memory use by about 2.3 GB, and a commit after a small Kotlin change took about 25 s.
+A commit made while another Gradle build is running starts a second daemon. It does not compile
 `demo-cli/` or `demo-web/`, run tests, or run detekt.
 
 ## Known gaps
