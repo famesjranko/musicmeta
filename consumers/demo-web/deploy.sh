@@ -37,14 +37,14 @@
 # dedicated least-privilege runtime SA (no project role) holding secretAccessor on the demo's
 # Secret Manager secrets: the provider keys, the maintainer secret, and the posture secret.
 set -euo pipefail
-cd "$(dirname "$0")/.." || exit 1
+cd "$(dirname "$0")/../.." || exit 1
 
-# Read one key out of the gitignored secrets.properties (repo root first, then demo-web/ — the
+# Read one key out of the gitignored secrets.properties (repo root first, then consumers/demo-web/ — the
 # nearer file wins, matching how the app itself resolves them). Comment lines and surrounding
 # whitespace are ignored; a missing key yields empty.
 secret_prop() {
     local key="$1" val="" line
-    for f in secrets.properties demo-web/secrets.properties; do
+    for f in secrets.properties consumers/demo-web/secrets.properties; do
         [ -f "$f" ] || continue
         line="$(grep -E "^[[:space:]]*${key}[[:space:]]*=" "$f" | grep -vE '^[[:space:]]*#' | tail -n1 || true)"
         [ -n "$line" ] && val="${line#*=}"
@@ -98,7 +98,7 @@ if [ "$BUILD" = 1 ]; then
     else
         echo "deploy.sh: building demo-web core from local source"
     fi
-    docker build -f demo-web/Dockerfile --build-arg DEMO_CORE_VERSION="$DEMO_CORE_VERSION" -t "$IMAGE" .
+    docker build -f consumers/demo-web/Dockerfile --build-arg DEMO_CORE_VERSION="$DEMO_CORE_VERSION" -t "$IMAGE" .
     docker push "$IMAGE"
 fi
 

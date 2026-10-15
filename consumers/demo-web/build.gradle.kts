@@ -12,7 +12,7 @@ plugins {
 //
 // Read from the parent catalog rather than hardcoded: two copies of a version number is the exact
 // defect that let the gate and the write-time hook drift apart. Moving demo-web/ to its own repo
-// already means dropping `includeBuild("..")` in settings.gradle.kts; this line goes at the same time.
+// already means dropping `includeBuild("../..")` in settings.gradle.kts; this line goes at the same time.
 ktlint {
     version.set(libs.versions.ktlint.cli)
 }

@@ -8,13 +8,13 @@ rootProject.name = "musicmeta-demo-web"
 // includeBuild in place would silently keep resolving local source even with a version pinned in
 // build.gradle.kts. The property's only caller is the Dockerfile.
 if (!settings.startParameter.projectProperties.containsKey("demoCoreVersion")) {
-    includeBuild("..")
+    includeBuild("../..")
 }
 
 // The parent's version catalog, so the plugin versions in build.gradle.kts have one home there
 // instead of a second copy here. Goes when includeBuild does.
 dependencyResolutionManagement {
     versionCatalogs {
-        create("libs") { from(files("../gradle/libs.versions.toml")) }
+        create("libs") { from(files("../../gradle/libs.versions.toml")) }
     }
 }

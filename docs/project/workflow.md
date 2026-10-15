@@ -14,7 +14,7 @@ shared checkout.
   the project directory, so an in-tree worktree looks like a second copy of every module.
 - A fresh worktree needs no copied build inputs. `secrets.properties` is runtime-only, Android uses
   `ANDROID_HOME`, and Gradle dependencies resolve through the shared user cache.
-- The `demo-cli/` composite build uses `includeBuild("..")`; inside a worktree it correctly resolves that
+- The `consumers/demo-cli/` composite build uses `includeBuild("../..")`; inside a worktree it correctly resolves that
   worktree's library. Do not replace the relative path with an absolute one.
 - `.claude/` is ignored except for `.claude/settings.json`, which is tracked so the format-on-write
   hook reaches every worktree. `.claude/rules/` is un-ignored too but does not exist yet. Everything

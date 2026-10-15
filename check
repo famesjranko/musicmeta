@@ -190,7 +190,7 @@ echo "all script self-tests pass"
 step "demo frontend tests (node)"
 # The demo's browser code was the one surface with no gate at all. Its wire-protocol reading and its
 # "is this worth retrying" decision are pure functions precisely so this can run without a browser.
-(cd demo-web && npm test --silent)
+(cd consumers/demo-web && npm test --silent)
 
 step "changelog release-note caps"
 # The caps already existed in build_release_notes.py, but only ran at release prep — an over-long
@@ -261,7 +261,7 @@ step "core dependency baseline (published POM)"
 ./gradlew :musicmeta-core:generatePomFileForMavenPublication --quiet
 python3 scripts/checks/check_pom_dependencies.py
 
-# demo-cli/ and demo-web/ are separate composite builds that `./gradlew build` never compiles, so
+# consumers/demo-cli/ and demo-web/ are separate composite builds that `./gradlew build` never compiles, so
 # they are the only in-tree consumers compiling the way an external one does.
 #
 # --skip-demo exists for CI only, where `demo-canary` is a separate required status check and
@@ -274,19 +274,19 @@ else
     scripts/demo-canary.sh --quiet
 fi
 
-# docs-samples/ is the same composite-build shape as demo-cli/demo-web, not a consumer canary: it
+# consumers/docs-samples/ is the same composite-build shape as the demos, not a consumer canary: it
 # compiles scripts/checks/check_doc_samples.py's extraction of every docs/guides/*.md Kotlin fence,
 # so a sample that drifts from the real API fails here instead of only in a reader's own build.
 step "doc samples"
-(cd docs-samples && ../gradlew compileKotlin --quiet)
+(cd consumers/docs-samples && ../../gradlew compileKotlin --quiet)
 
-# docs-samples-android/ is the same extractor's Android-toolchain target: android.md's fences use
+# consumers/docs-samples-android/ is the same extractor's Android-toolchain target: android.md's fences use
 # Room/Hilt/WorkManager types a plain JVM module cannot see, so they compile here instead, against
 # a real com.android.library build. No separate ANDROID_HOME gate: this needs the same SDK the
 # android variants above already do, and fails the same way — loudly, not a silent skip — if it is
 # absent.
 step "doc samples (android)"
-(cd docs-samples-android && ../gradlew compileDebugKotlin --quiet)
+(cd consumers/docs-samples-android && ../../gradlew compileDebugKotlin --quiet)
 
 step "test results are from this run"
 # The forcing above is a build-file property, and a property that stops being passed — or a
@@ -296,7 +296,7 @@ step "test results are from this run"
 # their reports are legitimately older and are not evidence about this run either way.
 freshness_excludes=()
 if [ "$SKIP_DEMO" = 1 ]; then
-    freshness_excludes=(--exclude demo-cli --exclude demo-web)
+    freshness_excludes=(--exclude consumers/demo-cli --exclude consumers/demo-web)
 fi
 python3 scripts/checks/check_test_freshness.py --since "$RUN_START" "${freshness_excludes[@]}"
 

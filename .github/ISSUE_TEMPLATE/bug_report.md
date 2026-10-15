@@ -54,7 +54,7 @@ val profile = runBlocking { engine.artistProfile("...") }
 > **Redact secrets first.** Remove API keys and `secrets.properties` values from anything you
 > paste, including URLs — several providers put the key in the query string. Do not open a public
 > issue for a vulnerability or a leaked credential; see
-> [SECURITY.md](https://github.com/famesjranko/musicmeta/blob/main/SECURITY.md).
+> [SECURITY.md](https://github.com/famesjranko/musicmeta/blob/main/.github/SECURITY.md).
 
 ## Is it upstream?
 

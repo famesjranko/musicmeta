@@ -12,7 +12,7 @@
 
 A Kotlin library for Android and JVM music apps: 11 public music APIs behind one engine, 8 of them usable without API keys. Ask for as much or as little as you need: all 36 enrichment types, a single artist photo, or just lyrics. The engine handles identity resolution, multi-provider merging, confidence scoring, rate limiting and caching. Providers set their own terms on commercial use, licensing and attribution, so see [docs/providers.md](docs/providers.md#terms-licences-attribution) before shipping.
 
-**[Try the live demo](https://musicmeta-demo-354377080055.us-central1.run.app)** to see the engine enrich a real search across every provider, or run it yourself; see [demo-web](demo-web/README.md).
+**[Try the live demo](https://musicmeta-demo-354377080055.us-central1.run.app)** to see the engine enrich a real search across every provider, or run it yourself; see [demo-web](consumers/demo-web/README.md).
 
 ## What it does
 
@@ -209,13 +209,13 @@ To consume a local checkout instead, see [docs/project/workflow.md](docs/project
 | [CHANGELOG.md](CHANGELOG.md) | Release history |
 | [ARCHITECTURE.md](ARCHITECTURE.md) | Module boundaries, the `enrich()` flow, and what a new provider costs |
 | [VERIFICATION.md](VERIFICATION.md) | What `./check` runs, and the gaps in it worth knowing about |
-| [CONTRIBUTING.md](CONTRIBUTING.md) | How to report a bug, propose a change, or open a pull request |
-| [SECURITY.md](SECURITY.md) | Reporting a vulnerability privately, and what is in scope |
-| [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) | What is expected of everyone taking part, and how to report a problem |
+| [CONTRIBUTING.md](.github/CONTRIBUTING.md) | How to report a bug, propose a change, or open a pull request |
+| [SECURITY.md](.github/SECURITY.md) | Reporting a vulnerability privately, and what is in scope |
+| [CODE_OF_CONDUCT.md](.github/CODE_OF_CONDUCT.md) | What is expected of everyone taking part, and how to report a problem |
 
 ## Interactive demo
 
-The `demo-cli/` module is a standalone CLI that showcases all three API tiers (profiles, named accessors, raw results), progressive streaming, cache management, search, the disambiguation flow, and pinning a type against automatic overwrites. To enable the key-requiring providers, copy `secrets.properties.example` to `secrets.properties` and fill in the keys, or set environment variables (`LASTFM_API_KEY`, `FANARTTV_API_KEY`, `DISCOGS_TOKEN`, `LISTENBRAINZ_TOKEN`).
+The `consumers/demo-cli/` module is a standalone CLI that showcases all three API tiers (profiles, named accessors, raw results), progressive streaming, cache management, search, the disambiguation flow, and pinning a type against automatic overwrites. To enable the key-requiring providers, copy `secrets.properties.example` to `secrets.properties` and fill in the keys, or set environment variables (`LASTFM_API_KEY`, `FANARTTV_API_KEY`, `DISCOGS_TOKEN`, `LISTENBRAINZ_TOKEN`).
 
 ```bash
 make demo-cli-run                          # interactive
@@ -237,7 +237,7 @@ musicmeta> refresh artist radiohead
 musicmeta> invalidate artist radiohead --types bio,art
 ```
 
-The [`demo-web/`](demo-web/README.md) module is the same idea as a web app: artist, album, and
+The [`consumers/demo-web/`](consumers/demo-web/README.md) module is the same idea as a web app: artist, album, and
 track pages, plus search, rendering everything the library exposes:
 
 ```bash

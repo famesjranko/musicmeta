@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# The demo canary: compile, lint and test demo-cli/ and demo-web/. `./check`, CI's `demo-canary`
+# The demo canary: compile, lint and test consumers/demo-cli/ and demo-web/. `./check`, CI's `demo-canary`
 # job and `make demo` all call this, so the three cannot disagree about what the canary runs.
 #
 # Both demos are separate composite builds that `./gradlew build` never compiles, consuming the
@@ -13,6 +13,6 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-for demo in demo-cli demo-web; do
-    (cd "$demo" && ../gradlew compileKotlin ktlintCheck test -Pmusicmeta.rerunTests "$@")
+for demo in consumers/demo-cli consumers/demo-web; do
+    (cd "$demo" && ../../gradlew compileKotlin ktlintCheck test -Pmusicmeta.rerunTests "$@")
 done

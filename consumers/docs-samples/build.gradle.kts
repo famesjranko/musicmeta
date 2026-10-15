@@ -30,14 +30,14 @@ val generatedSamplesDir = layout.buildDirectory.dir("generated-samples/src/main/
 // a stale generated file from a since-removed fence does not survive into the next compile.
 val extractDocSamples =
     tasks.register<Exec>("extractDocSamples") {
-        inputs.dir(rootProject.projectDir.resolve("../docs/guides"))
-        inputs.file(rootProject.projectDir.resolve("../scripts/checks/check_doc_samples.py"))
+        inputs.dir(rootProject.projectDir.resolve("../../docs/guides"))
+        inputs.file(rootProject.projectDir.resolve("../../scripts/checks/check_doc_samples.py"))
         outputs.dir(generatedSamplesDir)
         commandLine(
             "python3",
-            rootProject.projectDir.resolve("../scripts/checks/check_doc_samples.py").absolutePath,
+            rootProject.projectDir.resolve("../../scripts/checks/check_doc_samples.py").absolutePath,
             "--root",
-            rootProject.projectDir.resolve("..").absolutePath,
+            rootProject.projectDir.resolve("../..").absolutePath,
             "--out",
             generatedSamplesDir.get().asFile.absolutePath,
         )

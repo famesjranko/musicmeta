@@ -50,7 +50,7 @@ jobs:
         env:
           DEMO_CORE_VERSION: ${{ github.event.inputs.core_version }}
         run: |
-          docker build -f demo-web/Dockerfile \
+          docker build -f consumers/demo-web/Dockerfile \
             --build-arg DEMO_CORE_VERSION="$DEMO_CORE_VERSION" \
             -t "$IMAGE" .
           docker push "$IMAGE"

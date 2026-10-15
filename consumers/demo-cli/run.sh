@@ -7,7 +7,7 @@
 cd "$(dirname "$0")" || exit 1
 
 if [ $# -gt 0 ]; then
-    exec ../gradlew run --console=plain -q --args="$*"
+    exec ../../gradlew run --console=plain -q --args="$*"
 else
-    exec ../gradlew run --console=plain -q
+    exec ../../gradlew run --console=plain -q
 fi

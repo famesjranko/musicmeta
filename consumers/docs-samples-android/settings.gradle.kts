@@ -16,7 +16,7 @@ rootProject.name = "musicmeta-docs-samples-android"
 
 // Composite build: resolves musicmeta-core/musicmeta-android from local source, the same pattern
 // as docs-samples. To move to its own repo: remove includeBuild, add a JitPack repo.
-includeBuild("..")
+includeBuild("../..")
 
 // The parent's version catalog, so a plugin/library version has one home there instead of a
 // second copy here. Goes when includeBuild does.
@@ -27,6 +27,6 @@ dependencyResolutionManagement {
         mavenCentral()
     }
     versionCatalogs {
-        create("libs") { from(files("../gradle/libs.versions.toml")) }
+        create("libs") { from(files("../../gradle/libs.versions.toml")) }
     }
 }

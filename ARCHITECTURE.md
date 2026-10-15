@@ -21,12 +21,16 @@ musicmeta-core        pure JVM: the engine, the provider implementations, the co
 │                     public *Provider — deezer ships a second for similar albums
 ├── cache/            CacheMode and the in-memory EnrichmentCache
 ├── http/             the HttpClient seam, rate limiter, budgeted retry, circuit breaker
+├── drift/            the schema-pin registry the scheduled provider-drift run walks — internal
 └── (root package)    the published surface: request/result/profile types, EnrichmentEngine.Builder
 
 musicmeta-okhttp      one class: OkHttpEnrichmentClient, adapting OkHttp to core's HttpClient
 musicmeta-android     Room-backed EnrichmentCache (schema + migrations), Hilt wiring, WorkManager
-demo-cli, demo-web,   separate composite builds consuming the published shape the way an external
-docs-samples[-android]  consumer does — the in-tree stand-ins for consumers we cannot see
+consumers/            separate composite builds consuming the published shape the way an external
+├── demo-cli/         consumer does — the in-tree stand-ins for consumers we cannot see
+├── demo-web/
+└── docs-samples/     every Kotlin fence in docs/guides/, compiled against the real API; the
+    docs-samples-android/  -android half compiles android.md's against a real Android build
 ```
 ```mermaid
 flowchart TD

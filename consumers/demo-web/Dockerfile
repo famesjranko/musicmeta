@@ -1,6 +1,6 @@
 # Container image for the public web demo. Build from the repository root:
 #
-#   docker build -f demo-web/Dockerfile -t musicmeta-demo-web .
+#   docker build -f consumers/demo-web/Dockerfile -t musicmeta-demo-web .
 #
 # Java 17 throughout, matching the toolchain the demo declares.
 #
@@ -15,7 +15,7 @@ FROM eclipse-temurin:17-jdk AS build
 WORKDIR /src
 COPY . .
 ARG DEMO_CORE_VERSION
-RUN cd demo-web && ../gradlew installDist --no-daemon --console=plain \
+RUN cd consumers/demo-web && ../../gradlew installDist --no-daemon --console=plain \
     ${DEMO_CORE_VERSION:+-PdemoCoreVersion="$DEMO_CORE_VERSION"}
 
 FROM eclipse-temurin:17-jre
@@ -23,7 +23,7 @@ FROM eclipse-temurin:17-jre
 # demo so the image behaves the same under `docker run` with nothing set.
 ENV PORT=8080
 WORKDIR /app
-COPY --from=build /src/demo-web/build/install/musicmeta-demo-web ./
+COPY --from=build /src/consumers/demo-web/build/install/musicmeta-demo-web ./
 # The start script resolves no relative paths outside /app, so an unprivileged user is enough. The
 # demo writes nothing: its cache is in-memory and its secrets arrive as environment variables.
 RUN useradd --system --create-home --uid 10001 demo
