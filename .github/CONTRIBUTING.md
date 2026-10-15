@@ -97,7 +97,7 @@ a public `*Provider`. Keeping the first three internal is what lets them be rena
 Open an issue first. Providers set their own terms on commercial use, redistribution and
 attribution, and this library is used commercially, so the terms decide it before any code does.
 [docs/providers.md](docs/providers.md) records those terms per provider, and
-[ARCHITECTURE.md](ARCHITECTURE.md) says what a provider costs to add.
+[docs/architecture.md](../docs/architecture.md) says what a provider costs to add.
 
 ## Style
 
@@ -140,11 +140,11 @@ something, put it in exactly one of these and say which in the PR:
 |---|---|
 | Trap that cost something | [docs/pitfalls.md](docs/pitfalls.md) |
 | Consumer-visible change | a [CHANGELOG.md](CHANGELOG.md) line — its header defines the shape |
-| Fact about the tooling — a gate that does not exist | [VERIFICATION.md](VERIFICATION.md), "Known gaps" |
+| Fact about the tooling — a gate that does not exist | [docs/verification.md](../docs/verification.md), "Known gaps" |
 
 ## Further reading
 
 - [docs/project/workflow.md](docs/project/workflow.md) — branch topology, worktrees, verification
-- [ARCHITECTURE.md](ARCHITECTURE.md) — module boundaries, `enrich()`, what a provider costs
-- [VERIFICATION.md](VERIFICATION.md) — what a green run does and does not prove
+- [docs/architecture.md](../docs/architecture.md) — module boundaries, `enrich()`, what a provider costs
+- [docs/verification.md](../docs/verification.md) — what a green run does and does not prove
 - [docs/glossary.md](docs/glossary.md) — one word per concept, and each upstream's word for it

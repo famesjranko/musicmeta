@@ -139,7 +139,7 @@ executes. Export `ANDROID_HOME` or write a `local.properties` containing `sdk.di
 `local.properties` is gitignored, so a fresh worktree needs it again.
 
 `./check` is the whole verification surface and is exactly what CI runs;
-[VERIFICATION.md](../../VERIFICATION.md) has the step table, and where a green run means less than
+[docs/verification.md](../verification.md) has the step table, and where a green run means less than
 it looks like.
 
 The API dump exclusion is intentional: its generator writes a trailing blank line that `apiCheck`
@@ -195,11 +195,11 @@ Use conventional commits scoped by area, for example `fix(provider): handle null
 
 | Change | Update |
 |---|---|
-| New or changed gate, or a rule that gains/loses a mechanism | The mechanism itself — the `check` step, the config key, the script docstring. `VERIFICATION.md` for what a green run then covers or misses |
+| New or changed gate, or a rule that gains/loses a mechanism | The mechanism itself — the `check` step, the config key, the script docstring. `docs/verification.md` for what a green run then covers or misses |
 | Feature or bug fix | `CHANGELOG.md` |
 | Breaking public API change | `CHANGELOG.md` under `### Breaking Changes` |
 | Why a decision was made, or an approach rejected | Inline at the mechanism; the PR for the rest |
-| Coverage, gap, or milestone shift | `ROADMAP.md` |
+| Coverage, gap, or milestone shift | `docs/roadmap.md` |
 | New provider | `docs/providers.md` — a row in the table; `docs/provider-internals.md` — a `What we don't extract` block if the upstream returns more than we take. Nothing checks either |
 | New public capability | Relevant `docs/guides/*.md` |
 | Release preparation or publication | [release.md](release.md) |

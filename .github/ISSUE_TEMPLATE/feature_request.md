@@ -17,9 +17,9 @@ labels: enhancement, needs-triage
 ## Does it fit?
 
 <!-- musicmeta resolves an identity once and then enriches it from many providers, keeping every
-     type independent so one failure costs one type. ROADMAP.md says what is in scope and what
+     type independent so one failure costs one type. docs/roadmap.md says what is in scope and what
      1.0.0 is waiting on — a look there may answer this faster than waiting on a reply:
-     https://github.com/famesjranko/musicmeta/blob/main/ROADMAP.md
+     https://github.com/famesjranko/musicmeta/blob/main/docs/roadmap.md
 
      If your idea sits outside it, say why it is worth the exception; that is a real
      conversation, not a rejection. -->

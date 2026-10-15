@@ -219,7 +219,7 @@ internal class DefaultEnrichmentEngine(
     // (nothing deeper in the chain already caught and logged it) and no collector is left attached
     // to relay it anywhere — without this it would otherwise reach the platform's default
     // uncaught-exception handler instead of this engine's own logger. Untested: see
-    // VERIFICATION.md "Known gaps".
+    // docs/verification.md "Known gaps".
     private val detachedScope = CoroutineScope(
         SupervisorJob() + detachedDispatcher +
             CoroutineExceptionHandler { _, throwable ->

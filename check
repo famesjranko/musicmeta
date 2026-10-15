@@ -38,7 +38,7 @@ if [ "$FAST" = 1 ] && [ "$COMMIT" = 1 ]; then
 fi
 
 # A gate whose tool is missing must fail, not skip. Skipping reports green while checking nothing,
-# which is worse than having no gate at all — VERIFICATION.md would then assert something false.
+# which is worse than having no gate at all — docs/verification.md would then assert something false.
 # Version, not just presence. bootstrap.sh pins these precisely because formatter output and
 # lint rules differ between releases, so accepting any version on PATH reintroduces the local/CI
 # disagreement the single command exists to remove.

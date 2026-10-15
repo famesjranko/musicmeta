@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Fail on a doc that still names a version other than the one `gradle.properties` declares.
 
-Three documents name the release version outside `CHANGELOG.md`: `ROADMAP.md`'s "Where We Are"
+Three documents name the release version outside `CHANGELOG.md`: `docs/roadmap.md`'s "Where We Are"
 block, `README.md`'s dependency coordinates, and the same coordinates in three guides. Gate 1
 rewrites the ROADMAP heading and README's coordinates; before this check, nothing rewrote or read
 the rest. Preparing 0.12.0 the ROADMAP prose was found still naming 0.10.1 — stale by a full
@@ -40,7 +40,7 @@ COORDINATE_FILES = (
     "docs/guides/android.md",
 )
 
-ROADMAP = "ROADMAP.md"
+ROADMAP = "docs/roadmap.md"
 GRADLE_PROPERTIES = "gradle.properties"
 
 # Each guarded region runs from its heading to the next heading of any level. Naming the headings

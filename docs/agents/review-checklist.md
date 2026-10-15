@@ -2,7 +2,7 @@
 
 For a reviewer reading a diff. **Only rules no mechanism catches** — if `./check` gates it, it is
 not here, because a checklist item that cannot fail is noise and goes stale unwatched.
-`VERIFICATION.md` lists what is gated.
+`docs/verification.md` lists what is gated.
 
 `/review-checklist` walks it against a diff. Nothing gates it — a reviewer who does not open this
 file is not stopped by anything, which is the accepted cost of the rules that are here.
@@ -23,7 +23,7 @@ a row here carries only what a reviewer looks *for*, so a rule change is never a
       `docs/pitfalls.md` §1 and `docs/glossary.md` hold the three rules and their frozen
       exceptions; the dump shows the addition, not whether it took the right shape.
 - [ ] A serialized payload changed. Round-trip tests encode and decode with the same tree, so they
-      cannot see a break for data a consumer already persisted — `VERIFICATION.md`'s known gaps has
+      cannot see a break for data a consumer already persisted — `docs/verification.md`'s known gaps has
       what that cost. Ask the user about a cache-clear note.
 
 ## CHANGELOG
@@ -36,7 +36,7 @@ a row here carries only what a reviewer looks *for*, so a rule change is never a
 
 - [ ] A new `catch` in a suspend function that swallows `CancellationException` — most often by
       returning a fallback rather than rethrowing. `docs/pitfalls.md` §2 has the worked example, and
-      `VERIFICATION.md` why the textual rule for it was deleted rather than fixed.
+      `docs/verification.md` why the textual rule for it was deleted rather than fixed.
 
 ## Comments
 

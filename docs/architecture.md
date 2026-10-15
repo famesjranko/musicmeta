@@ -3,7 +3,7 @@
 Why the modules are split where they are, what flows between them, and what a change costs. This is
 the map. The pipeline's step-by-step behaviour is `docs/how-it-works.md`, each provider's data
 semantics is `docs/providers.md` and `docs/provider-internals.md`, and what a green check run
-proves is `VERIFICATION.md`.
+proves is `docs/verification.md`.
 
 ## The bar designs are judged by
 

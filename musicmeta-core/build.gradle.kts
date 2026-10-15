@@ -88,7 +88,7 @@ val schemaPin by tasks.registering(Test::class) {
     outputs.cacheIf { false }
 }
 
-// Core is dependency-minimal JVM (ARCHITECTURE.md), which is what lets a server or desktop
+// Core is dependency-minimal JVM (docs/architecture.md), which is what lets a server or desktop
 // consumer take the engine without an Android artifact or a wire library. A fourth entry below is
 // imposed on every consumer's classpath at the next release and cannot be removed without a break.
 // `apiCheck` sees nothing, because a transitive is not part of the ABI; the published POM is

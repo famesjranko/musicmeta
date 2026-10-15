@@ -22,9 +22,9 @@ and commit again; do not edit or disable the hook to get a commit through.
 | A provider's parsing, search/ranking, `confidence`, or a `ProviderCapability` | `docs/pitfalls.md` — "Provider data and matching"; `docs/provider-internals.md` |
 | Retry or status mapping, state held by a provider, or `forceRefresh`/invalidation | `docs/pitfalls.md` — "Transport and provider state" |
 | `scripts/checks/`, the comment rule, or demo config | `docs/pitfalls.md` — "Checks, comments, and config" |
-| Treating a green run as proof | `VERIFICATION.md` — what each check skips |
-| Designing across module boundaries, or adding a provider | `ARCHITECTURE.md` — the seams and what they cost |
-| Deciding whether a thing is in scope, or what `1.0.0` waits on | `ROADMAP.md` |
+| Treating a green run as proof | `docs/verification.md` — what each check skips |
+| Designing across module boundaries, or adding a provider | `docs/architecture.md` — the seams and what they cost |
+| Deciding whether a thing is in scope, or what `1.0.0` waits on | `docs/roadmap.md` |
 | Looking for the issue list | GitHub Issues — `docs/agents/issue-tracker.md` |
 | Reviewing a diff, a branch, or a PR | `docs/agents/review-checklist.md` — the unmechanised rules only |
 
@@ -36,12 +36,12 @@ nothing can catch a trap nobody wrote down. This file is the home only for the l
 **Two audiences, and the boundary is `README.md`'s documentation table.** Everything in it ships to
 someone who took the library and will never see this repo: `README.md`, `docs/guides/`,
 `docs/how-it-works.md`, `docs/glossary.md`, `docs/providers.md`, `docs/project/`, `CHANGELOG.md`,
-`ARCHITECTURE.md`, `VERIFICATION.md`, and `.github/`'s `CONTRIBUTING.md`, `SECURITY.md` and
+`docs/architecture.md`, `docs/verification.md`, and `.github/`'s `CONTRIBUTING.md`, `SECURITY.md` and
 `CODE_OF_CONDUCT.md`. The `.github/` issue and PR templates are not in the table but ship to that
 same reader, so write them for it. Everything outside it is ours: this file, `docs/pitfalls.md`,
-`docs/agents/`, `.scratch/`. Write for the reader the file has — a consumer reading `ARCHITECTURE.md`
+`docs/agents/`, `.scratch/`. Write for the reader the file has — a consumer reading `docs/architecture.md`
 wants the invariant and what it costs them, not which check we wrote, kept or deleted. The two
-shipped files that are *about* the repo, `ARCHITECTURE.md` and `VERIFICATION.md`, are where this
+shipped files that are *about* the repo, `docs/architecture.md` and `docs/verification.md`, are where this
 goes wrong: the split between them is the system versus what verifies it.
 
 | A new | Goes in |
@@ -50,7 +50,7 @@ goes wrong: the split between them is the system versus what verifies it.
 | Consumer-visible change | a `CHANGELOG.md` line — that file's header defines consumer-visible and the shape |
 | Work item, or a finding to triage later | a GitHub issue — `docs/agents/issue-tracker.md` |
 | Rule no mechanism catches | here, and nowhere else — `docs/agents/review-checklist.md` may add how review *applies* a rule, never the rule itself |
-| Fact about our own tooling — a gate that does not exist, a mechanism tried and dropped | `VERIFICATION.md` — "Known gaps". Never a design doc: `ARCHITECTURE.md` says what the system is, not what we check |
+| Fact about our own tooling — a gate that does not exist, a mechanism tried and dropped | `docs/verification.md` — "Known gaps". Never a design doc: `docs/architecture.md` says what the system is, not what we check |
 
 ## Rules with no mechanism
 
@@ -84,7 +84,7 @@ Where a rule below names its gate, what is written here is the part that gate ca
 - A `@Serializable` cache type is a compatibility surface that no gate reads. It moves no
   `api/*.api` line, and the round-trip tests encode and decode with the same tree, so they cannot
   see a payload a consumer already persisted becoming unreadable — that is v0.4.0, which broke
-  every Room cache entry (`VERIFICATION.md` — "Known gaps"). Treat a change to one as a break under
+  every Room cache entry (`docs/verification.md` — "Known gaps"). Treat a change to one as a break under
   the rule above, and ask the user about a cache-clear note.
 - A provider test asserts against a fixture copied from a real upstream response, and a fixture
   must predate the change it is evidence for — one written to match new code proves only that the

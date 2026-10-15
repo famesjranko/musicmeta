@@ -34,11 +34,11 @@ updates:
   # message belongs on the list below, whatever its own version number did.
   #
   # Everything left is test tooling, with one exception that matters: the Kotlin version publishes
-  # `kotlin-stdlib` into every POM at compile scope (VERIFICATION.md — "Core dependency floor", the
+  # `kotlin-stdlib` into every POM at compile scope (docs/verification.md — "Core dependency floor", the
   # gate that fails on the moved version), so a Kotlin
   # move is a consumer-facing floor move wearing a toolchain label — a second reason it is hand work.
   # `detekt` and `ktlint-gradle` stay offered but need more than a green run, and say so where they
-  # live (VERIFICATION.md and libs.versions.toml respectively).
+  # live (docs/verification.md and libs.versions.toml respectively).
   - package-ecosystem: gradle
     directory: /
     schedule:
@@ -69,7 +69,7 @@ updates:
     # `version-update:*` suppresses version updates only — Dependabot's ignore_condition short-
     # circuits past update_types when the update is a security one, so a security advisory still
     # opens a PR. GitHub's own reference documents the opposite, so nothing here should be read as
-    # guaranteed: VERIFICATION.md — "Known gaps" carries what is unverified about it.
+    # guaranteed: docs/verification.md — "Known gaps" carries what is unverified about it.
     ignore:
       # The compatibility-coupled toolchain. Two patterns for Kotlin: the plugin ids are dotted
       # (`org.jetbrains.kotlin.android`) and the artifacts are colon-separated, and neither form

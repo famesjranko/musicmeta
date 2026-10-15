@@ -19,7 +19,10 @@ import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
-/** The fan-out is one concurrent pass, and each type settles on its own (`ARCHITECTURE.md`, "One `enrich()` call"). */
+/**
+ * The fan-out is one concurrent pass, and each type settles on its own (`docs/architecture.md`,
+ * "One `enrich()` call").
+ */
 class FanOutAndSettleTest {
     private val req = EnrichmentRequest.forArtist("Radiohead")
 

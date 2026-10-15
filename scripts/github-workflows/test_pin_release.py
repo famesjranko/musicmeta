@@ -2,10 +2,11 @@
 """Runnable self-check: `python3 test_pin_release.py` (no framework needed)."""
 
 import re
+import tempfile
 from pathlib import Path
 
 from build_release_notes import extract_section, released_versions
-from pin_release import PinError, pin_changelog, pin_guides, pin_roadmap
+from pin_release import PinError, main, pin_changelog, pin_guides, pin_roadmap
 
 BEFORE = """# Changelog
 
@@ -156,6 +157,33 @@ for changelog, guide in ((FIXED_ONLY, GUIDE_UNRELEASED), (BREAKING_ONLY, OLD_ONL
         continue
     raise AssertionError("a guide that disagrees with [Unreleased] about a break should be refused")
 
+# --- the coordinate files are found from the changelog, not the roadmap ------------------------
+# Given a tree shaped like the repo, with the roadmap under docs/ and a README coordinate to pin
+with tempfile.TemporaryDirectory() as tmp:
+    tree = Path(tmp)
+    (tree / "docs").mkdir()
+    (tree / "CHANGELOG.md").write_text(BEFORE, encoding="utf-8")
+    (tree / "docs" / "roadmap.md").write_text("# Roadmap\n\n## Where We Are (v0.10.1)\n", encoding="utf-8")
+    (tree / "README.md").write_text('implementation("io.github.famesjranko:musicmeta-core:0.10.1")\n', encoding="utf-8")
+
+    # When the script pins a release with both files named by path
+    code = main(
+        [
+            "0.11.0",
+            "--date",
+            "2026-07-23",
+            "--changelog",
+            str(tree / "CHANGELOG.md"),
+            "--roadmap",
+            str(tree / "docs" / "roadmap.md"),
+        ]
+    )
+
+    # Then README's coordinate is rewritten: the root is the changelog's directory, not the roadmap's
+    assert code == 0, f"main exited {code}"
+    readme = (tree / "README.md").read_text(encoding="utf-8")
+    assert "musicmeta-core:0.11.0" in readme, f"README coordinate was not pinned: {readme!r}"
+
 # --- against the real files ---------------------------------------------------------------------
 # State-agnostic on purpose: this runs on every commit, including the release branch (target
 # version freshly pinned, [Unreleased] empty) and main right after a release merges. A hard-coded
@@ -170,7 +198,7 @@ next_minor = f"{major}.{minor + 1}.0"
 try:
     real = pin_changelog(live, next_minor, "2026-07-23")
     assert extract_section(real, next_minor), "the live [Unreleased] section must pin and extract"
-    roadmap = pin_roadmap((root / "ROADMAP.md").read_text(encoding="utf-8"), next_minor)
+    roadmap = pin_roadmap((root / "docs/roadmap.md").read_text(encoding="utf-8"), next_minor)
     assert f"## Where We Are (v{next_minor})" in roadmap
     migration = (root / "docs" / "guides" / "migration.md").read_text(encoding="utf-8")
     assert_guide_matches_unreleased(live, migration)
