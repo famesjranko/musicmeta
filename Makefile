@@ -29,7 +29,7 @@ help: ## Show this list
 # --- setup ---
 
 .PHONY: bootstrap
-bootstrap: ## Install the pinned tools ./check requires (once per machine)
+bootstrap: ## Install the pinned tools ./check requires and enable the pre-commit hook (once per clone)
 	./scripts/bootstrap.sh
 
 # --- the gate ---

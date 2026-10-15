@@ -1,0 +1,77 @@
+#!/usr/bin/env bash
+# Runs `./check --commit` against exactly what is being committed, so formatting, lint, the custom
+# checks and Kotlin type errors fail at the commit that introduced them rather than in CI.
+# Enabled by `make bootstrap`, which sets core.hooksPath. An accelerator, not the gate: `./check`
+# and CI are.
+#
+# The staged tree, not the working tree: a partly staged file, an unstaged fix or an untracked
+# source must neither pass nor fail this commit. So the tree is checked out into one snapshot
+# worktree per clone, kept between commits so Gradle there stays warm and incremental. A lock
+# serialises commits from different worktrees, which all share the snapshot.
+set -euo pipefail
+
+# write-tree honours GIT_INDEX_FILE, which is how `git commit -a` and `git commit <paths>` hand the
+# hook the index they are about to commit. Read it before unsetting the variables below.
+tree="$(git write-tree)"
+parent="$(git rev-parse -q --verify HEAD || true)"
+top="$(git rev-parse --show-toplevel)"
+# The same form `rev-parse` reports for the snapshot below, so a symlinked path still matches.
+common="$(git rev-parse --path-format=absolute --git-common-dir)"
+
+# Every git call below targets the snapshot. Left set, these would point it at the commit's index.
+unset GIT_INDEX_FILE GIT_DIR GIT_WORK_TREE
+
+snap="${XDG_CACHE_HOME:-$HOME/.cache}/musicmeta-hooks/$(printf '%s' "$common" | sha1sum | cut -c1-12)"
+mkdir -p "$(dirname "$snap")"
+exec 9>"$snap.lock"
+flock 9
+
+# Snapshots whose clone is gone: the worktree's .git file names a directory that no longer exists.
+# No hook can be running for them, because the repository it would run in is deleted.
+for other in "$(dirname "$snap")"/*/; do
+    other="${other%/}"
+    gitdir="$(sed -n 's/^gitdir: //p' "$other/.git" 2>/dev/null || true)"
+    # git may write the path relative to the snapshot (worktree.useRelativePaths).
+    case "$gitdir" in
+        ''|/*) ;;
+        *) gitdir="$other/$gitdir" ;;
+    esac
+    if [ "$other" != "$snap" ] && [ -n "$gitdir" ] && [ ! -e "$gitdir" ]; then
+        rm -rf "$other" "$other.lock"
+    fi
+done
+
+# A commit object, because a worktree checks out commits and ./check finds shell scripts with
+# `git ls-files`, which needs the snapshot's index to match its files.
+commit="$(git commit-tree "$tree" ${parent:+-p "$parent"} -m "pre-commit snapshot")"
+# This clone's snapshot only. A bare `rev-parse` would also accept a directory inside an enclosing
+# repository, such as a home directory under version control.
+if [ "$(git -C "$snap" rev-parse --path-format=absolute --git-common-dir 2>/dev/null)" = "$common" ]; then
+    git -C "$snap" checkout -q --detach -f "$commit"
+    # Untracked files only; ignored build output stays, which is what keeps Gradle incremental.
+    git -C "$snap" clean -fdq
+else
+    rm -rf "$snap"
+    # -f re-registers a path git still lists for a deleted snapshot, without pruning other
+    # worktrees whose directories are only temporarily missing.
+    git worktree add -q -f --detach "$snap" "$commit"
+fi
+# Untracked, so not in the tree, but it is where some machines name their Android SDK.
+if [ -f "$top/local.properties" ]; then
+    cp "$top/local.properties" "$snap/local.properties"
+fi
+
+if (cd "$snap" && ./check --commit); then
+    exit 0
+fi
+
+cat >&2 <<EOF
+
+pre-commit: the staged changes fail ./check --commit (output above). Nothing was committed.
+  - Paths under $snap are the staged copies. Fix the same paths in $top.
+  - Formatting (ktlint, ruff format): run \`make format\`.
+  - Anything else: fix what the failed step names.
+  - Then \`git add\` the fixed files and commit again. An unstaged fix does not count.
+  - Do not bypass this with --no-verify. CI runs the same checks and will fail the PR.
+EOF
+exit 1

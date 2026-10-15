@@ -23,7 +23,7 @@ Once your issue is triaged it gets labels, and the outcome is recorded on it.
 ## Getting set up
 
 ```
-make bootstrap    # installs the pinned tools ./check needs — once per machine
+make bootstrap    # installs the pinned tools ./check needs and enables the pre-commit hook — once per clone
 make check        # everything CI runs
 ```
 

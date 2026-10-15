@@ -8,6 +8,9 @@ Run `make check` before claiming anything works; CI runs the same script. `make 
 only, **never evidence for a push**; `check`'s header lists what it skips. `make help` lists the
 rest; `ls docs/` lists the docs.
 
+Never commit with `--no-verify`. When the pre-commit hook fails, fix what it names, `git add` the fix,
+and commit again; do not edit or disable the hook to get a commit through.
+
 ## Read first
 
 | Before | Read |
