@@ -56,7 +56,8 @@ Format-on-write (`scripts/format-on-write.sh`, wired in `.claude/settings.json`)
 not a gate. It runs ktlint on `.kt`/`.kts` and ruff on `.py`, and no-ops when either CLI is absent;
 `ktlintCheck` and the ruff check are what actually fail. It also no-ops when the `ktlint` on `PATH`
 is not the `ktlint-cli` version pinned in `libs.versions.toml` — a CLI running a different rule set
-writes formatting the gate never asked for, and nothing fails to say so. It does not skip
+writes formatting the gate never asked for, and nothing fails to say so. A missing or mismatched
+ktlint is reported to the writer on every Kotlin edit, so the no-op is never silent. It does not skip
 `demo-cli/` or `demo-web/`: formatting is shared with the parent build even though house
 conventions are not.
 
