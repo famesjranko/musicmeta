@@ -16,10 +16,9 @@ corrections can go straight to a pull request.
 Filing an issue does not commit you to writing the code — the feature-request template has a
 checkbox for saying which you mean. If you want to implement it, comment to claim it.
 
-**Where issues live.** GitHub Issues is the inbound door: it is where you report a bug or propose a
-change, and where that conversation happens. The maintainer's own working tracker is a set of local
-markdown files that are not in this repository, so an issue you file may be mirrored there once it
-is triaged — you will see the outcome on your issue either way.
+**Where issues live.** GitHub Issues is the project's only tracker: it is where you report a bug or
+propose a change, where that conversation happens, and where the maintainer's own work items live.
+Once your issue is triaged it gets labels, and the outcome is recorded on it.
 
 ## Getting set up
 

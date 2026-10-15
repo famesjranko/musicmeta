@@ -23,9 +23,9 @@ updates:
   # are a compatibility-coupled set, and independent semver updates produce invalid combinations:
   # Kotlin and KSP move as minors while AGP moves as a major, so a group filtered to minor and patch
   # proposes exactly the combination that cannot build. They are upgraded together, deliberately,
-  # as a migration — the backlog is `.scratch/dependency-majors/`. Do not restore these to the group
-  # on the reasoning that Kotlin should stay patched: that was tried, and the PR it produced could
-  # only ever be red.
+  # as a migration — the backlog is the GitHub issues labelled `dependencies`. Do not restore these
+  # to the group on the reasoning that Kotlin should stay patched: that was tried, and the PR it
+  # produced could only ever be red.
   #
   # Membership in that set is decided by whether a bump carries a floor on another member, not by
   # what the plugin is for. `vanniktech.maven.publish` is the case that proves it: 0.37.0 refuses to
