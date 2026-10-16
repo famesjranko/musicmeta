@@ -47,7 +47,7 @@ You do not need API keys: eight of the eleven providers work without them, and t
 needs none at all.
 
 To try a change from a real consumer before publishing, add `includeBuild("../musicmeta")` to that
-project's `settings.gradle.kts`; [docs/project/workflow.md](docs/project/workflow.md) covers the
+project's `settings.gradle.kts`; [docs/project/workflow.md](../docs/project/workflow.md) covers the
 alternatives.
 
 ## Branches and merging
@@ -77,7 +77,7 @@ upstream responses. One written to match new code proves only that the code agre
 **Breaking changes are allowed in a minor, but only visibly.** A break must appear under a
 `### Breaking Changes` heading in `CHANGELOG.md` *and* in the reviewed `api/*.api` diff; a break in
 neither is a defect. A patch may not break at all. In practice a break also gets a section in
-[docs/guides/migration.md](docs/guides/migration.md) telling a consumer what edit it asks of
+[docs/guides/migration.md](../docs/guides/migration.md) telling a consumer what edit it asks of
 them — no check can tell whether an individual break has one, so it is worth writing while the
 change is still in your head. If you think your change breaks something, say so in the PR rather
 than deciding alone: some of it is not obvious, and a JVM descriptor can make an innocent-looking
@@ -96,7 +96,7 @@ a public `*Provider`. Keeping the first three internal is what lets them be rena
 
 Open an issue first. Providers set their own terms on commercial use, redistribution and
 attribution, and this library is used commercially, so the terms decide it before any code does.
-[docs/providers.md](docs/providers.md) records those terms per provider, and
+[docs/providers.md](../docs/providers.md) records those terms per provider, and
 [docs/architecture.md](../docs/architecture.md) says what a provider costs to add.
 
 ## Style
@@ -124,12 +124,12 @@ Not through a public issue — see [SECURITY.md](SECURITY.md).
 
 By submitting a pull request, patch, issue comment, documentation change, or other contribution to
 musicmeta, you agree that your contribution is provided under the project's licence, the
-[Apache License 2.0](LICENSE), and that you have the right to submit it.
+[Apache License 2.0](../LICENSE), and that you have the right to submit it.
 
 If your contribution includes third-party material, identify it in the pull request with its licence
 and source. Provider data is a special case of this: what an upstream API returns comes with that
 provider's terms attached, and those terms are recorded in
-[docs/providers.md](docs/providers.md#terms-licences-attribution).
+[docs/providers.md](../docs/providers.md#terms-licences-attribution).
 
 ## Where the writing goes
 
@@ -138,13 +138,13 @@ something, put it in exactly one of these and say which in the PR:
 
 | A new | Goes in |
 |---|---|
-| Trap that cost something | [docs/pitfalls.md](docs/pitfalls.md) |
-| Consumer-visible change | a [CHANGELOG.md](CHANGELOG.md) line — its header defines the shape |
+| Trap that cost something | [docs/pitfalls.md](../docs/pitfalls.md) |
+| Consumer-visible change | a [CHANGELOG.md](../CHANGELOG.md) line — its header defines the shape |
 | Fact about the tooling — a gate that does not exist | [docs/verification.md](../docs/verification.md), "Known gaps" |
 
 ## Further reading
 
-- [docs/project/workflow.md](docs/project/workflow.md) — branch topology, worktrees, verification
+- [docs/project/workflow.md](../docs/project/workflow.md) — branch topology, worktrees, verification
 - [docs/architecture.md](../docs/architecture.md) — module boundaries, `enrich()`, what a provider costs
 - [docs/verification.md](../docs/verification.md) — what a green run does and does not prove
-- [docs/glossary.md](docs/glossary.md) — one word per concept, and each upstream's word for it
+- [docs/glossary.md](../docs/glossary.md) — one word per concept, and each upstream's word for it

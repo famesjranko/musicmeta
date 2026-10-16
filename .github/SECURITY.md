@@ -35,7 +35,7 @@ Pre-1.0, only the **latest released minor** gets fixes. A fix ships as the next 
 ## Out of scope
 
 - Vulnerabilities in the eleven upstream provider APIs themselves. Report those to the provider;
-  [docs/providers.md](docs/providers.md) links each one. If musicmeta's *handling* of a bad response
+  [docs/providers.md](../docs/providers.md) links each one. If musicmeta's *handling* of a bad response
   is the problem, that is in scope and belongs here.
 - The demos (`consumers/demo-cli/`, `consumers/demo-web/`). They exist to exercise the library and are not published
   artifacts — but say so if you find something there, because it may mirror a real defect in

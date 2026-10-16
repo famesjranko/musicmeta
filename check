@@ -75,7 +75,7 @@ elif [ "$(node --version | sed 's/^v\([0-9]*\).*/\1/')" -lt "$node_min" ]; then
     bad="$bad node($(node --version), want >=$node_min)"
 fi
 
-# java is the machine's runtime too, and exact rather than a minimum: CONTRIBUTING.md says why. It
+# java is the machine's runtime too, and exact rather than a minimum: .github/CONTRIBUTING.md says why. It
 # is checked in every mode because even --fast runs ktlint through Gradle. The check lives in
 # toolchain.sh so bootstrap.sh reports the same thing.
 # shellcheck source=scripts/toolchain.sh
