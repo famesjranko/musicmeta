@@ -12,10 +12,10 @@ class SecretsSearchTest {
     @get:Rule
     val tmp = TemporaryFolder()
 
-    /** A demo directory inside [worktree], whose `.git` file points at [main]'s worktree git dir. */
+    /** `consumers/demo` inside [worktree], as in the real tree; [worktree]'s `.git` file points at [main]. */
     private fun demoDirInWorktree(main: File, worktree: File): File {
         File(worktree, ".git").writeText("gitdir: ${File(main, ".git/worktrees/wt").absolutePath}\n")
-        return File(worktree, "demo").apply { mkdirs() }
+        return File(worktree, "consumers/demo").apply { mkdirs() }
     }
 
     @Test

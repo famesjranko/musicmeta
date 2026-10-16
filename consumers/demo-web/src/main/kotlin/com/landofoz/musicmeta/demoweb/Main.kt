@@ -157,10 +157,11 @@ private fun env(key: String): String? = System.getenv(key)?.takeIf { it.isNotBla
 /**
  * Where a demo run out of [demoDir] looks for `secrets.properties`, outermost first: the main
  * checkout's file when [demoDir] sits in a git worktree, then the repo root's, then the demo's own.
+ * [demoDir] is `<repo root>/consumers/<demo>`, so the repo root is two levels up.
  * [loadSecrets] merges in this order, so the nearer file wins per key.
  */
 internal fun secretsSearchPath(demoDir: File): List<File> {
-    val repoRoot = File(demoDir, "..")
+    val repoRoot = File(demoDir, "../..")
     return listOfNotNull(mainCheckoutSecrets(repoRoot)) +
         listOf(File(repoRoot, "secrets.properties"), File(demoDir, "secrets.properties"))
 }
