@@ -14,7 +14,7 @@ shared checkout.
   the project directory, so an in-tree worktree looks like a second copy of every module.
 - A fresh worktree needs no copied build inputs. `secrets.properties` is runtime-only, Android uses
   `ANDROID_HOME`, and Gradle dependencies resolve through the shared user cache.
-- The `demo-cli/` composite build uses `includeBuild("..")`; inside a worktree it correctly resolves that
+- The `consumers/demo-cli/` composite build uses `includeBuild("../..")`; inside a worktree it correctly resolves that
   worktree's library. Do not replace the relative path with an absolute one.
 - `.claude/` is ignored except for `.claude/settings.json`, which is tracked so the format-on-write
   hook reaches every worktree. `.claude/rules/` is un-ignored too but does not exist yet. Everything
@@ -139,7 +139,7 @@ executes. Export `ANDROID_HOME` or write a `local.properties` containing `sdk.di
 `local.properties` is gitignored, so a fresh worktree needs it again.
 
 `./check` is the whole verification surface and is exactly what CI runs;
-[VERIFICATION.md](../../VERIFICATION.md) has the step table, and where a green run means less than
+[docs/verification.md](../verification.md) has the step table, and where a green run means less than
 it looks like.
 
 The API dump exclusion is intentional: its generator writes a trailing blank line that `apiCheck`
@@ -151,7 +151,7 @@ Gradle may report `UP-TO-DATE` without executing tests. Verification evidence mu
 | Changed surface | Additional evidence |
 |---|---|
 | `musicmeta-core/**` | `./gradlew :musicmeta-core:test` |
-| Public core API or any `api/*.api` | `./gradlew apiCheck`, review the API diff against `docs/pitfalls.md`, then `cd demo-cli && ../gradlew compileKotlin` |
+| Public core API or any `api/*.api` | `./gradlew apiCheck`, review the API diff against `docs/pitfalls.md`, then `cd consumers/demo-cli && ../../gradlew compileKotlin` |
 | `provider/<name>/**` | Matching provider tests, then the full core suite |
 | `musicmeta-android/**` | `ANDROID_HOME=~/Android/Sdk ./gradlew :musicmeta-android:test` plus `apiCheck` |
 | Android Room cache | Android tests plus explicit schema and migration review |
@@ -195,11 +195,11 @@ Use conventional commits scoped by area, for example `fix(provider): handle null
 
 | Change | Update |
 |---|---|
-| New or changed gate, or a rule that gains/loses a mechanism | The mechanism itself — the `check` step, the config key, the script docstring. `VERIFICATION.md` for what a green run then covers or misses |
+| New or changed gate, or a rule that gains/loses a mechanism | The mechanism itself — the `check` step, the config key, the script docstring. `docs/verification.md` for what a green run then covers or misses |
 | Feature or bug fix | `CHANGELOG.md` |
 | Breaking public API change | `CHANGELOG.md` under `### Breaking Changes` |
 | Why a decision was made, or an approach rejected | Inline at the mechanism; the PR for the rest |
-| Coverage, gap, or milestone shift | `ROADMAP.md` |
+| Coverage, gap, or milestone shift | `docs/roadmap.md` |
 | New provider | `docs/providers.md` — a row in the table; `docs/provider-internals.md` — a `What we don't extract` block if the upstream returns more than we take. Nothing checks either |
 | New public capability | Relevant `docs/guides/*.md` |
 | Release preparation or publication | [release.md](release.md) |

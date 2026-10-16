@@ -16,7 +16,7 @@ plugins {
 val ktlintVersion = libs.versions.ktlint.cli.get()
 
 // Applied to every module rather than per-module, so a new module is formatted by default instead
-// of by remembering. `demo-cli/` is a separate composite build and is not covered — it is the
+// of by remembering. `consumers/demo-cli/` is a separate composite build and is not covered — it is the
 // consumer canary, and its job is to compile against the published surface, not to match house
 // style.
 subprojects {

@@ -1,4 +1,4 @@
-# Build context for demo-web/Dockerfile. Everything the image does not need, plus everything it
+# Build context for consumers/demo-web/Dockerfile. Everything the image does not need, plus everything it
 # must never contain: `secrets.properties` is read at runtime from the environment on Cloud Run,
 # and a copy baked into a layer stays readable in the registry after it is deleted from the tree.
 secrets.properties
@@ -12,8 +12,8 @@ secrets.properties
 build
 **/build
 docs
-docs-samples
-docs-samples-android
+consumers/docs-samples
+consumers/docs-samples-android
 research
 prototype
 musicmeta-android

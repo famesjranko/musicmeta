@@ -48,7 +48,7 @@ AGENT_WORKTREES = ".claude/worktrees/"
 
 
 def main_sources(root: Path) -> list[Path]:
-    """Main sources of the published modules — `demo-cli/` and `demo-web/` publish nothing."""
+    """Main sources of the published modules — `consumers/demo-cli/` and `consumers/demo-web/` publish nothing."""
     return sorted(
         path
         for path in root.glob("musicmeta-*/src/main/**/*.kt")

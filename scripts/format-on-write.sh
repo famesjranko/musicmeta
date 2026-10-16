@@ -45,7 +45,7 @@ ktlint_version_matches() {
     return 1
 }
 
-# `demo-cli/` is included on purpose: it applies the same ktlint against the same `.editorconfig`, and
+# `consumers/demo-cli/` is included on purpose: it applies the same ktlint against the same `.editorconfig`, and
 # `./check` gates it. It stays exempt from house *conventions*, which is a separate check.
 #
 # Rewrites in place. Failures are non-fatal: a file mid-edit may not parse, and blocking the write
@@ -56,13 +56,15 @@ case "$FILE" in
 esac || true
 
 # Given/when/then shape, immediate feedback while the file is still in the writer's context. Same
-# script `check` runs, so hook and gate agree by construction. src/test/ only, matching the script's
-# own scope — main sources have no test-shape rule to enforce.
+# script `check` runs, so hook and gate agree by construction. Every Kotlin file under a src/test/ or
+# src/testFixtures/ directory goes to the script, which decides the exact scope itself
+# (`is_test_source`); the pattern here only has to be no narrower than that, so the scope rule lives
+# in one place. Main sources have no test-shape rule to enforce.
 #
 # Exits 2 on a violation rather than swallowing it: a PostToolUse hook's stderr reaches the writer
 # only at exit 2, so `|| true` here would leave the write-time half printing into a void while
-# `CLAUDE.md` and `VERIFICATION.md` both claim it gates. Unlike the formatters above, this reports
+# `CLAUDE.md` and `docs/verification.md` both claim it gates. Unlike the formatters above, this reports
 # rather than rewrites, so failing loudly costs nothing mid-edit.
 case "$FILE" in
-    */src/test/*.kt) python3 "$(dirname "${BASH_SOURCE[0]}")/checks/check_test_shape.py" --file "$FILE" >&2 || exit 2 ;;
+    */src/test/*.kt|*/src/testFixtures/*.kt) python3 "$(dirname "${BASH_SOURCE[0]}")/checks/check_test_shape.py" --file "$FILE" >&2 || exit 2 ;;
 esac

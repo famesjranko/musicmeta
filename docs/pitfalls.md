@@ -113,7 +113,7 @@ with a default.
   breaks what consumers already stored: v0.4.0 swapped `SimilarArtist.musicBrainzId` for
   `identifiers` and broke every Room cache entry in the field. Any payload change asks whether
   `CHANGELOG.md` needs a cache-clear note. Round-trip tests cannot catch this — they encode and
-  decode with the same code (`VERIFICATION.md`; goldens unwritten).
+  decode with the same code (`docs/verification.md`; goldens unwritten).
   Retyping a field `String?` → `Int?` is the exception that looks like a break and is not:
   kotlinx.serialization 1.7.3 decodes a quoted number into a numeric field even with `isLenient`
   false, so a stored `"year":"1997"` still reads. Only a value that was never numeric fails to
@@ -227,7 +227,7 @@ interface guarded *without* `ensureActive()` — its two methods are not `suspen
 cannot be delivered into them and a `CancellationException` there can only be one the consumer's
 logger built itself. `EnrichmentLogger.guarded()` holds the reasoning; the wrapper is applied at
 `EnrichmentEngine.Builder.logger` so no call site repeats it (#71). Enforced by behaviour, not a rule — a textual rule was
-written and deleted because the remediation it printed was itself the defect (`VERIFICATION.md`). Read `EnrichCacheFailureTest`, `EnrichStrategyFailureTest` and
+written and deleted because the remediation it printed was itself the defect (`docs/verification.md`). Read `EnrichCacheFailureTest`, `EnrichStrategyFailureTest` and
 `ProviderChainCancellationTest` before writing a cancellation test of your own. A provider's own
 `catch` calls `mapError(type, e)` and deliberately does not special-case `CancellationException`.
 

@@ -1,0 +1,207 @@
+package com.landofoz.musicmeta.demoweb
+
+import com.landofoz.musicmeta.ApiKey
+import com.landofoz.musicmeta.ApiKeyConfig
+import com.landofoz.musicmeta.EnrichmentConfig
+import com.landofoz.musicmeta.EnrichmentEngine
+import com.landofoz.musicmeta.KeyRequirement
+import com.landofoz.musicmeta.ProviderCatalog
+import com.landofoz.musicmeta.cache.CacheMode
+import com.landofoz.musicmeta.cache.InMemoryEnrichmentCache
+import java.io.File
+import java.util.concurrent.atomic.AtomicReference
+import kotlin.system.exitProcess
+
+private const val CONTACT = "https://github.com/famesjranko/musicmeta"
+
+/**
+ * Where [main] reads one [ApiKey] from — the `secrets.properties` key, then the env var as
+ * fallback — joined to the [ProviderCatalog] id whose `KeyRequirement` names that same [ApiKey].
+ * The single place these names live: the startup missing-key message reads [envVar] off whichever
+ * entries the catalog itself calls missing, rather than re-deriving the list.
+ */
+internal class KeySpec(val catalogId: String, val key: ApiKey, val secretsKey: String, val envVar: String)
+
+private val LASTFM = KeySpec("lastfm", ApiKey.LASTFM_API_KEY, "lastfm.apikey", "LASTFM_API_KEY")
+private val FANARTTV = KeySpec("fanarttv", ApiKey.FANARTTV_PROJECT_KEY, "fanarttv.apikey", "FANARTTV_API_KEY")
+private val DISCOGS = KeySpec("discogs", ApiKey.DISCOGS_PERSONAL_TOKEN, "discogs.token", "DISCOGS_TOKEN")
+private val LISTENBRAINZ =
+    KeySpec("listenbrainz", ApiKey.LISTENBRAINZ_USER_TOKEN, "listenbrainz.token", "LISTENBRAINZ_TOKEN")
+
+internal val KEY_SPECS = listOf(LASTFM, FANARTTV, DISCOGS, LISTENBRAINZ)
+
+private fun KeySpec.resolve(secrets: Map<String, String>) = secrets[secretsKey] ?: env(envVar)
+
+fun main() {
+    val port = env("PORT")?.toIntOrNull() ?: 8099
+    val secrets = loadSecrets()
+    val requested = parsePublicRelaxations(env("DEMO_PUBLIC_ALLOW"))
+    val posture = PublicPosture(publicPostureEnabled(env("DEMO_PUBLIC")), requested.recognised)
+    // Refused rather than ignored, and only where the variable does anything: a relaxation is an
+    // operator's explicit choice, so a token that names nothing is a choice this process cannot
+    // carry out. Failing here leaves the previous deployment serving; accepting the typo would
+    // leave a posture nobody chose, which is what DEMO_PUBLIC exists to rule out.
+    if (posture.enabled && requested.unknown.isNotEmpty()) {
+        System.err.println(unknownRelaxationMessage(requested.unknown))
+        exitProcess(64)
+    }
+    val keys = KEY_SPECS
+        .fold(ApiKeyConfig()) { config, spec ->
+            spec.resolve(secrets)?.let { config.with(spec.key, it) } ?: config
+        }
+        .underPublicPosture(posture)
+    val cache = InMemoryEnrichmentCache().let { if (posture.capsDiscogsFreshness) DiscogsFreshnessCache(it) else it }
+
+    fun buildEngine(cacheMode: CacheMode): EnrichmentEngine {
+        // This demo exists to show what every provider returns, so a type dropped to meet the
+        // library's 30s default deadline is the failure, not a slow answer — and 30s can't hold
+        // that once MusicBrainz's one-request-a-second limiter serialises concurrent cold
+        // enrichments into a single queue, so wall clock scales with simultaneous visitors while
+        // the deadline doesn't. 120s is headroom for that, not a measured figure.
+        val config = EnrichmentConfig(
+            enrichTimeoutMs = 120_000L,
+            cacheMode = cacheMode,
+        )
+        val engine = EnrichmentEngine.Builder()
+            .apiKeys(keys)
+            .config(config)
+            .cache(cache)
+            .contact(CONTACT)
+            .withDefaultProviders()
+            .build()
+        return if (posture.withholdsDiscogsImages) PublicPostureEngine(engine) else engine
+    }
+
+    // The same shared `cache` above every rebuild passes to `buildEngine` is what makes the
+    // toggle honest: swapping the engine held here does not clear it, so a STALE_IF_ERROR swap
+    // has entries a NETWORK_FIRST run already warmed to serve as fallbacks. `withDefaultProviders()`
+    // does rebuild per-host rate limiters and circuit breakers fresh on every swap, though — those
+    // do not survive.
+    val engineRef = AtomicReference(buildEngine(CacheMode.NETWORK_FIRST))
+    val cacheModeRef = AtomicReference(CacheMode.NETWORK_FIRST)
+
+    val maintainerSecret = env("DEMO_MAINTAINER_SECRET")
+
+    val missing = missingCredentials(keys, posture.withheldCredentialIds)
+    if (posture.enabled) {
+        println(posture.notice)
+        println(
+            if (maintainerSecret != null) {
+                "DEMO_MAINTAINER_SECRET set: maintainer mutations (cache-mode changes) enabled."
+            } else {
+                "DEMO_MAINTAINER_SECRET unset: maintainer mutations (cache-mode changes) disabled."
+            },
+        )
+    }
+    if (missing.required.isNotEmpty()) {
+        println(
+            "No key set for: ${missing.required.joinToString(", ")}. Those providers are skipped. " +
+                "See secrets.properties / README.",
+        )
+    }
+    if (missing.optional.isNotEmpty()) {
+        println(
+            "No token set for: ${missing.optional.joinToString(", ")}. Registered, but artist radio " +
+                "discovery is off. See secrets.properties / README.",
+        )
+    }
+
+    val bound = startServer(
+        engineRef,
+        cacheModeRef,
+        ::buildEngine,
+        keys,
+        port,
+        unregisteredProviderIds = posture.unregisteredProviderIds,
+        requireMaintainerSecret = posture.enabled,
+        maintainerSecret = maintainerSecret,
+        securityHeaders = posture.enabled,
+        hostReachability = HostReachability(
+            targets = KEYLESS_PROBE_URLS,
+            userAgent = EnrichmentConfig.userAgentWithContact(CONTACT),
+        ),
+    )
+    println("musicmeta web demo running at http://localhost:$bound")
+}
+
+/** The env vars a startup message names, split by what their absence actually costs. */
+internal data class MissingCredentials(val required: List<String>, val optional: List<String>)
+
+/**
+ * Which [KEY_SPECS] env vars the built [keys] leaves unset, ignoring [withheldIds] — a credential
+ * dropped on purpose is not one an operator forgot, and printing it as missing invites them to
+ * "fix" it.
+ *
+ * Missingness reads the catalog's own requirement against the built config, not the raw sources —
+ * Required and Optional are different failures. A missing Required key means the provider never
+ * registered at all; a missing Optional token (ListenBrainz) means it registered and answers
+ * everything except artist radio discovery, so lumping it in with "skipped" would be false.
+ */
+internal fun missingCredentials(keys: ApiKeyConfig, withheldIds: Set<String>): MissingCredentials {
+    val catalogById = ProviderCatalog.entries.associateBy { it.id }
+    val considered = KEY_SPECS
+        .filterNot { it.catalogId in withheldIds }
+        .map { spec -> spec.envVar to catalogById.getValue(spec.catalogId).keyRequirement }
+    return MissingCredentials(
+        required = considered.mapNotNull { (envVar, requirement) ->
+            envVar.takeIf { requirement is KeyRequirement.Required && keys[requirement.key] == null }
+        },
+        optional = considered.mapNotNull { (envVar, requirement) ->
+            envVar.takeIf { requirement is KeyRequirement.Optional && keys[requirement.key] == null }
+        },
+    )
+}
+
+private fun env(key: String): String? = System.getenv(key)?.takeIf { it.isNotBlank() }
+
+/**
+ * Where a demo run out of [demoDir] looks for `secrets.properties`, outermost first: the main
+ * checkout's file when [demoDir] sits in a git worktree, then the repo root's, then the demo's own.
+ * [demoDir] is `<repo root>/consumers/<demo>`, so the repo root is two levels up.
+ * [loadSecrets] merges in this order, so the nearer file wins per key.
+ */
+internal fun secretsSearchPath(demoDir: File): List<File> {
+    val repoRoot = File(demoDir, "../..")
+    return listOfNotNull(mainCheckoutSecrets(repoRoot)) +
+        listOf(File(repoRoot, "secrets.properties"), File(demoDir, "secrets.properties"))
+}
+
+/**
+ * Every `secrets.properties` on [secretsSearchPath] merged, the nearer file winning per key — not
+ * the first that exists, which cannot tell a template from a configuration (`docs/pitfalls.md` §13).
+ *
+ * A key present but blank is dropped rather than returned as `""`: every caller reads
+ * `secrets[k] ?: env(k)`, and an empty string is non-null, so it would beat the environment variable
+ * it is meant to defer to.
+ */
+internal fun loadSecrets(demoDir: File = File(".")): Map<String, String> =
+    secretsSearchPath(demoDir)
+        .filter { it.exists() }
+        .fold(mutableMapOf<String, String>()) { merged, file -> merged.apply { putAll(file.readKeys()) } }
+
+/**
+ * The main checkout's `secrets.properties`, when [repoRoot] is a git worktree — a worktree
+ * materialises only tracked files, so a gitignored secrets file exists solely in the main
+ * checkout and a worktree run is silently keyless without this (`docs/pitfalls.md` §13). A
+ * worktree's `.git` is a *file* naming its real git dir (`gitdir: <main>/.git/worktrees/<name>`);
+ * anything else — a `.git` directory, or a file this cannot parse — contributes nothing. Joins
+ * the search path outermost, so both nearer files still win per key.
+ */
+internal fun mainCheckoutSecrets(repoRoot: File): File? {
+    val gitMarker = File(repoRoot, ".git")
+    if (!gitMarker.isFile) return null
+    val gitdir = gitMarker.readLines().firstOrNull { it.startsWith("gitdir:") }
+        ?.removePrefix("gitdir:")?.trim()?.takeIf { it.isNotEmpty() } ?: return null
+    val resolved = File(gitdir).let { if (it.isAbsolute) it else File(repoRoot, gitdir) }
+    // A worktree's git dir is <main>/.git/worktrees/<name>; any other shape (a submodule's
+    // .git/modules/<name>, say) is not a worktree and names no main checkout.
+    val worktrees = resolved.parentFile?.takeIf { it.name == "worktrees" } ?: return null
+    val dotGit = worktrees.parentFile?.takeIf { it.name == ".git" } ?: return null
+    val main = dotGit.parentFile ?: return null
+    return File(main, "secrets.properties")
+}
+
+private fun File.readKeys(): Map<String, String> = readLines()
+    .filter { it.contains('=') && !it.trimStart().startsWith('#') }
+    .associate { line -> val (k, v) = line.split('=', limit = 2); k.trim() to v.trim() }
+    .filterValues { it.isNotEmpty() }

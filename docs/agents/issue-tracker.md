@@ -10,7 +10,7 @@ Issues and specs (you may know a spec as a PRD) for this repo live in GitHub Iss
 > maintainer, and that email is the drift signal.
 
 > **Issues are public.** A vulnerability or a leaked credential never becomes an issue, including a
-> finding of your own: it goes through the private security policy in `SECURITY.md`.
+> finding of your own: it goes through the private security policy in `.github/SECURITY.md`.
 
 ## Conventions
 

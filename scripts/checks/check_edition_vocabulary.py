@@ -32,7 +32,7 @@ import sys
 from pathlib import Path
 
 CORE_FILE = "musicmeta-core/src/main/kotlin/com/landofoz/musicmeta/provider/musicbrainz/MusicBrainzQualifierFallback.kt"
-DEMO_FILE = "demo-web/src/main/kotlin/com/landofoz/musicmeta/demoweb/DiscographyGrouping.kt"
+DEMO_FILE = "consumers/demo-web/src/main/kotlin/com/landofoz/musicmeta/demoweb/DiscographyGrouping.kt"
 
 DECLARATION = "KIND_PATTERNS: List<KindPattern> = listOf("
 

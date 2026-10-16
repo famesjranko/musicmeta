@@ -3,7 +3,7 @@
 
 A doc sample is a claim about the API that nothing checks — the two guides fixed by hand before this
 existed are exactly what a reader trusts and a build never verifies. This script turns each guide's
-fences into `.kt` files `docs-samples/` compiles as part of `./check`'s build layer (see `check`'s
+fences into `.kt` files `consumers/docs-samples/` compiles as part of `./check`'s build layer (see `check`'s
 "doc samples" step), so a sample that drifts from the real API fails a compile instead of lying to
 the next reader. It does not run the samples — only proves they still type-check.
 
@@ -26,7 +26,7 @@ its reader experiences it. Per guide instead of per fence:
   `run { }` still puts both declarations in one scope — so that case is an `ExtractionError` demanding
   an explicit `<!-- no-compile: ... -->` instead of a silent skip.
 - Every guide's narrative gets a mechanism-owned prelude prepended, uniformly, quick-start.md's own
-  included: `docs-samples/src/main/kotlin/doc/samples/prelude/Prelude.kt`, a real, compiled,
+  included: `consumers/docs-samples/src/main/kotlin/doc/samples/prelude/Prelude.kt`, a real, compiled,
   checked-in file, not a string in this script. It is "the context every guide's narrative may
   assume": a default `engine`, a default `results`, and the small placeholders (`myOkHttpClient`,
   `opaqueEntityKey`, `candidate`, `topTrack`, `topTracks`, `myLibrary`) enough guides use as a
@@ -43,10 +43,11 @@ that is itself opted out*, a Gradle build-script fragment (not code either toolc
 another library's API neither target wires in (`android.util.Log`, JUnit).
 
 **`android.md` compiles against the real Android toolchain, not the JVM one.** Every other guide's
-fences land in `docs-samples/`, a plain JVM module; `android.md`'s land in `docs-samples-android/`,
+fences land in `consumers/docs-samples/`, a plain JVM module; `android.md`'s land in
+`consumers/docs-samples-android/`,
 a `com.android.library` composite build that actually depends on `musicmeta-android` and Room/Hilt/
 WorkManager, the same extraction and narrative rules applied to a second output directory and a
-second, Android-flavoured prelude (`docs-samples-android/.../prelude/AndroidPrelude.kt`). One
+second, Android-flavoured prelude (`consumers/docs-samples-android/.../prelude/AndroidPrelude.kt`). One
 extractor, two compiled targets — `run()` writes every other guide to `--out` and `android.md` to
 `--android-out` on the same pass.
 
@@ -61,10 +62,11 @@ import sys
 from pathlib import Path
 
 GUIDES_DIR = "docs/guides"
-OUT_DIR = "docs-samples/build/generated-samples/src/main/kotlin"
-ANDROID_OUT_DIR = "docs-samples-android/build/generated-samples/src/main/kotlin"
+OUT_DIR = "consumers/docs-samples/build/generated-samples/src/main/kotlin"
+ANDROID_OUT_DIR = "consumers/docs-samples-android/build/generated-samples/src/main/kotlin"
 # The one guide whose fences use Room/Hilt/WorkManager/Android-framework types a plain JVM module
-# cannot see — routed to `ANDROID_OUT_DIR`, compiled by docs-samples-android/ instead of docs-samples/.
+# cannot see — routed to `ANDROID_OUT_DIR`, compiled by consumers/docs-samples-android/ instead of
+# consumers/docs-samples/.
 ANDROID_GUIDE_NAME = "android.md"
 FENCE_RE = re.compile(r"^\s*```kotlin\s*$")
 FENCE_END_RE = re.compile(r"^\s*```\s*$")
@@ -591,7 +593,7 @@ def _write_target(
         for filename, content in files:
             (out_dir / filename).write_text(content, encoding="utf-8")
         # A narrative file holds several fences; count them via their marker comments so the totals
-        # printed here mean "fences", the unit the census in the report and VERIFICATION.md use.
+        # printed here mean "fences", the unit the census in the report and docs/verification.md use.
         compiled_here = sum(content.count(f"// {GUIDES_DIR}/{guide.name} snippet ") for _, content in files)
         total_compiled += compiled_here
         total_skipped += len(skipped)
@@ -630,12 +632,12 @@ def run(root: Path, out_dir: Path, android_out_dir: Path) -> tuple[int, int, int
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
-        description="Compile docs/guides/*.md Kotlin fences, per guide, into docs-samples/ and docs-samples-android/."
+        description="Compile docs/guides/*.md Kotlin fences, per guide, into consumers/docs-samples[-android]/."
     )
     parser.add_argument("--root", help="repository root (default: inferred from this file)")
-    parser.add_argument("--out", help="JVM output directory (default: docs-samples/build/generated-samples/...)")
+    parser.add_argument("--out", help="JVM output directory (default: consumers/docs-samples/build/...)")
     parser.add_argument(
-        "--android-out", help="Android output directory (default: docs-samples-android/build/generated-samples/...)"
+        "--android-out", help="Android output directory (default: consumers/docs-samples-android/build/...)"
     )
     args = parser.parse_args(argv)
 

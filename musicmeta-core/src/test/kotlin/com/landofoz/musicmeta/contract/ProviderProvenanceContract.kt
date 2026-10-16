@@ -28,7 +28,7 @@ import org.junit.Test
  * [EnrichmentResult.Success.provenance] naming the route that selected it, asserted once here and
  * inherited by the concrete engine subclass. The subject is the **engine**
  * ([TestStack.build]), not a provider — a per-provider subject would need twelve subclasses to say
- * one thing (`architecture.md` § 2 P3).
+ * one thing.
  *
  * Two call sites fill the field when a result arrives without one:
  * [com.landofoz.musicmeta.engine.stampProvenanceOne] (the single-winner chain path) and

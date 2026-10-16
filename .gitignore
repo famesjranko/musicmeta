@@ -9,6 +9,7 @@
 .DS_Store
 /build
 /*/build
+/consumers/*/build
 /captures
 .externalNativeBuild
 .cxx
@@ -39,4 +40,4 @@ __pycache__/
 graphify-out/
 
 # Maintainer-private demo deployment notes (concrete GCP identifiers, cost-control internals)
-demo-web/DEPLOYMENT.md
+consumers/demo-web/DEPLOYMENT.md

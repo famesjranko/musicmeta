@@ -12,7 +12,7 @@ anywhere in the relevant sources, comments and strings included, so the substrin
 today and forbids strictly more. If a comment ever legitimately needs to write one, reword the
 comment; that is cheaper than owning a Kotlin front end.
 
-Main sources only, `demo-cli/` excluded.
+Main sources only, `consumers/demo-cli/` excluded.
 
     python3 check_conventions.py [--root PATH]
 """
@@ -98,17 +98,18 @@ API_PROVIDER_FIX = (
 def main_sources(root: Path) -> list[Path]:
     """Main sources of the published modules.
 
-    `demo-cli/` is excluded, and ktlint deliberately no longer follows suit. These rules govern how we
+    `consumers/demo-cli/` is excluded, and ktlint deliberately no longer follows suit. These rules govern how we
     build internals; the canary's job is to compile against the published surface the way an outside
     consumer does, and holding it to them would make the canary about us instead of about consumers.
-    Formatting is the opposite case — it has no bearing on that job, and demo-cli/ is the worked
-    example people read — so `demo-cli/build.gradle.kts` applies ktlint against this repo's
+    Formatting is the opposite case — it has no bearing on that job, and consumers/demo-cli/ is the worked
+    example people read — so `consumers/demo-cli/build.gradle.kts` applies ktlint against this repo's
     `.editorconfig`.
     """
     return sorted(
         path
-        for path in root.glob("*/src/main/**/*.kt")
-        if "/build/" not in path.as_posix() and not path.as_posix().startswith(f"{root.as_posix()}/demo-cli/")
+        for pattern in ("*/src/main/**/*.kt", "consumers/*/src/main/**/*.kt")
+        for path in root.glob(pattern)
+        if "/build/" not in path.as_posix() and not path.as_posix().startswith(f"{root.as_posix()}/consumers/demo-cli/")
     )
 
 
@@ -209,8 +210,8 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--root", help="repository root (default: inferred from this file)")
     args = parser.parse_args(argv)
 
-    # Resolved, because the demo-cli/ exclusion compares absolute path prefixes — with `--root .`
-    # an unresolved root makes that comparison fail and silently starts scanning demo-cli/.
+    # Resolved, because the consumers/demo-cli/ exclusion compares absolute path prefixes — with `--root .`
+    # an unresolved root makes that comparison fail and silently starts scanning consumers/demo-cli/.
     root = Path(args.root).resolve() if args.root else Path(__file__).resolve().parent.parent.parent
     findings = run(root)
 

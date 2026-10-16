@@ -148,7 +148,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("version", help="release version, e.g. 0.11.0 (leading v allowed)")
     parser.add_argument("--date", help="release date, YYYY-MM-DD (default: today, UTC)")
     parser.add_argument("--changelog", default="CHANGELOG.md")
-    parser.add_argument("--roadmap", default="ROADMAP.md")
+    parser.add_argument("--roadmap", default="docs/roadmap.md")
     parser.add_argument("--migration-guide", default=MIGRATION_GUIDE)
     args = parser.parse_args(argv)
 
@@ -173,7 +173,9 @@ def main(argv: list[str] | None = None) -> int:
     else:
         print(f"Pinned [Unreleased] -> [{version}] - {date}. ROADMAP block unchanged.")
 
-    root = Path(args.roadmap).resolve().parent
+    # The changelog's directory, not the roadmap's: the roadmap lives under docs/, the coordinate
+    # files are named from the repo root.
+    root = Path(args.changelog).resolve().parent
     for rel in COORDINATE_FILES:
         path = root / rel
         if not path.exists():

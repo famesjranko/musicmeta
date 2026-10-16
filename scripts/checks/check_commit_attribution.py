@@ -32,7 +32,7 @@ import sys
 #
 # The `[^,]` runs are what separate a footer from a sentence about one: `Generated with Claude Code`
 # is a footer, `Generated with Claude Code, then rewritten by hand` is prose. A comma-free sentence
-# still reads as a footer here; that residual is in VERIFICATION.md rather than chased with a
+# still reads as a footer here; that residual is in docs/verification.md rather than chased with a
 # grammar.
 STANDALONE = re.compile(
     r"^(?:\N{ROBOT FACE}\s*)?(?:"
@@ -61,7 +61,7 @@ ASSISTANTS = re.compile(
 # amended by anyone but its author. Everything that actually emits these trailers qualifies:
 # `noreply@anthropic.com`, `copilot-swe-agent[bot]@users.noreply.github.com`.
 #
-# The residual is stated rather than closed: `Claude <claude@example.com>` passes. VERIFICATION.md
+# The residual is stated rather than closed: `Claude <claude@example.com>` passes. docs/verification.md
 # carries it under "Known gaps".
 MACHINE_ADDRESS = re.compile(
     r"@(?:anthropic|openai|cursor|cognition-labs)\.\w+|\[bot\]|\bno-?reply@|users\.noreply\.github\.com",

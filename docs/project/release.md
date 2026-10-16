@@ -51,7 +51,7 @@ curl -s https://repo1.maven.org/maven2/io/github/famesjranko/musicmeta-core/mave
       gh workflow run release.yml --ref main -f mode=release
 
 - [ ] Drop the `X.Y.Z-rc.<run number>` deployment `stage` left behind
-- [ ] Bump `demo-web/Dockerfile`'s `ARG DEMO_CORE_VERSION` to `X.Y.Z`, and redeploy the demo against
+- [ ] Bump `consumers/demo-web/Dockerfile`'s `ARG DEMO_CORE_VERSION` to `X.Y.Z`, and redeploy the demo against
       it: Actions → **Deploy demo-web**, `core_version=X.Y.Z`, `public=keep`. No check reads that
       `ARG`, and it cannot be pinned against `gradle.properties` the way the coordinates are —
       between gate 1 and gate 3 that file names a version Central does not carry yet, so a gate
@@ -91,7 +91,7 @@ It then does every mechanical edit, so none of them is a chance to typo the valu
 reads:
 
 - pins `## [Unreleased]` to `## [<version>] - <date>` and opens a fresh empty `[Unreleased]` above it
-- moves `ROADMAP.md`'s “Where We Are” heading to the new version
+- moves `docs/roadmap.md`'s “Where We Are” heading to the new version
 - renames `docs/guides/migration.md`'s `## Unreleased` heading to the new version, when present
 - sets `version` in `gradle.properties`
 - rewrites all nine README coordinate lines, then greps to prove the old version is gone

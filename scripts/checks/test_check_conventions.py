@@ -114,19 +114,19 @@ class ConventionsTest(unittest.TestCase):
         self.assertEqual(self.findings_for("musicmeta-core/src/test/kotlin/A.kt", body), [])
 
     def test_demo_cli_is_not_scanned(self):
-        # Given a `!!` in demo-cli/, the external-consumer canary
+        # Given a `!!` in consumers/demo-cli/, the external-consumer canary
         body = "package a\n\nfun f(x: String?) = x!!.length\n"
         # When the conventions check runs
         # Then it is not reported — the canary's job is to compile like a consumer, not to match
         # house style
-        self.assertEqual(self.findings_for("demo-cli/src/main/kotlin/A.kt", body), [])
+        self.assertEqual(self.findings_for("consumers/demo-cli/src/main/kotlin/A.kt", body), [])
 
     def test_root_given_as_dot_still_excludes_demo_cli(self):
-        # Given the check invoked with a relative root. The demo-cli/ exclusion compares absolute
-        # path prefixes, so an unresolved root silently starts scanning demo-cli/.
+        # Given the check invoked with a relative root. The consumers/demo-cli/ exclusion compares absolute
+        # path prefixes, so an unresolved root silently starts scanning consumers/demo-cli/.
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
-            self.write(root, "demo-cli/src/main/kotlin/A.kt", "package a\n\nfun f(x: String?) = x!!.length\n")
+            self.write(root, "consumers/demo-cli/src/main/kotlin/A.kt", "package a\n\nfun f(x: String?) = x!!.length\n")
             # An api dump, as any real root carries — its absence is a finding of its own.
             self.write(root, "musicmeta-core/api/musicmeta-core.api", "")
             import os
@@ -137,7 +137,7 @@ class ConventionsTest(unittest.TestCase):
                 from check_conventions import main
 
                 # When it runs with --root .
-                # Then demo-cli/ is still excluded and it exits clean
+                # Then consumers/demo-cli/ is still excluded and it exits clean
                 self.assertEqual(main(["--root", "."]), 0)
             finally:
                 os.chdir(cwd)

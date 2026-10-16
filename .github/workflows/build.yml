@@ -47,7 +47,7 @@ jobs:
         # The same command developers and agents run locally. CI having its own step list is what
         # makes a CI failure a guessing game, so there is deliberately only one thing to run here.
         # --skip-demo only because demo-canary below is a separate required check; running it here
-        # too would compile demo-cli/ twice. Local `./check` still covers everything.
+        # too would compile consumers/demo-cli/ twice. Local `./check` still covers everything.
         env:
           # The commit this push replaced. Without it a push build compares main against itself,
           # reads an empty range, and the attribution gate passes having seen nothing — which is
@@ -65,10 +65,10 @@ jobs:
           path: '**/build/reports/tests/'
           retention-days: 7
 
-  # `demo-cli/` is a separate composite build, so `./gradlew build` never compiles it — this is the only
+  # `consumers/demo-cli/` is a separate composite build, so `./gradlew build` never compiles it — this is the only
   # in-tree consumer compiling like an external one. Not a parameter-position guard; see CLAUDE.md.
   #
-  # This is the only place CI compiles demo-cli/ — the build job passes --skip-demo so it is not done
+  # This is the only place CI compiles consumers/demo-cli/ — the build job passes --skip-demo so it is not done
   # twice. The job stays separate rather than folding into `build` because `demo-canary` is a
   # required status check in the `main` protection ruleset and reports under its own name; deleting
   # it would block merges to `main` waiting for a check that no longer runs.

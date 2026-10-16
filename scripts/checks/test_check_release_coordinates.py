@@ -53,7 +53,7 @@ class ReleaseCoordinatesTest(unittest.TestCase):
 
     def findings_for(self, **overrides: str) -> list[str]:
         """Findings for an otherwise-consistent tree with the named files replaced."""
-        files = {"gradle.properties": GRADLE, "ROADMAP.md": ROADMAP, "README.md": README}
+        files = {"gradle.properties": GRADLE, "docs/roadmap.md": ROADMAP, "README.md": README}
         files.update(dict.fromkeys(GUIDES, GUIDE))
         files.update(overrides)
         with tempfile.TemporaryDirectory() as tmp:
@@ -68,14 +68,14 @@ class ReleaseCoordinatesTest(unittest.TestCase):
 
     def test_stale_roadmap_prose_under_a_pinned_heading_is_a_finding(self) -> None:
         stale = ROADMAP.replace("v0.12.0 is published to Maven Central", "v0.11.0 is published to Maven Central")
-        findings = self.findings_for(**{"ROADMAP.md": stale})
+        findings = self.findings_for(**{"docs/roadmap.md": stale})
         self.assertTrue(findings, "a stale published-version sentence must fail the gate")
-        self.assertIn("ROADMAP.md", findings[0])
+        self.assertIn("docs/roadmap.md", findings[0])
         self.assertIn("0.11.0", findings[0])
 
     def test_stale_unreleased_subsection_is_a_finding(self) -> None:
         stale = ROADMAP.replace("The published 0.12.0 artifact", "The published 0.10.1 artifact")
-        findings = self.findings_for(**{"ROADMAP.md": stale})
+        findings = self.findings_for(**{"docs/roadmap.md": stale})
         self.assertTrue(findings, "the Unreleased subsection names the published version too")
         self.assertIn("0.10.1", findings[0])
 
@@ -97,13 +97,13 @@ class ReleaseCoordinatesTest(unittest.TestCase):
         self.assertIn("README.md", findings[0])
 
     def test_missing_where_we_are_heading_is_a_finding(self) -> None:
-        findings = self.findings_for(**{"ROADMAP.md": "# musicmeta\n\nno heading here\n"})
+        findings = self.findings_for(**{"docs/roadmap.md": "# musicmeta\n\nno heading here\n"})
         self.assertTrue(findings, "a renamed heading must fail loudly, not silently pass")
         self.assertIn("Where We Are", findings[0])
 
     def test_missing_unreleased_subsection_is_a_finding(self) -> None:
         without = ROADMAP.replace("### Unreleased — lands in the next release", "### Something else")
-        findings = self.findings_for(**{"ROADMAP.md": without})
+        findings = self.findings_for(**{"docs/roadmap.md": without})
         self.assertTrue(findings, "a renamed subsection must fail loudly, not silently pass")
         self.assertIn("Unreleased", findings[0])
 

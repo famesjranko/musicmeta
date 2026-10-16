@@ -18,8 +18,10 @@ functions cannot nest in Kotlin, so a window never starts inside another one; th
 is what stops the last `@Test` in a multi-class file from swallowing the next class's helpers.
 Neither bound needs brace-matching or any other structural parsing.
 
-Kotlin test sources only (`*/src/test/**/*.kt`), on both entry points — this has no opinion on main
-sources, and does not fire on a helper function that happens to mention "given" in prose.
+Kotlin test sources only (`<module>/src/{test,testFixtures}/**/*.kt`, where `<module>` is a
+directory directly below the root or directly below `consumers/`), on both entry points — this has
+no opinion on main sources, and does not fire on a helper function that happens to mention "given"
+in prose.
 
 Known limitation: the scan is line-based and does not know what a string literal is, so Kotlin
 fixture text inside a `\"\"\"` raw string is read as source. A `// Given` in one is graded as a
@@ -90,7 +92,10 @@ RAW_STRING_FIX = (
 # — the abstract classes whose test methods every implementation inherits — so leaving it out
 # exempts the files with the widest reach.
 TEST_SOURCE_DIRS = ("test", "testFixtures")
-TEST_SOURCE_GLOBS = tuple(f"*/src/{name}/**/*.kt" for name in TEST_SOURCE_DIRS)
+# Where module directories sit: directly below the root, or directly below `consumers/` (the demo
+# and docs-sample modules). Each prefix is a fixed depth, never a wildcard over depth.
+MODULE_PARENTS = ("", "consumers/")
+TEST_SOURCE_GLOBS = tuple(f"{parent}*/src/{name}/**/*.kt" for parent in MODULE_PARENTS for name in TEST_SOURCE_DIRS)
 
 
 def test_sources(root: Path) -> list[Path]:
@@ -103,8 +108,8 @@ def is_test_source(path: Path, root: Path) -> bool:
     The two entry points must agree: a file the gate ignores must not fail at write-time, and a
     file the gate checks must not pass there. This spells `TEST_SOURCE_GLOBS` out against the same
     root rather than substring-testing for `/src/test/`: the two look equivalent but are not, since
-    each glob's leading `*` admits exactly one module directory below the root while a substring
-    match admits any depth — an agent worktree under `.claude/`, say, which the gate never walks.
+    each glob's `*` admits exactly one module directory, at a fixed depth, while a substring match
+    admits any depth — an agent worktree under `.claude/`, say, which the gate never walks.
     A substring test would also confuse `src/test` with `src/testFixtures`, which are separate
     source sets sharing a prefix. (`PurePath.match` is not the shortcut it appears to be either: it
     does not anchor `**` the way `glob` does.)
@@ -113,10 +118,11 @@ def is_test_source(path: Path, root: Path) -> bool:
         parts = path.relative_to(root).parts
     except ValueError:
         return False
+    # `src` sits at index 1 (module below the root) or, under `consumers/`, at index 2. A top-level
+    # module that is itself named `consumers` matches at index 1, as its glob does.
+    src_indexes = (1, 2) if parts[:1] == ("consumers",) else (1,)
     return (
-        len(parts) >= 4
-        and parts[1] == "src"
-        and parts[2] in TEST_SOURCE_DIRS
+        any(len(parts) >= i + 3 and parts[i] == "src" and parts[i + 1] in TEST_SOURCE_DIRS for i in src_indexes)
         and path.suffix == ".kt"
         and "/build/" not in path.as_posix()
     )

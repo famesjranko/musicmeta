@@ -61,16 +61,16 @@ test-e2e: ## E2E tests against live third-party APIs — never merge-gating, nee
 	$(GRADLE) :musicmeta-core:test -Dinclude.e2e=true
 
 .PHONY: demo
-demo: ## Compile, lint and test demo-cli/ and demo-web/, matching CI's demo-canary job
+demo: ## Compile, lint and test consumers/demo-cli/ and consumers/demo-web/, matching CI's demo-canary job
 	scripts/demo-canary.sh
 
 .PHONY: demo-cli-run
 demo-cli-run: ## Run the demo CLI (interactive if ARGS unset, else ARGS="artist Radiohead")
-	cd demo-cli && ../gradlew run --console=plain -q $(if $(ARGS),--args="$(ARGS)")
+	cd consumers/demo-cli && ../../gradlew run --console=plain -q $(if $(ARGS),--args="$(ARGS)")
 
 .PHONY: demo-web-run
 demo-web-run: ## Start the demo web server on http://localhost:8099
-	cd demo-web && ../gradlew run --console=plain -q
+	cd consumers/demo-web && ../../gradlew run --console=plain -q
 
 # --- code quality ---
 
