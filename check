@@ -261,7 +261,7 @@ step "core dependency baseline (published POM)"
 ./gradlew :musicmeta-core:generatePomFileForMavenPublication --quiet
 python3 scripts/checks/check_pom_dependencies.py
 
-# consumers/demo-cli/ and demo-web/ are separate composite builds that `./gradlew build` never compiles, so
+# consumers/demo-cli/ and consumers/demo-web/ are separate composite builds that `./gradlew build` never compiles, so
 # they are the only in-tree consumers compiling the way an external one does.
 #
 # --skip-demo exists for CI only, where `demo-canary` is a separate required status check and

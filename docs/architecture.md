@@ -29,8 +29,8 @@ musicmeta-android     Room-backed EnrichmentCache (schema + migrations), Hilt wi
 consumers/            separate composite builds consuming the published shape the way an external
 ├── demo-cli/         consumer does — the in-tree stand-ins for consumers we cannot see
 ├── demo-web/
-└── docs-samples/     every Kotlin fence in docs/guides/, compiled against the real API; the
-    docs-samples-android/  -android half compiles android.md's against a real Android build
+├── docs-samples/     every Kotlin fence in docs/guides/, compiled against the real API
+└── docs-samples-android/  android.md's fences, compiled against a real Android build
 ```
 ```mermaid
 flowchart TD
