@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# The demo canary: compile, lint and test consumers/demo-cli/ and demo-web/. `./check`, CI's `demo-canary`
+# The demo canary: compile, lint and test consumers/demo-cli/ and consumers/demo-web/. `./check`, CI's `demo-canary`
 # job and `make demo` all call this, so the three cannot disagree about what the canary runs.
 #
 # Both demos are separate composite builds that `./gradlew build` never compiles, consuming the

@@ -61,7 +61,7 @@ test-e2e: ## E2E tests against live third-party APIs — never merge-gating, nee
 	$(GRADLE) :musicmeta-core:test -Dinclude.e2e=true
 
 .PHONY: demo
-demo: ## Compile, lint and test consumers/demo-cli/ and demo-web/, matching CI's demo-canary job
+demo: ## Compile, lint and test consumers/demo-cli/ and consumers/demo-web/, matching CI's demo-canary job
 	scripts/demo-canary.sh
 
 .PHONY: demo-cli-run
