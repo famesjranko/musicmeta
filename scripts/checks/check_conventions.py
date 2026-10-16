@@ -101,7 +101,7 @@ def main_sources(root: Path) -> list[Path]:
     `consumers/demo-cli/` is excluded, and ktlint deliberately no longer follows suit. These rules govern how we
     build internals; the canary's job is to compile against the published surface the way an outside
     consumer does, and holding it to them would make the canary about us instead of about consumers.
-    Formatting is the opposite case — it has no bearing on that job, and demo-cli/ is the worked
+    Formatting is the opposite case — it has no bearing on that job, and consumers/demo-cli/ is the worked
     example people read — so `consumers/demo-cli/build.gradle.kts` applies ktlint against this repo's
     `.editorconfig`.
     """
@@ -210,8 +210,8 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--root", help="repository root (default: inferred from this file)")
     args = parser.parse_args(argv)
 
-    # Resolved, because the demo-cli/ exclusion compares absolute path prefixes — with `--root .`
-    # an unresolved root makes that comparison fail and silently starts scanning demo-cli/.
+    # Resolved, because the consumers/demo-cli/ exclusion compares absolute path prefixes — with `--root .`
+    # an unresolved root makes that comparison fail and silently starts scanning consumers/demo-cli/.
     root = Path(args.root).resolve() if args.root else Path(__file__).resolve().parent.parent.parent
     findings = run(root)
 
