@@ -493,6 +493,72 @@ class Embedded {
         # Then it fails there as well — the two entry points must agree on scope
         self.assertEqual(self.exit_code_for_file("m/src/testFixtures/kotlin/AContract.kt", body), 2)
 
+    # --- consumers/<module> is in scope, at exactly that depth ---
+    #
+    # The demo and docs-sample modules live one level deeper, under `consumers/`. Depth stays
+    # fixed: no deeper module directory and nothing under an agent worktree is walked.
+
+    SHAPELESS = """class ATest {
+    @Test
+    fun f() {
+        assertEquals(1, 1)
+    }
+}
+"""
+
+    def test_a_consumers_test_source_is_walked_by_the_gate(self):
+        # Given a `@Test` with no `// Given -` line under consumers/<module>/src/test
+        rel = "consumers/demo-cli/src/test/kotlin/ATest.kt"
+        # When the gate walks the tree
+        findings = self.findings_for(rel, self.SHAPELESS)
+        # Then it is reported against that path
+        self.assertEqual(len(findings), 1)
+        self.assertIn(f"file={rel},", findings[0])
+
+    def test_a_consumers_test_source_is_checked_in_file_mode_too(self):
+        # Given the same file
+        rel = "consumers/demo-cli/src/test/kotlin/ATest.kt"
+        # When it is checked through `--file`
+        # Then it fails there as well
+        self.assertEqual(self.exit_code_for_file(rel, self.SHAPELESS), 2)
+
+    def test_a_consumers_testfixtures_source_is_walked_by_the_gate(self):
+        # Given a shapeless `@Test` under consumers/<module>/src/testFixtures
+        # When the gate walks the tree
+        findings = self.findings_for("consumers/demo-cli/src/testFixtures/kotlin/ATest.kt", self.SHAPELESS)
+        # Then it is reported
+        self.assertEqual(len(findings), 1)
+
+    def test_a_consumers_testfixtures_source_is_checked_in_file_mode_too(self):
+        # Given the same file
+        # When it is checked through `--file`
+        # Then it fails there as well
+        self.assertEqual(
+            self.exit_code_for_file("consumers/demo-cli/src/testFixtures/kotlin/ATest.kt", self.SHAPELESS), 2
+        )
+
+    def test_deeper_paths_are_excluded_by_both_entry_points(self):
+        # Given shapeless `@Test` files one level deeper than consumers/<module>, and in a worktree
+        for rel in (
+            "consumers/demo-cli/x/src/test/kotlin/ATest.kt",
+            "consumers/a/b/src/test/kotlin/ATest.kt",
+            ".claude/worktrees/w/m/src/test/kotlin/ATest.kt",
+            ".claude/worktrees/w/consumers/m/src/test/kotlin/ATest.kt",
+        ):
+            with self.subTest(rel=rel):
+                # When the gate walks the tree, and when `--file` is given the path
+                # Then neither checks it
+                self.assertEqual(self.findings_for(rel, self.SHAPELESS), [])
+                self.assertEqual(self.exit_code_for_file(rel, self.SHAPELESS), 0)
+
+    def test_a_module_named_consumers_is_still_a_module(self):
+        # Given a shapeless `@Test` in a top-level module that happens to be called `consumers`
+        rel = "consumers/src/test/kotlin/ATest.kt"
+        # When the gate walks the tree, and when `--file` is given the path
+        # Then both check it, as the glob does
+        self.assertEqual(len(self.findings_for(rel, self.SHAPELESS)), 1)
+        self.assertEqual(self.exit_code_for_file(rel, self.SHAPELESS), 2)
+
 
 if __name__ == "__main__":
     sys.exit(0 if unittest.main(exit=False).result.wasSuccessful() else 1)
