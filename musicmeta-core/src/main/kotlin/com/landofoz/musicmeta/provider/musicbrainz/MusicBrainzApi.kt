@@ -55,7 +55,7 @@ internal class MusicBrainzApi(
         return MusicBrainzParser.parseArtistDisambiguations(json)
     }
 
-    /** Near-miss suggestions; without an artist, every title word must match the title field. */
+    /** Near-miss suggestions; title-only queries require a word of at least four code points. */
     suspend fun searchReleasesFuzzy(
         title: String,
         artist: String,
@@ -268,11 +268,10 @@ internal class MusicBrainzApi(
         }
 
     /**
-     * Near-miss suggestions; without an artist, every title word must match the title field.
-     * [searchRecordings]'s own hint-less retry only
-     * drops the `release:"…"` album term; it re-sends [title] quoted, so it can never rescue a typo
-     * the way this loosened match can. Like the release/artist variants, this deliberately takes no
-     * album hint — a fuzzy near-miss query is already loose, and a release term would narrow it.
+     * Near-miss suggestions; title-only queries require a word of at least four code points.
+     * [searchRecordings]'s own hint-less retry only drops the `release:"…"` album term. It re-sends
+     * [title] quoted, so this loosened match is needed to rescue a typo. Like the release/artist
+     * variants, this takes no album hint — a release term would narrow a near-miss query.
      */
     suspend fun searchRecordingsFuzzy(
         title: String,
@@ -476,13 +475,26 @@ internal class MusicBrainzApi(
         fun escapeLucene(value: String): String =
             value.replace(LUCENE_SPECIAL_CHARS) { "\\${it.value}" }
 
+        private const val MIN_FUZZY_WORD_LENGTH = 4
+        private val FUZZY_TITLE_WORDS = Regex("[\\p{L}\\p{N}]+(?:['’][\\p{L}\\p{N}]+)*")
+
         private fun fuzzyTitleQuery(field: String, title: String, artist: String): String? {
-            val query = if (artist.isBlank()) {
-                if (title.isBlank()) return null
-                // A field prefix and fuzzy suffix bind to one term, so require each title word.
-                title.trim().split(Regex("\\s+")).joinToString(" AND ") { "$field:${escapeLucene(it)}~" }
+            if (artist.isNotBlank()) {
+                return encodeQueryValue("$field:${escapeLucene(title)}~ AND artistname:${escapeLucene(artist)}~")
+            }
+            // Fuzzy terms bypass analysis; punctuation and short tokens can reach unrelated words.
+            val words = FUZZY_TITLE_WORDS.findAll(title).map { it.value.replace('’', '\'') }.toList()
+            val fuzzyWords = words.filter { it.codePointCount(0, it.length) >= MIN_FUZZY_WORD_LENGTH }.distinct()
+            if (fuzzyWords.isEmpty()) return null
+            val terms = words.joinToString(" AND ") {
+                "$field:${escapeLucene(it)}" + if (it in fuzzyWords) "~" else ""
+            }
+            // One approximate word can otherwise satisfy several fuzzy clauses, as Rolc does.
+            val query = if (fuzzyWords.size > 1) {
+                val exactWord = fuzzyWords.joinToString(" OR ") { "$field:${escapeLucene(it)}" }
+                "$terms AND ($exactWord)"
             } else {
-                "$field:${escapeLucene(title)}~ AND artistname:${escapeLucene(artist)}~"
+                terms
             }
             return encodeQueryValue(query)
         }

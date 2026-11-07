@@ -522,20 +522,37 @@ private to previews. An album hint is a preference among those eligible recordin
 recording constraint. Keep its edition-tolerant preference even when a nonmatching compilation
 comes first, but never strip a track-title qualifier to satisfy the album hint.
 
-## 44. Removing an empty Lucene field does not constrain a multiword fuzzy title
+## 44. A fuzzy title term must resemble an indexed word
 
 MusicBrainz accepted `recording:Karma Polise~ AND artistname:~` and returned 7,216,213 hits,
 led by `Polise II` (2026-11-07). The release equivalent returned 552,522, led by `Polise`.
 Removing only the empty artist clause still returned 74,629 recording hits led by `Kängpolisen`
 and 43,933 release hits led by `Boråspolisen Blues`. The field prefix and fuzzy suffix do not
-make the intervening words one required title: each word needs its own field and fuzzy suffix,
-joined with `AND`. `recording:Karma~ AND recording:Polise~` returned 412 hits, and the release
-equivalent returned 22; both displayed only `Karma Police` in their first three rows. Quoting
-the typo instead returned nothing, because phrase search does not correct spelling.
+make the intervening words one required title: each word needs its own field, joined with `AND`.
+That alone is insufficient. Lucene fuzzy terms are not analysed: attached or standalone punctuation
+can become a required term that finds nothing, while two edits on a short term reach unrelated
+tokens. `recording:東凉~` returned 5,743 unrelated score-zero hits and the release equivalent 809.
+`release:F♯~ AND release:B♯~ AND release:∞~` returned 172 hits, led by `BV I Fk E`.
+Three characters are still unsafe: `recording:Hte~` returned 56,690 hits led by `Hoe komt het`,
+and correctly spelled `recording:千本桜~` returned 16,460 unrelated hits. The `Hte~1` probe did
+not improve the count or relevance.
 
-The captures and the same six-input comparison are in `pools/musicbrainz-fuzzy-title-only/`
-under core's test resources. Each response predates the query change. This constrains suggestions,
-not identity: a title without an artist still cannot identify which recording the caller means.
+Extract letter/digit runs, retain internal apostrophes, normalize curly apostrophes, and require
+words shorter than four Unicode code points exactly. Only longer words take `~`. With several
+distinct long words, also require one exactly: without that clause `Rokc~ AND Roll~` was led by
+`Rolc`, because one approximate word satisfied both clauses. With it the displayed recording pool
+started with `Rock, Roll, Roll`. Dropping punctuation restored the previously empty Satisfaction
+and Rumours queries without filtering returned titles locally.
+
+If no long word qualifies, skip the request: an exact-only fallback cannot rescue a typo and an
+exact short CJK term can itself broaden (`recording:東凉` returned 8,429 hits led by `凉凉`).
+The recall cost includes `U2`, `AC/DC`, short CJK titles and three-letter typos. With several long
+words, misspelling every one can also lose the answer to the exact-word requirement.
+
+The captures, timestamps and query comparisons are in `pools/musicbrainz-fuzzy-title-only/`
+under core's test resources; each capture predates the code change it pins. Only the first three
+hits were inspected. These queries constrain suggestions, not identity or semantic relevance for
+every title: a title without an artist still cannot identify which recording the caller means.
 
 ## 3. `org.json` returns a default for a missing key — it does not fail
 
