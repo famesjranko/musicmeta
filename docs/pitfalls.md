@@ -570,6 +570,13 @@ fixtures agreed with each other, three of them carrying a hand-written `cover-ar
 search payload upstream never sends. A fixture copied from a real response of **the endpoint the
 caller actually uses** is what pins this — a lookup capture proves nothing about a search path.
 
+Release search also omits `release-group.first-release-date`: none of the 200 Thriller search
+hits captured on 2026-11-07 carried it. The pressing's `date` is the available chronology signal,
+not proof of the album's worldwide original date. Keep its month/day precision until ranking:
+`SearchCandidate.year` has already discarded it, so sorting that display field cannot distinguish
+November and December pressings of the same year. Rank incomplete releases before `take(limit)`
+without filtering them; retention in the pool does not promise a place inside every result limit.
+
 ## 32. Normalizing an upstream's convention at one call site gives one entity two names
 
 ```kotlin

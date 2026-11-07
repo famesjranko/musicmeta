@@ -47,7 +47,9 @@ internal class MusicBrainzCandidateSearch(
                     .thenBy { it.value.artist.orEmpty().lowercase() }
                     .thenBy { it.value.title.lowercase() }
                     .thenBy { it.value.identifiers.musicBrainzId },
-            ).map { it.value }.distinctBy { it.displayKey() }.take(limit)
+            ).let { candidates ->
+                MusicBrainzAlbumCandidateOrder.order(candidates, title) { it.release }
+            }.map { it.value }.distinctBy { it.displayKey() }.take(limit)
     }
 
     private fun artistRank(artists: List<String>, candidate: Candidate): Int =
@@ -105,6 +107,7 @@ internal class MusicBrainzCandidateSearch(
                     disambiguation = release.disambiguation,
                 ),
                 artistCredits = release.artistCredits,
+                release = release,
             )
         }
     }
@@ -170,5 +173,6 @@ internal class MusicBrainzCandidateSearch(
         val value: SearchCandidate,
         val artistCredits: List<String>,
         val officialAlbumRecording: Boolean = false,
+        val release: MusicBrainzRelease? = null,
     )
 }
