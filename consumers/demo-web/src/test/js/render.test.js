@@ -47,11 +47,11 @@ async function loadRender() {
     setTimeout: (fn, ms, ...args) => realSetTimeout(fn, ms, ...args).unref(),
   });
   const source = readFileSync(new URL('index.js', resources), 'utf8')
-    .replace(/from '\/([\w-]+\.js)'/g, (_, file) => `from '${new URL(file, resources).href}'`);
+    .replace(/from '\/([\w-]+\.js)'/g, (_, file) => `from '${new URL(file, resources).href}'`) + '\nexport { candidateSubtitle };';
   const file = join(mkdtempSync(join(tmpdir(), 'render-test-')), 'index.mjs');
   writeFileSync(file, source);
-  const { render } = await import(pathToFileURL(file).href);
-  return { render, painted: () => byId('result').innerHTML };
+  const { render, candidateSubtitle } = await import(pathToFileURL(file).href);
+  return { render, subtitle: candidateSubtitle, painted: () => byId('result').innerHTML };
 }
 
 const WIKI_TEXT_CREDIT = { provider: 'wikipedia', url: 'https://en.wikipedia.org/wiki/Radiohead' };
@@ -94,4 +94,19 @@ test('a Wikipedia summary shows its text credit, its unattributed image and ever
   assert.ok(html.includes('src="https://upload.wikimedia.org/wikipedia/commons/a/a1/Thom_Yorke.jpg"'));
   for (const g of GALLERY) assert.ok(html.includes(`src="${g.url}"`), g.url);
   assert.equal((html.match(/<figure>/g) || []).length, GALLERY.length);
+});
+
+test('candidate subtitles distinguish countries on otherwise identical album choices', async () => {
+  // Given - two album choices differ only in their country.
+  const { subtitle } = await loadRender();
+  const base = { artist: 'Artist', releaseType: 'Album', year: 2000 };
+
+  // When - the demo renders their subtitles.
+  const british = subtitle({ ...base, country: 'GB' });
+  const american = subtitle({ ...base, country: 'US' });
+
+  // Then - each country is visible and the choices have different labels.
+  assert.match(british, /GB/);
+  assert.match(american, /US/);
+  assert.notEqual(british, american);
 });

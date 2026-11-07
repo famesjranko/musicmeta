@@ -619,7 +619,7 @@ internal class DefaultEnrichmentEngine(
     private suspend fun searchCandidates(request: EnrichmentRequest, limit: Int): List<SearchCandidate> {
         if (limit <= 0) return emptyList()
         val identity = registry.identityProvider()
-        val primary = if (identity != null) {
+        val primary = (if (identity != null) {
             try {
                 if (identity is MusicBrainzProvider) {
                     identity.searchCandidates(
@@ -635,7 +635,7 @@ internal class DefaultEnrichmentEngine(
                 logger.warn(TAG, "Identity search failed: ${e.message}", e)
                 emptyList()
             }
-        } else emptyList()
+        } else emptyList()).distinctBy { it.displayKey() }
 
         if (primary.size >= limit) return primary.take(limit)
 
@@ -651,11 +651,7 @@ internal class DefaultEnrichmentEngine(
             }
         }
 
-        val primaryTitles = primary.map { "${it.title}:${it.artist}".lowercase() }.toSet()
-        val unique = supplemental.filter {
-            "${it.title}:${it.artist}".lowercase() !in primaryTitles
-        }
-        return (primary + unique).take(limit)
+        return (primary + supplemental).distinctBy { it.displayKey() }.take(limit)
     }
 
     override fun getProviders(): List<ProviderInfo> = registry.providerInfos()

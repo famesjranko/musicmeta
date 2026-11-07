@@ -3,6 +3,7 @@ package com.landofoz.musicmeta.provider.itunes
 import com.landofoz.musicmeta.drift.SchemaTarget
 import com.landofoz.musicmeta.engine.ArtistMatcher
 import com.landofoz.musicmeta.engine.ArtistNameMatch
+import com.landofoz.musicmeta.engine.SearchTitleMatcher
 import com.landofoz.musicmeta.engine.TitleMatcher
 import com.landofoz.musicmeta.engine.bestArtistMatchOrAlias
 import com.landofoz.musicmeta.http.HttpClient
@@ -41,8 +42,8 @@ internal class ITunesApi(
         val titleField = if (album) "collectionName" else "trackName"
         return (0 until results.length()).map { results.getJSONObject(it) }
             .filter { item ->
-                val requested = TitleMatcher.parse(title)
-                val found = TitleMatcher.parse(item.getString(titleField))
+                val requested = SearchTitleMatcher.parse(title)
+                val found = SearchTitleMatcher.parse(item.getString(titleField))
                 requested == found || (requested.qualifier == null && requested.base == found.base &&
                     (!album || found.qualifier?.let(TitleMatcher::isEditionDecoration) == true))
             }

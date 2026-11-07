@@ -660,6 +660,13 @@ Bunny. Rank on `matchQuality` first and let popularity break ties only *within* 
 popularity signal must never outrank name quality, only settle candidates whose names are equally
 good.
 
+Candidate discovery has a different title contract from enrichment identity. MusicBrainz's curly
+apostrophes and iTunes's straight ones can describe the same search choice, but changing the shared
+`TitleMatcher` would also change enrichment's acceptance policy. `SearchTitleMatcher` folds those
+punctuation forms only for candidate ranking and artist-hint filtering. Collapse duplicate choices
+after ranking and before the limit, using every visible field: collapsing by title and artist alone
+deletes distinct pressings, while collapsing only by identifier leaves an unusable list of equal rows.
+
 **Within a rank, though, popularity is not a tiebreak between two spellings — it is a guess between
 two acts.** The ghost case (one act listed twice) and the homonym case (two different acts of the
 same name) are indistinguishable in a search pool, and the second is common: over nine

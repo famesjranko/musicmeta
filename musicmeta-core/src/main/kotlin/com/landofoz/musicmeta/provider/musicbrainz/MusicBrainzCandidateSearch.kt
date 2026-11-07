@@ -6,7 +6,8 @@ import com.landofoz.musicmeta.EnrichmentRequest
 import com.landofoz.musicmeta.SearchCandidate
 import com.landofoz.musicmeta.engine.ArtistMatcher
 import com.landofoz.musicmeta.engine.ConfidenceCalculator
-import com.landofoz.musicmeta.engine.TitleMatcher
+import com.landofoz.musicmeta.engine.SearchTitleMatcher
+import com.landofoz.musicmeta.engine.displayKey
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
 
@@ -30,18 +31,21 @@ internal class MusicBrainzCandidateSearch(
             is EnrichmentRequest.ForTrack -> request.title to request.artist
             is EnrichmentRequest.ForArtist -> request.name to ""
         }
-        return (pool + extra).distinctBy { it.value.identifiers.musicBrainzId }
+        return (pool + extra)
             .sortedWith(
-                compareByDescending<Candidate> { TitleMatcher.equivalent(title, it.value.title) }
+                compareByDescending<Candidate> { SearchTitleMatcher.equivalent(title, it.value.title) }
                     .thenByDescending { sameArtist(suppliedArtist, it) }
-                    .thenByDescending { it.value.disambiguation.isNullOrBlank() }
+                    .thenByDescending {
+                        if (SearchTitleMatcher.equivalent(title, it.value.title)) 0f else it.value.matchScore
+                    }
                     .thenBy { artistRank(artists, it) }
+                    .thenByDescending { it.value.disambiguation.isNullOrBlank() }
                     .thenByDescending { it.officialAlbumRecording }
                     .thenByDescending { it.value.matchScore }
                     .thenBy { it.value.artist.orEmpty().lowercase() }
                     .thenBy { it.value.title.lowercase() }
                     .thenBy { it.value.identifiers.musicBrainzId },
-            ).take(limit).map { it.value }
+            ).map { it.value }.distinctBy { it.displayKey() }.take(limit)
     }
 
     private fun artistRank(artists: List<String>, candidate: Candidate): Int =
@@ -59,7 +63,9 @@ internal class MusicBrainzCandidateSearch(
         when (request) {
             is EnrichmentRequest.ForTrack ->
                 api.searchCanonicalRecordings(request.title, artist, request.album).map { it.toCandidate() }
-            is EnrichmentRequest.ForAlbum -> if (pool.any { artistRank(listOf(artist), it) == 0 }) {
+            is EnrichmentRequest.ForAlbum -> if (pool.any {
+                    artistRank(listOf(artist), it) == 0 && SearchTitleMatcher.equivalent(request.title, it.value.title)
+                }) {
                 emptyList()
             } else searchAlbumCandidates(request.copy(artist = artist), limit)
             is EnrichmentRequest.ForArtist -> emptyList()
@@ -114,26 +120,25 @@ internal class MusicBrainzCandidateSearch(
                 identifiers = EnrichmentIdentifiers(musicBrainzId = artist.id),
                 disambiguation = artist.disambiguation,
             )
-        }
+        }.distinctBy { it.displayKey() }.take(limit)
     }
 
     private suspend fun searchTrackCandidates(
         request: EnrichmentRequest.ForTrack, limit: Int,
     ): List<Candidate> {
-        val strict = api.searchRecordings(
-            request.title, request.artist, request.album, MusicBrainzApi.CANONICAL_SEARCH_LIMIT,
-        )
+        val pool = api.searchCandidateRecordingPool(request.title, request.artist, request.album)
+        val strict = pool.recordings
         val recordings = strict.ifEmpty { api.searchRecordingsFuzzy(request.title, request.artist, limit) }
-        val canonical = if (request.artist.isNotBlank() && strict.isNotEmpty()) {
+        val canonical = if (request.artist.isNotBlank() && strict.isNotEmpty() && !pool.albumMatched) {
             try {
-                api.searchCanonicalRecordings(request.title, request.artist, request.album)
+                api.searchCandidateCanonicalRecordings(request.title, request.artist, request.album)
             } catch (e: Exception) {
                 currentCoroutineContext().ensureActive()
                 logger.warn("MusicBrainzSearch", "Canonical candidate search failed: ${e.message}", e)
                 emptyList()
             }
         } else emptyList()
-        return (recordings + canonical).distinctBy { it.id }.map { it.toCandidate() }
+        return (recordings + canonical).map { it.toCandidate() }
     }
 
     private fun MusicBrainzRecording.toCandidate(): Candidate {

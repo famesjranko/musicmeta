@@ -1,0 +1,3808 @@
+{
+  "recordings": [
+    {
+      "id": "c4291490-7989-4a9a-9850-e645d97cc6c9",
+      "score": 100,
+      "artist-credit-id": "2c9554a3-3ee3-37cb-8ac3-2c9bdc4ef7d2",
+      "title": "HUMBLE.",
+      "length": 199000,
+      "video": null,
+      "artist-credit": [
+        {
+          "name": "Kendrick Lamar",
+          "artist": {
+            "id": "381086ea-f511-4aba-bdf9-71c753dc5077",
+            "name": "Kendrick Lamar",
+            "sort-name": "Lamar, Kendrick",
+            "aliases": [
+              {
+                "sort-name": "Kendrick LAmar & SZA",
+                "name": "Kendrick Lamar, SZA",
+                "locale": null,
+                "type": null,
+                "primary": null,
+                "begin-date": null,
+                "end-date": null
+              },
+              {
+                "sort-name": "K. Duckworth",
+                "type-id": "1937e404-b981-3cb7-8151-4c86ebfc8d8e",
+                "name": "K. Duckworth",
+                "locale": null,
+                "type": "Search hint",
+                "primary": null,
+                "begin-date": null,
+                "end-date": null
+              },
+              {
+                "sort-name": "Kendrick Duckworth",
+                "type-id": "1937e404-b981-3cb7-8151-4c86ebfc8d8e",
+                "name": "Kendrick Duckworth",
+                "locale": null,
+                "type": "Search hint",
+                "primary": null,
+                "begin-date": null,
+                "end-date": null
+              },
+              {
+                "sort-name": "Duckworth, Kendrick Lamar",
+                "type-id": "d4dcd0c0-b341-3612-a332-c0ce797b25cf",
+                "name": "Kendrick Lamar Duckworth",
+                "locale": null,
+                "type": "Legal name",
+                "primary": null,
+                "begin-date": null,
+                "end-date": null
+              },
+              {
+                "sort-name": "ケンドリック・ラマー",
+                "type-id": "894afba6-2816-3c24-8072-eadb66bd04bc",
+                "name": "ケンドリック・ラマー",
+                "locale": "ja",
+                "type": "Artist name",
+                "primary": true,
+                "begin-date": null,
+                "end-date": null
+              },
+              {
+                "sort-name": "켄드릭 라마",
+                "type-id": "894afba6-2816-3c24-8072-eadb66bd04bc",
+                "name": "켄드릭 라마",
+                "locale": "ko",
+                "type": "Artist name",
+                "primary": true,
+                "begin-date": null,
+                "end-date": null
+              },
+              {
+                "sort-name": "OKLAMA",
+                "type-id": "1937e404-b981-3cb7-8151-4c86ebfc8d8e",
+                "name": "OKLAMA",
+                "locale": null,
+                "type": "Search hint",
+                "primary": null,
+                "begin-date": null,
+                "end-date": null
+              },
+              {
+                "sort-name": "K‐Dot",
+                "type-id": "894afba6-2816-3c24-8072-eadb66bd04bc",
+                "name": "K‐Dot",
+                "locale": null,
+                "type": "Artist name",
+                "primary": null,
+                "begin-date": null,
+                "end-date": null
+              },
+              {
+                "sort-name": "K. Dot",
+                "type-id": "1937e404-b981-3cb7-8151-4c86ebfc8d8e",
+                "name": "K. Dot",
+                "locale": null,
+                "type": "Search hint",
+                "primary": null,
+                "begin-date": null,
+                "end-date": null
+              }
+            ]
+          }
+        }
+      ],
+      "first-release-date": "2023",
+      "releases": [
+        {
+          "id": "b52fe371-474a-4561-b93e-11616aaca1ae",
+          "status-id": "1156806e-d06a-38bd-83f0-cf2284a808b9",
+          "artist-credit-id": "2c9554a3-3ee3-37cb-8ac3-2c9bdc4ef7d2",
+          "count": 2,
+          "title": "DAMNATION.",
+          "status": "Bootleg",
+          "artist-credit": [
+            {
+              "name": "Kendrick Lamar",
+              "artist": {
+                "id": "381086ea-f511-4aba-bdf9-71c753dc5077",
+                "name": "Kendrick Lamar",
+                "sort-name": "Lamar, Kendrick"
+              }
+            }
+          ],
+          "release-group": {
+            "id": "5ba985c9-263b-4aa6-9242-9d4678bc0ee3",
+            "type-id": "0c60f497-ff81-3818-befd-abfc84a4858b",
+            "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+            "title": "DAMNATION.",
+            "primary-type": "Album",
+            "secondary-types": [
+              "Remix"
+            ],
+            "secondary-type-ids": [
+              "0c60f497-ff81-3818-befd-abfc84a4858b"
+            ]
+          },
+          "track-count": 16,
+          "media": [
+            {
+              "id": "d39ec730-0e25-4172-8af8-0a8674acf1bd",
+              "position": 1,
+              "format": "Digital Media",
+              "track": [
+                {
+                  "id": "bfbf1740-7afd-48c4-ad7d-736f88fa2bc1",
+                  "number": "8",
+                  "title": "HUMBLE.",
+                  "length": 199000
+                }
+              ],
+              "track-count": 15,
+              "track-offset": 7
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "398bf241-7d57-4993-860b-1f9ef496c97f",
+      "score": 100,
+      "artist-credit-id": "2c9554a3-3ee3-37cb-8ac3-2c9bdc4ef7d2",
+      "title": "HUMBLE.",
+      "length": 177000,
+      "disambiguation": "explicit",
+      "video": null,
+      "artist-credit": [
+        {
+          "name": "Kendrick Lamar",
+          "artist": {
+            "id": "381086ea-f511-4aba-bdf9-71c753dc5077",
+            "name": "Kendrick Lamar",
+            "sort-name": "Lamar, Kendrick",
+            "aliases": [
+              {
+                "sort-name": "Kendrick LAmar & SZA",
+                "name": "Kendrick Lamar, SZA",
+                "locale": null,
+                "type": null,
+                "primary": null,
+                "begin-date": null,
+                "end-date": null
+              },
+              {
+                "sort-name": "K. Duckworth",
+                "type-id": "1937e404-b981-3cb7-8151-4c86ebfc8d8e",
+                "name": "K. Duckworth",
+                "locale": null,
+                "type": "Search hint",
+                "primary": null,
+                "begin-date": null,
+                "end-date": null
+              },
+              {
+                "sort-name": "Kendrick Duckworth",
+                "type-id": "1937e404-b981-3cb7-8151-4c86ebfc8d8e",
+                "name": "Kendrick Duckworth",
+                "locale": null,
+                "type": "Search hint",
+                "primary": null,
+                "begin-date": null,
+                "end-date": null
+              },
+              {
+                "sort-name": "Duckworth, Kendrick Lamar",
+                "type-id": "d4dcd0c0-b341-3612-a332-c0ce797b25cf",
+                "name": "Kendrick Lamar Duckworth",
+                "locale": null,
+                "type": "Legal name",
+                "primary": null,
+                "begin-date": null,
+                "end-date": null
+              },
+              {
+                "sort-name": "ケンドリック・ラマー",
+                "type-id": "894afba6-2816-3c24-8072-eadb66bd04bc",
+                "name": "ケンドリック・ラマー",
+                "locale": "ja",
+                "type": "Artist name",
+                "primary": true,
+                "begin-date": null,
+                "end-date": null
+              },
+              {
+                "sort-name": "켄드릭 라마",
+                "type-id": "894afba6-2816-3c24-8072-eadb66bd04bc",
+                "name": "켄드릭 라마",
+                "locale": "ko",
+                "type": "Artist name",
+                "primary": true,
+                "begin-date": null,
+                "end-date": null
+              },
+              {
+                "sort-name": "OKLAMA",
+                "type-id": "1937e404-b981-3cb7-8151-4c86ebfc8d8e",
+                "name": "OKLAMA",
+                "locale": null,
+                "type": "Search hint",
+                "primary": null,
+                "begin-date": null,
+                "end-date": null
+              },
+              {
+                "sort-name": "K‐Dot",
+                "type-id": "894afba6-2816-3c24-8072-eadb66bd04bc",
+                "name": "K‐Dot",
+                "locale": null,
+                "type": "Artist name",
+                "primary": null,
+                "begin-date": null,
+                "end-date": null
+              },
+              {
+                "sort-name": "K. Dot",
+                "type-id": "1937e404-b981-3cb7-8151-4c86ebfc8d8e",
+                "name": "K. Dot",
+                "locale": null,
+                "type": "Search hint",
+                "primary": null,
+                "begin-date": null,
+                "end-date": null
+              }
+            ]
+          }
+        }
+      ],
+      "first-release-date": "2017-03-31",
+      "releases": [
+        {
+          "id": "f3025206-030b-440b-bcf9-391434862d29",
+          "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
+          "artist-credit-id": "2c9554a3-3ee3-37cb-8ac3-2c9bdc4ef7d2",
+          "count": 1,
+          "title": "DAMN.",
+          "status": "Official",
+          "disambiguation": "COLLECTORS EDITION. numbered",
+          "artist-credit": [
+            {
+              "name": "Kendrick Lamar",
+              "artist": {
+                "id": "381086ea-f511-4aba-bdf9-71c753dc5077",
+                "name": "Kendrick Lamar",
+                "sort-name": "Lamar, Kendrick"
+              }
+            }
+          ],
+          "release-group": {
+            "id": "b88655ba-7469-48b8-a296-b9011ab73ef3",
+            "type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+            "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+            "title": "DAMN.",
+            "primary-type": "Album"
+          },
+          "date": "2017-12-08",
+          "country": "US",
+          "release-events": [
+            {
+              "date": "2017-12-08",
+              "area": {
+                "id": "489ce91b-6658-3307-9877-795b68554c98",
+                "name": "United States",
+                "sort-name": "United States",
+                "iso-3166-1-codes": [
+                  "US"
+                ]
+              }
+            }
+          ],
+          "track-count": 14,
+          "media": [
+            {
+              "id": "c4e6c266-c3df-36ff-8922-16b28eb4b263",
+              "position": 1,
+              "format": "CD",
+              "track": [
+                {
+                  "id": "331f8dc6-0b5a-4443-ae3f-e94430d3a133",
+                  "number": "7",
+                  "title": "HUMBLE.",
+                  "length": 177000
+                }
+              ],
+              "track-count": 14,
+              "track-offset": 6
+            }
+          ]
+        },
+        {
+          "id": "7c59d15d-ef1a-48f6-9af6-51a1add92780",
+          "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
+          "artist-credit-id": "2c9554a3-3ee3-37cb-8ac3-2c9bdc4ef7d2",
+          "count": 1,
+          "title": "DAMN.",
+          "status": "Official",
+          "disambiguation": "explicit",
+          "artist-credit": [
+            {
+              "name": "Kendrick Lamar",
+              "artist": {
+                "id": "381086ea-f511-4aba-bdf9-71c753dc5077",
+                "name": "Kendrick Lamar",
+                "sort-name": "Lamar, Kendrick"
+              }
+            }
+          ],
+          "release-group": {
+            "id": "b88655ba-7469-48b8-a296-b9011ab73ef3",
+            "type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+            "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+            "title": "DAMN.",
+            "primary-type": "Album"
+          },
+          "date": "2017-04-14",
+          "country": "XW",
+          "release-events": [
+            {
+              "date": "2017-04-14",
+              "area": {
+                "id": "525d4e18-3d00-31b9-a58b-a146a916de8f",
+                "name": "[Worldwide]",
+                "sort-name": "[Worldwide]",
+                "iso-3166-1-codes": [
+                  "XW"
+                ]
+              }
+            }
+          ],
+          "track-count": 14,
+          "media": [
+            {
+              "id": "ce1bf4eb-1197-3170-a58b-3ff1bf1e8ce1",
+              "position": 1,
+              "format": "Digital Media",
+              "track": [
+                {
+                  "id": "efb1b942-97ed-4ffd-bcef-6e516bfc923b",
+                  "number": "8",
+                  "title": "HUMBLE.",
+                  "length": 177000
+                }
+              ],
+              "track-count": 14,
+              "track-offset": 7
+            }
+          ]
+        },
+        {
+          "id": "81ad6e82-8e70-4805-8866-42e246c6f68c",
+          "status-id": "6a3772de-4605-4132-993d-aa315cd19b4b",
+          "artist-credit-id": "2c9554a3-3ee3-37cb-8ac3-2c9bdc4ef7d2",
+          "count": 1,
+          "title": "DAMN.",
+          "status": "Withdrawn",
+          "artist-credit": [
+            {
+              "name": "Kendrick Lamar",
+              "artist": {
+                "id": "381086ea-f511-4aba-bdf9-71c753dc5077",
+                "name": "Kendrick Lamar",
+                "sort-name": "Lamar, Kendrick"
+              }
+            }
+          ],
+          "release-group": {
+            "id": "b88655ba-7469-48b8-a296-b9011ab73ef3",
+            "type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+            "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+            "title": "DAMN.",
+            "primary-type": "Album"
+          },
+          "date": "2017-04-14",
+          "country": "US",
+          "release-events": [
+            {
+              "date": "2017-04-14",
+              "area": {
+                "id": "489ce91b-6658-3307-9877-795b68554c98",
+                "name": "United States",
+                "sort-name": "United States",
+                "iso-3166-1-codes": [
+                  "US"
+                ]
+              }
+            }
+          ],
+          "track-count": 14,
+          "media": [
+            {
+              "id": "185362e2-bf96-396d-ac1f-176e012d6d58",
+              "position": 1,
+              "format": "CD",
+              "track": [
+                {
+                  "id": "998e90ff-4e2c-421a-84b8-35174c3e2333",
+                  "number": "8",
+                  "title": "HUMBLE.",
+                  "length": 176973
+                }
+              ],
+              "track-count": 14,
+              "track-offset": 7
+            }
+          ]
+        },
+        {
+          "id": "87d39f16-b84f-473c-8c9d-60456c6da439",
+          "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
+          "artist-credit-id": "2c9554a3-3ee3-37cb-8ac3-2c9bdc4ef7d2",
+          "count": 1,
+          "title": "DAMN.",
+          "status": "Official",
+          "artist-credit": [
+            {
+              "name": "Kendrick Lamar",
+              "artist": {
+                "id": "381086ea-f511-4aba-bdf9-71c753dc5077",
+                "name": "Kendrick Lamar",
+                "sort-name": "Lamar, Kendrick"
+              }
+            }
+          ],
+          "release-group": {
+            "id": "b88655ba-7469-48b8-a296-b9011ab73ef3",
+            "type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+            "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+            "title": "DAMN.",
+            "primary-type": "Album"
+          },
+          "date": "2017-04-21",
+          "country": "XE",
+          "release-events": [
+            {
+              "date": "2017-04-21",
+              "area": {
+                "id": "89a675c2-3e37-3518-b83c-418bad59a85a",
+                "name": "Europe",
+                "sort-name": "Europe",
+                "iso-3166-1-codes": [
+                  "XE"
+                ]
+              }
+            }
+          ],
+          "track-count": 14,
+          "media": [
+            {
+              "id": "83446585-d6f1-3271-a83c-34966a201df7",
+              "position": 1,
+              "format": "CD",
+              "track": [
+                {
+                  "id": "1dd996ef-edfd-4dbb-9555-99730865fd79",
+                  "number": "8",
+                  "title": "HUMBLE.",
+                  "length": 177000
+                }
+              ],
+              "track-count": 14,
+              "track-offset": 7
+            }
+          ]
+        },
+        {
+          "id": "f18ef847-1a38-4f01-85e7-8802d0950a84",
+          "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
+          "artist-credit-id": "2c9554a3-3ee3-37cb-8ac3-2c9bdc4ef7d2",
+          "count": 2,
+          "title": "DAMN.",
+          "status": "Official",
+          "disambiguation": "Memphis Record Pressing",
+          "artist-credit": [
+            {
+              "name": "Kendrick Lamar",
+              "artist": {
+                "id": "381086ea-f511-4aba-bdf9-71c753dc5077",
+                "name": "Kendrick Lamar",
+                "sort-name": "Lamar, Kendrick"
+              }
+            }
+          ],
+          "release-group": {
+            "id": "b88655ba-7469-48b8-a296-b9011ab73ef3",
+            "type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+            "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+            "title": "DAMN.",
+            "primary-type": "Album"
+          },
+          "date": "",
+          "country": "US",
+          "release-events": [
+            {
+              "date": "",
+              "area": {
+                "id": "489ce91b-6658-3307-9877-795b68554c98",
+                "name": "United States",
+                "sort-name": "United States",
+                "iso-3166-1-codes": [
+                  "US"
+                ]
+              }
+            }
+          ],
+          "track-count": 14,
+          "media": [
+            {
+              "id": "a64f0a34-9b72-483f-8ffe-c46626324b0f",
+              "position": 1,
+              "format": "12\" Vinyl",
+              "track": [
+                {
+                  "id": "8bd9ec91-bddf-4e32-9938-f80543aee6f2",
+                  "number": "B4",
+                  "title": "HUMBLE.",
+                  "length": 177000
+                }
+              ],
+              "track-count": 8,
+              "track-offset": 7
+            }
+          ]
+        },
+        {
+          "id": "76e3892a-d221-4de7-99f9-4aeec6128739",
+          "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
+          "artist-credit-id": "2c9554a3-3ee3-37cb-8ac3-2c9bdc4ef7d2",
+          "count": 2,
+          "title": "DAMN.",
+          "status": "Official",
+          "artist-credit": [
+            {
+              "name": "Kendrick Lamar",
+              "artist": {
+                "id": "381086ea-f511-4aba-bdf9-71c753dc5077",
+                "name": "Kendrick Lamar",
+                "sort-name": "Lamar, Kendrick"
+              }
+            }
+          ],
+          "release-group": {
+            "id": "b88655ba-7469-48b8-a296-b9011ab73ef3",
+            "type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+            "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+            "title": "DAMN.",
+            "primary-type": "Album"
+          },
+          "date": "",
+          "country": "US",
+          "release-events": [
+            {
+              "date": "",
+              "area": {
+                "id": "489ce91b-6658-3307-9877-795b68554c98",
+                "name": "United States",
+                "sort-name": "United States",
+                "iso-3166-1-codes": [
+                  "US"
+                ]
+              }
+            }
+          ],
+          "track-count": 14,
+          "media": [
+            {
+              "id": "f0cf187b-1f01-430f-a774-6c337d906ac4",
+              "position": 1,
+              "format": "12\" Vinyl",
+              "track": [
+                {
+                  "id": "3e2050e5-67c0-4a08-9845-7a2f0a140030",
+                  "number": "B4",
+                  "title": "HUMBLE.",
+                  "length": 177000
+                }
+              ],
+              "track-count": 8,
+              "track-offset": 7
+            }
+          ]
+        },
+        {
+          "id": "8859dd56-94b4-4623-92ab-0e650887caa4",
+          "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
+          "artist-credit-id": "2c9554a3-3ee3-37cb-8ac3-2c9bdc4ef7d2",
+          "count": 2,
+          "title": "DAMN.",
+          "status": "Official",
+          "artist-credit": [
+            {
+              "name": "Kendrick Lamar",
+              "artist": {
+                "id": "381086ea-f511-4aba-bdf9-71c753dc5077",
+                "name": "Kendrick Lamar",
+                "sort-name": "Lamar, Kendrick"
+              }
+            }
+          ],
+          "release-group": {
+            "id": "b88655ba-7469-48b8-a296-b9011ab73ef3",
+            "type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+            "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+            "title": "DAMN.",
+            "primary-type": "Album"
+          },
+          "date": "2025",
+          "country": "XE",
+          "release-events": [
+            {
+              "date": "2025",
+              "area": {
+                "id": "89a675c2-3e37-3518-b83c-418bad59a85a",
+                "name": "Europe",
+                "sort-name": "Europe",
+                "iso-3166-1-codes": [
+                  "XE"
+                ]
+              }
+            }
+          ],
+          "track-count": 14,
+          "media": [
+            {
+              "id": "2a69b61c-7555-4fb0-a6e9-76812cc0646e",
+              "position": 1,
+              "format": "12\" Vinyl",
+              "track": [
+                {
+                  "id": "bf0a9d52-9a52-42ab-bb02-a258a2b79275",
+                  "number": "B4",
+                  "title": "HUMBLE.",
+                  "length": 177000
+                }
+              ],
+              "track-count": 8,
+              "track-offset": 7
+            }
+          ]
+        },
+        {
+          "id": "01e40d7b-8e25-4221-b7ea-780c195ffe96",
+          "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
+          "artist-credit-id": "2c9554a3-3ee3-37cb-8ac3-2c9bdc4ef7d2",
+          "count": 2,
+          "title": "DAMN.",
+          "status": "Official",
+          "disambiguation": "reimagined by Toyin Ojih Odutola",
+          "artist-credit": [
+            {
+              "name": "Kendrick Lamar",
+              "artist": {
+                "id": "381086ea-f511-4aba-bdf9-71c753dc5077",
+                "name": "Kendrick Lamar",
+                "sort-name": "Lamar, Kendrick"
+              }
+            }
+          ],
+          "release-group": {
+            "id": "b88655ba-7469-48b8-a296-b9011ab73ef3",
+            "type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+            "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+            "title": "DAMN.",
+            "primary-type": "Album"
+          },
+          "date": "2022-01-27",
+          "country": "US",
+          "release-events": [
+            {
+              "date": "2022-01-27",
+              "area": {
+                "id": "489ce91b-6658-3307-9877-795b68554c98",
+                "name": "United States",
+                "sort-name": "United States",
+                "iso-3166-1-codes": [
+                  "US"
+                ]
+              }
+            }
+          ],
+          "track-count": 14,
+          "media": [
+            {
+              "id": "8b11ce77-f9e8-49ff-b591-7ae81d690cb6",
+              "position": 1,
+              "format": "12\" Vinyl",
+              "track": [
+                {
+                  "id": "1d4b1a4a-2f0a-437d-a191-b259d5f56257",
+                  "number": "B4",
+                  "title": "HUMBLE.",
+                  "length": 177000
+                }
+              ],
+              "track-count": 8,
+              "track-offset": 7
+            }
+          ]
+        },
+        {
+          "id": "efcc9721-53ad-4c48-a905-3e4fef478546",
+          "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
+          "artist-credit-id": "2c9554a3-3ee3-37cb-8ac3-2c9bdc4ef7d2",
+          "count": 2,
+          "title": "DAMN.",
+          "status": "Official",
+          "disambiguation": "made in Poland",
+          "artist-credit": [
+            {
+              "name": "Kendrick Lamar",
+              "artist": {
+                "id": "381086ea-f511-4aba-bdf9-71c753dc5077",
+                "name": "Kendrick Lamar",
+                "sort-name": "Lamar, Kendrick"
+              }
+            }
+          ],
+          "release-group": {
+            "id": "b88655ba-7469-48b8-a296-b9011ab73ef3",
+            "type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+            "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+            "title": "DAMN.",
+            "primary-type": "Album"
+          },
+          "date": "2022",
+          "country": "XE",
+          "release-events": [
+            {
+              "date": "2022",
+              "area": {
+                "id": "89a675c2-3e37-3518-b83c-418bad59a85a",
+                "name": "Europe",
+                "sort-name": "Europe",
+                "iso-3166-1-codes": [
+                  "XE"
+                ]
+              }
+            }
+          ],
+          "track-count": 14,
+          "media": [
+            {
+              "id": "ebd8fcd6-84d9-4c89-b22f-ad2a006d9700",
+              "position": 1,
+              "format": "12\" Vinyl",
+              "track": [
+                {
+                  "id": "f822d3fe-0354-437c-a2ca-8b476d334798",
+                  "number": "B4",
+                  "title": "HUMBLE.",
+                  "length": 177000
+                }
+              ],
+              "track-count": 8,
+              "track-offset": 7
+            }
+          ]
+        },
+        {
+          "id": "102543db-f8a6-4676-8117-f0743271006a",
+          "status-id": "518ffc83-5cde-34df-8627-81bff5093d92",
+          "artist-credit-id": "2c9554a3-3ee3-37cb-8ac3-2c9bdc4ef7d2",
+          "count": 2,
+          "title": "DAMN.",
+          "status": "Promotion",
+          "artist-credit": [
+            {
+              "name": "Kendrick Lamar",
+              "artist": {
+                "id": "381086ea-f511-4aba-bdf9-71c753dc5077",
+                "name": "Kendrick Lamar",
+                "sort-name": "Lamar, Kendrick"
+              }
+            }
+          ],
+          "release-group": {
+            "id": "b88655ba-7469-48b8-a296-b9011ab73ef3",
+            "type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+            "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+            "title": "DAMN.",
+            "primary-type": "Album"
+          },
+          "date": "2021",
+          "country": "NZ",
+          "release-events": [
+            {
+              "date": "2021",
+              "area": {
+                "id": "8524c7d9-f472-3890-a458-f28d5081d9c4",
+                "name": "New Zealand",
+                "sort-name": "New Zealand",
+                "iso-3166-1-codes": [
+                  "NZ"
+                ]
+              }
+            }
+          ],
+          "track-count": 14,
+          "media": [
+            {
+              "id": "c74e0651-e211-4a83-ac6c-6dd36dafd656",
+              "position": 1,
+              "format": "12\" Vinyl",
+              "track": [
+                {
+                  "id": "b618c9fd-97cf-42dd-b2b3-92dd1456f826",
+                  "number": "B4",
+                  "title": "HUMBLE.",
+                  "length": 177000
+                }
+              ],
+              "track-count": 8,
+              "track-offset": 7
+            }
+          ]
+        },
+        {
+          "id": "91bcd205-b14d-40ba-ae0a-dbc9cc24c6d6",
+          "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
+          "artist-credit-id": "2c9554a3-3ee3-37cb-8ac3-2c9bdc4ef7d2",
+          "count": 2,
+          "title": "DAMN.",
+          "status": "Official",
+          "artist-credit": [
+            {
+              "name": "Kendrick Lamar",
+              "artist": {
+                "id": "381086ea-f511-4aba-bdf9-71c753dc5077",
+                "name": "Kendrick Lamar",
+                "sort-name": "Lamar, Kendrick"
+              }
+            }
+          ],
+          "release-group": {
+            "id": "b88655ba-7469-48b8-a296-b9011ab73ef3",
+            "type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+            "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+            "title": "DAMN.",
+            "primary-type": "Album"
+          },
+          "date": "2021-10-22",
+          "country": "NZ",
+          "release-events": [
+            {
+              "date": "2021-10-22",
+              "area": {
+                "id": "8524c7d9-f472-3890-a458-f28d5081d9c4",
+                "name": "New Zealand",
+                "sort-name": "New Zealand",
+                "iso-3166-1-codes": [
+                  "NZ"
+                ]
+              }
+            }
+          ],
+          "track-count": 14,
+          "media": [
+            {
+              "id": "9b786f80-e900-4a33-bf48-95c1f1756bf1",
+              "position": 1,
+              "format": "12\" Vinyl",
+              "track": [
+                {
+                  "id": "d4de8d95-9fef-4e8b-8e4f-0b3ffdc350c6",
+                  "number": "B4",
+                  "title": "HUMBLE.",
+                  "length": 177000
+                }
+              ],
+              "track-count": 8,
+              "track-offset": 7
+            }
+          ]
+        },
+        {
+          "id": "b98e73e2-2708-49a6-ba37-340d42bd158b",
+          "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
+          "artist-credit-id": "2c9554a3-3ee3-37cb-8ac3-2c9bdc4ef7d2",
+          "count": 2,
+          "title": "DAMN.",
+          "status": "Official",
+          "artist-credit": [
+            {
+              "name": "Kendrick Lamar",
+              "artist": {
+                "id": "381086ea-f511-4aba-bdf9-71c753dc5077",
+                "name": "Kendrick Lamar",
+                "sort-name": "Lamar, Kendrick"
+              }
+            }
+          ],
+          "release-group": {
+            "id": "b88655ba-7469-48b8-a296-b9011ab73ef3",
+            "type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+            "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+            "title": "DAMN.",
+            "primary-type": "Album"
+          },
+          "date": "2021",
+          "country": "IE",
+          "release-events": [
+            {
+              "date": "2021",
+              "area": {
+                "id": "390b05d4-11ec-3bce-a343-703a366b34a5",
+                "name": "Ireland",
+                "sort-name": "Ireland",
+                "iso-3166-1-codes": [
+                  "IE"
+                ]
+              }
+            }
+          ],
+          "track-count": 14,
+          "media": [
+            {
+              "id": "079c0790-006b-4443-b8f6-505a9c36089c",
+              "position": 1,
+              "format": "12\" Vinyl",
+              "track": [
+                {
+                  "id": "02fe6f03-6cfe-40ef-8174-1534067f89c4",
+                  "number": "B4",
+                  "title": "HUMBLE.",
+                  "length": 177000
+                }
+              ],
+              "track-count": 8,
+              "track-offset": 7
+            }
+          ]
+        },
+        {
+          "id": "f8a8cdcf-fd3f-4e13-b960-c3b59b8150d5",
+          "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
+          "artist-credit-id": "2c9554a3-3ee3-37cb-8ac3-2c9bdc4ef7d2",
+          "count": 2,
+          "title": "DAMN.",
+          "status": "Official",
+          "disambiguation": "Target exclusive",
+          "artist-credit": [
+            {
+              "name": "Kendrick Lamar",
+              "artist": {
+                "id": "381086ea-f511-4aba-bdf9-71c753dc5077",
+                "name": "Kendrick Lamar",
+                "sort-name": "Lamar, Kendrick"
+              }
+            }
+          ],
+          "release-group": {
+            "id": "b88655ba-7469-48b8-a296-b9011ab73ef3",
+            "type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+            "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+            "title": "DAMN.",
+            "primary-type": "Album"
+          },
+          "date": "2020-09-26",
+          "country": "US",
+          "release-events": [
+            {
+              "date": "2020-09-26",
+              "area": {
+                "id": "489ce91b-6658-3307-9877-795b68554c98",
+                "name": "United States",
+                "sort-name": "United States",
+                "iso-3166-1-codes": [
+                  "US"
+                ]
+              }
+            }
+          ],
+          "track-count": 14,
+          "media": [
+            {
+              "id": "08a1bed2-1c73-4331-904c-7a55bf87f531",
+              "position": 1,
+              "format": "12\" Vinyl",
+              "track": [
+                {
+                  "id": "ed6d3832-acba-46ee-95a3-faff2074303e",
+                  "number": "B4",
+                  "title": "HUMBLE.",
+                  "length": 177000
+                }
+              ],
+              "track-count": 8,
+              "track-offset": 7
+            }
+          ]
+        },
+        {
+          "id": "73b7b07d-21ee-4489-9699-e6826db24272",
+          "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
+          "artist-credit-id": "2c9554a3-3ee3-37cb-8ac3-2c9bdc4ef7d2",
+          "count": 2,
+          "title": "DAMN.",
+          "status": "Official",
+          "disambiguation": "COLLECTORS EDITION.",
+          "artist-credit": [
+            {
+              "name": "Kendrick Lamar",
+              "artist": {
+                "id": "381086ea-f511-4aba-bdf9-71c753dc5077",
+                "name": "Kendrick Lamar",
+                "sort-name": "Lamar, Kendrick"
+              }
+            }
+          ],
+          "release-group": {
+            "id": "b88655ba-7469-48b8-a296-b9011ab73ef3",
+            "type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+            "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+            "title": "DAMN.",
+            "primary-type": "Album"
+          },
+          "date": "2018-02-16",
+          "country": "XE",
+          "release-events": [
+            {
+              "date": "2018-02-16",
+              "area": {
+                "id": "89a675c2-3e37-3518-b83c-418bad59a85a",
+                "name": "Europe",
+                "sort-name": "Europe",
+                "iso-3166-1-codes": [
+                  "XE"
+                ]
+              }
+            }
+          ],
+          "track-count": 14,
+          "media": [
+            {
+              "id": "70060ddf-9dfc-4aca-bcb4-86d7cf95d881",
+              "position": 2,
+              "format": "12\" Vinyl",
+              "track": [
+                {
+                  "id": "b707a805-bcab-4392-bde0-defe711edf11",
+                  "number": "C1",
+                  "title": "HUMBLE.",
+                  "length": 177000
+                }
+              ],
+              "track-count": 8,
+              "track-offset": 0
+            }
+          ]
+        },
+        {
+          "id": "b82a5ee9-2f19-488c-b963-354a1ff1c4d9",
+          "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
+          "artist-credit-id": "2c9554a3-3ee3-37cb-8ac3-2c9bdc4ef7d2",
+          "count": 2,
+          "title": "DAMN.",
+          "status": "Official",
+          "disambiguation": "“275508E” runout",
+          "artist-credit": [
+            {
+              "name": "Kendrick Lamar",
+              "artist": {
+                "id": "381086ea-f511-4aba-bdf9-71c753dc5077",
+                "name": "Kendrick Lamar",
+                "sort-name": "Lamar, Kendrick"
+              }
+            }
+          ],
+          "release-group": {
+            "id": "b88655ba-7469-48b8-a296-b9011ab73ef3",
+            "type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+            "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+            "title": "DAMN.",
+            "primary-type": "Album"
+          },
+          "date": "2017-07-14",
+          "country": "XE",
+          "release-events": [
+            {
+              "date": "2017-07-14",
+              "area": {
+                "id": "89a675c2-3e37-3518-b83c-418bad59a85a",
+                "name": "Europe",
+                "sort-name": "Europe",
+                "iso-3166-1-codes": [
+                  "XE"
+                ]
+              }
+            }
+          ],
+          "track-count": 14,
+          "media": [
+            {
+              "id": "5a8f7188-dd3f-456f-a595-6fbe5ea1662a",
+              "position": 1,
+              "format": "12\" Vinyl",
+              "track": [
+                {
+                  "id": "7dfcf363-a526-4129-b189-0e116af04065",
+                  "number": "B4",
+                  "title": "HUMBLE.",
+                  "length": 177000
+                }
+              ],
+              "track-count": 8,
+              "track-offset": 7
+            }
+          ]
+        },
+        {
+          "id": "aced755e-e9c9-45fc-9d99-f49ef35149ed",
+          "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
+          "artist-credit-id": "2c9554a3-3ee3-37cb-8ac3-2c9bdc4ef7d2",
+          "count": 2,
+          "title": "DAMN.",
+          "status": "Official",
+          "disambiguation": "“157776E” runout",
+          "artist-credit": [
+            {
+              "name": "Kendrick Lamar",
+              "artist": {
+                "id": "381086ea-f511-4aba-bdf9-71c753dc5077",
+                "name": "Kendrick Lamar",
+                "sort-name": "Lamar, Kendrick"
+              }
+            }
+          ],
+          "release-group": {
+            "id": "b88655ba-7469-48b8-a296-b9011ab73ef3",
+            "type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+            "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+            "title": "DAMN.",
+            "primary-type": "Album"
+          },
+          "date": "2017-07-14",
+          "country": "XE",
+          "release-events": [
+            {
+              "date": "2017-07-14",
+              "area": {
+                "id": "89a675c2-3e37-3518-b83c-418bad59a85a",
+                "name": "Europe",
+                "sort-name": "Europe",
+                "iso-3166-1-codes": [
+                  "XE"
+                ]
+              }
+            }
+          ],
+          "track-count": 14,
+          "media": [
+            {
+              "id": "002c6636-a3d7-4e3a-bae4-ba9630f20c14",
+              "position": 1,
+              "format": "12\" Vinyl",
+              "track": [
+                {
+                  "id": "ba9e3083-e858-4e4d-ab1a-a1d1dc3eb0c5",
+                  "number": "B4",
+                  "title": "HUMBLE.",
+                  "length": 177000
+                }
+              ],
+              "track-count": 8,
+              "track-offset": 7
+            }
+          ]
+        },
+        {
+          "id": "60f8ff24-5d0a-454f-83d5-063d44487259",
+          "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
+          "artist-credit-id": "2c9554a3-3ee3-37cb-8ac3-2c9bdc4ef7d2",
+          "count": 2,
+          "title": "DAMN.",
+          "status": "Official",
+          "disambiguation": "red",
+          "artist-credit": [
+            {
+              "name": "Kendrick Lamar",
+              "artist": {
+                "id": "381086ea-f511-4aba-bdf9-71c753dc5077",
+                "name": "Kendrick Lamar",
+                "sort-name": "Lamar, Kendrick"
+              }
+            }
+          ],
+          "release-group": {
+            "id": "b88655ba-7469-48b8-a296-b9011ab73ef3",
+            "type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+            "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+            "title": "DAMN.",
+            "primary-type": "Album"
+          },
+          "date": "2017-07-14",
+          "country": "US",
+          "release-events": [
+            {
+              "date": "2017-07-14",
+              "area": {
+                "id": "489ce91b-6658-3307-9877-795b68554c98",
+                "name": "United States",
+                "sort-name": "United States",
+                "iso-3166-1-codes": [
+                  "US"
+                ]
+              }
+            }
+          ],
+          "track-count": 14,
+          "media": [
+            {
+              "id": "698c3539-c381-45b5-868f-5d47fafd33d7",
+              "position": 1,
+              "format": "12\" Vinyl",
+              "track": [
+                {
+                  "id": "445473f2-03e7-4555-b351-332d640fbf9f",
+                  "number": "B4",
+                  "title": "HUMBLE.",
+                  "length": 177000
+                }
+              ],
+              "track-count": 8,
+              "track-offset": 7
+            }
+          ]
+        },
+        {
+          "id": "acbb807b-4a1a-411a-a800-965a23955561",
+          "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
+          "artist-credit-id": "2c9554a3-3ee3-37cb-8ac3-2c9bdc4ef7d2",
+          "count": 2,
+          "title": "DAMN.",
+          "status": "Official",
+          "disambiguation": "red",
+          "artist-credit": [
+            {
+              "name": "Kendrick Lamar",
+              "artist": {
+                "id": "381086ea-f511-4aba-bdf9-71c753dc5077",
+                "name": "Kendrick Lamar",
+                "sort-name": "Lamar, Kendrick"
+              }
+            }
+          ],
+          "release-group": {
+            "id": "b88655ba-7469-48b8-a296-b9011ab73ef3",
+            "type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+            "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+            "title": "DAMN.",
+            "primary-type": "Album"
+          },
+          "date": "2017-08-11",
+          "country": "XE",
+          "release-events": [
+            {
+              "date": "2017-08-11",
+              "area": {
+                "id": "89a675c2-3e37-3518-b83c-418bad59a85a",
+                "name": "Europe",
+                "sort-name": "Europe",
+                "iso-3166-1-codes": [
+                  "XE"
+                ]
+              }
+            }
+          ],
+          "track-count": 14,
+          "media": [
+            {
+              "id": "5b4e46b0-5530-334a-9231-5519822112d6",
+              "position": 1,
+              "format": "12\" Vinyl",
+              "track": [
+                {
+                  "id": "c5fede63-aef7-4dcb-a49a-b7fb33d0130e",
+                  "number": "B4",
+                  "title": "HUMBLE.",
+                  "length": 177000
+                }
+              ],
+              "track-count": 8,
+              "track-offset": 7
+            }
+          ]
+        },
+        {
+          "id": "f8c39dbb-7d56-4be0-8438-1dbb880a7916",
+          "status-id": "1156806e-d06a-38bd-83f0-cf2284a808b9",
+          "artist-credit-id": "2c9554a3-3ee3-37cb-8ac3-2c9bdc4ef7d2",
+          "count": 1,
+          "title": "DAMN.",
+          "status": "Bootleg",
+          "disambiguation": "opaque red",
+          "artist-credit": [
+            {
+              "name": "Kendrick Lamar",
+              "artist": {
+                "id": "381086ea-f511-4aba-bdf9-71c753dc5077",
+                "name": "Kendrick Lamar",
+                "sort-name": "Lamar, Kendrick"
+              }
+            }
+          ],
+          "release-group": {
+            "id": "b88655ba-7469-48b8-a296-b9011ab73ef3",
+            "type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+            "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+            "title": "DAMN.",
+            "primary-type": "Album"
+          },
+          "date": "",
+          "country": "IT",
+          "release-events": [
+            {
+              "date": "",
+              "area": {
+                "id": "c6500277-9a3d-349b-bf30-41afdbf42add",
+                "name": "Italy",
+                "sort-name": "Italy",
+                "iso-3166-1-codes": [
+                  "IT"
+                ]
+              }
+            }
+          ],
+          "track-count": 14,
+          "media": [
+            {
+              "id": "eda0485c-1dae-48f7-bbc2-d9a4c4b84399",
+              "position": 1,
+              "format": "Cassette",
+              "track": [
+                {
+                  "id": "11625f7e-7be3-418b-b745-3db81142c077",
+                  "number": "A8",
+                  "title": "HUMBLE.",
+                  "length": 177000
+                }
+              ],
+              "track-count": 14,
+              "track-offset": 7
+            }
+          ]
+        },
+        {
+          "id": "b7881bfb-2581-489e-9030-b2f5a34b0a61",
+          "status-id": "1156806e-d06a-38bd-83f0-cf2284a808b9",
+          "artist-credit-id": "2c9554a3-3ee3-37cb-8ac3-2c9bdc4ef7d2",
+          "count": 1,
+          "title": "DAMN.",
+          "status": "Bootleg",
+          "disambiguation": "translucent red",
+          "artist-credit": [
+            {
+              "name": "Kendrick Lamar",
+              "artist": {
+                "id": "381086ea-f511-4aba-bdf9-71c753dc5077",
+                "name": "Kendrick Lamar",
+                "sort-name": "Lamar, Kendrick"
+              }
+            }
+          ],
+          "release-group": {
+            "id": "b88655ba-7469-48b8-a296-b9011ab73ef3",
+            "type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+            "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+            "title": "DAMN.",
+            "primary-type": "Album"
+          },
+          "date": "",
+          "country": "IT",
+          "release-events": [
+            {
+              "date": "",
+              "area": {
+                "id": "c6500277-9a3d-349b-bf30-41afdbf42add",
+                "name": "Italy",
+                "sort-name": "Italy",
+                "iso-3166-1-codes": [
+                  "IT"
+                ]
+              }
+            }
+          ],
+          "track-count": 14,
+          "media": [
+            {
+              "id": "c079a94a-680c-4fc1-b1fd-41300d60a62d",
+              "position": 1,
+              "format": "Cassette",
+              "track": [
+                {
+                  "id": "91cb7f5d-1695-4216-abd0-064123417bb8",
+                  "number": "A8",
+                  "title": "HUMBLE.",
+                  "length": 177000
+                }
+              ],
+              "track-count": 14,
+              "track-offset": 7
+            }
+          ]
+        },
+        {
+          "id": "dc9abbdf-a39e-495f-94c8-4eccaf4860dd",
+          "status-id": "1156806e-d06a-38bd-83f0-cf2284a808b9",
+          "artist-credit-id": "2c9554a3-3ee3-37cb-8ac3-2c9bdc4ef7d2",
+          "count": 1,
+          "title": "DAMN.",
+          "status": "Bootleg",
+          "disambiguation": "clear",
+          "artist-credit": [
+            {
+              "name": "Kendrick Lamar",
+              "artist": {
+                "id": "381086ea-f511-4aba-bdf9-71c753dc5077",
+                "name": "Kendrick Lamar",
+                "sort-name": "Lamar, Kendrick"
+              }
+            }
+          ],
+          "release-group": {
+            "id": "b88655ba-7469-48b8-a296-b9011ab73ef3",
+            "type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+            "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+            "title": "DAMN.",
+            "primary-type": "Album"
+          },
+          "date": "",
+          "country": "IT",
+          "release-events": [
+            {
+              "date": "",
+              "area": {
+                "id": "c6500277-9a3d-349b-bf30-41afdbf42add",
+                "name": "Italy",
+                "sort-name": "Italy",
+                "iso-3166-1-codes": [
+                  "IT"
+                ]
+              }
+            }
+          ],
+          "track-count": 14,
+          "media": [
+            {
+              "id": "7cae60d9-9e81-4be2-b9bb-9f4944599238",
+              "position": 1,
+              "format": "Cassette",
+              "track": [
+                {
+                  "id": "5d2e8ed7-227a-42b0-bfcc-d48824cf563f",
+                  "number": "A8",
+                  "title": "HUMBLE.",
+                  "length": 177000
+                }
+              ],
+              "track-count": 14,
+              "track-offset": 7
+            }
+          ]
+        },
+        {
+          "id": "b6b286ee-0a97-45a0-84be-49c1c8c8b15f",
+          "status-id": "1156806e-d06a-38bd-83f0-cf2284a808b9",
+          "artist-credit-id": "2c9554a3-3ee3-37cb-8ac3-2c9bdc4ef7d2",
+          "count": 1,
+          "title": "DAMN.",
+          "status": "Bootleg",
+          "artist-credit": [
+            {
+              "name": "Kendrick Lamar",
+              "artist": {
+                "id": "381086ea-f511-4aba-bdf9-71c753dc5077",
+                "name": "Kendrick Lamar",
+                "sort-name": "Lamar, Kendrick"
+              }
+            }
+          ],
+          "release-group": {
+            "id": "b88655ba-7469-48b8-a296-b9011ab73ef3",
+            "type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+            "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+            "title": "DAMN.",
+            "primary-type": "Album"
+          },
+          "date": "2017",
+          "country": "RU",
+          "release-events": [
+            {
+              "date": "2017",
+              "area": {
+                "id": "1f1fc3a4-9500-39b8-9f10-f0a465557eef",
+                "name": "Russia",
+                "sort-name": "Russia",
+                "iso-3166-1-codes": [
+                  "RU"
+                ]
+              }
+            }
+          ],
+          "track-count": 14,
+          "media": [
+            {
+              "id": "5484a4c9-4564-40fa-99f6-a5bfd378cfe5",
+              "position": 1,
+              "format": "Cassette",
+              "track": [
+                {
+                  "id": "5eeb0aa8-109a-472b-9326-2c13ce06afaa",
+                  "number": "A8",
+                  "title": "HUMBLE.",
+                  "length": 177000
+                }
+              ],
+              "track-count": 14,
+              "track-offset": 7
+            }
+          ]
+        },
+        {
+          "id": "9a176b40-254a-42c7-87cb-6840002765fc",
+          "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
+          "artist-credit-id": "74b9187f-7369-4cab-85aa-e75cfedeed88",
+          "count": 1,
+          "title": "DAMN.",
+          "status": "Official",
+          "disambiguation": "コレクターズ・エディション",
+          "artist-credit": [
+            {
+              "name": "ケンドリック・ラマー",
+              "artist": {
+                "id": "381086ea-f511-4aba-bdf9-71c753dc5077",
+                "name": "Kendrick Lamar",
+                "sort-name": "Lamar, Kendrick"
+              }
+            }
+          ],
+          "release-group": {
+            "id": "b88655ba-7469-48b8-a296-b9011ab73ef3",
+            "type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+            "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+            "title": "DAMN.",
+            "primary-type": "Album"
+          },
+          "date": "2017-12-08",
+          "country": "JP",
+          "release-events": [
+            {
+              "date": "2017-12-08",
+              "area": {
+                "id": "2db42837-c832-3c27-b4a3-08198f75693c",
+                "name": "Japan",
+                "sort-name": "Japan",
+                "iso-3166-1-codes": [
+                  "JP"
+                ]
+              }
+            }
+          ],
+          "track-count": 14,
+          "media": [
+            {
+              "id": "5c825a96-05f2-4277-be44-f94b1ea7074f",
+              "position": 1,
+              "format": "CD",
+              "track": [
+                {
+                  "id": "eddff6bd-c2a2-431c-a3a3-a1cf82a22f09",
+                  "number": "7",
+                  "title": "HUMBLE.",
+                  "length": 177000
+                }
+              ],
+              "track-count": 14,
+              "track-offset": 6
+            }
+          ]
+        },
+        {
+          "id": "df7ada6e-6d18-409a-b6fa-29eaaef67e92",
+          "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
+          "artist-credit-id": "2c9554a3-3ee3-37cb-8ac3-2c9bdc4ef7d2",
+          "count": 1,
+          "title": "DAMN.",
+          "status": "Official",
+          "disambiguation": "COLLECTORS EDITION.",
+          "artist-credit": [
+            {
+              "name": "Kendrick Lamar",
+              "artist": {
+                "id": "381086ea-f511-4aba-bdf9-71c753dc5077",
+                "name": "Kendrick Lamar",
+                "sort-name": "Lamar, Kendrick"
+              }
+            }
+          ],
+          "release-group": {
+            "id": "b88655ba-7469-48b8-a296-b9011ab73ef3",
+            "type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+            "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+            "title": "DAMN.",
+            "primary-type": "Album"
+          },
+          "date": "2017-12-08",
+          "country": "XE",
+          "release-events": [
+            {
+              "date": "2017-12-08",
+              "area": {
+                "id": "89a675c2-3e37-3518-b83c-418bad59a85a",
+                "name": "Europe",
+                "sort-name": "Europe",
+                "iso-3166-1-codes": [
+                  "XE"
+                ]
+              }
+            }
+          ],
+          "track-count": 14,
+          "media": [
+            {
+              "id": "be534d54-ea71-4be7-a97c-467bf947501c",
+              "position": 1,
+              "format": "CD",
+              "track": [
+                {
+                  "id": "8238e3a0-bf2b-457a-bd1a-5deea6b30ddb",
+                  "number": "7",
+                  "title": "HUMBLE.",
+                  "length": 177000
+                }
+              ],
+              "track-count": 14,
+              "track-offset": 6
+            }
+          ]
+        },
+        {
+          "id": "fa0c13d7-bf96-4ccf-9bb3-386b802566f6",
+          "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
+          "artist-credit-id": "2c9554a3-3ee3-37cb-8ac3-2c9bdc4ef7d2",
+          "count": 1,
+          "title": "DAMN.",
+          "status": "Official",
+          "disambiguation": "COLLECTORS EDITION.",
+          "artist-credit": [
+            {
+              "name": "Kendrick Lamar",
+              "artist": {
+                "id": "381086ea-f511-4aba-bdf9-71c753dc5077",
+                "name": "Kendrick Lamar",
+                "sort-name": "Lamar, Kendrick"
+              }
+            }
+          ],
+          "release-group": {
+            "id": "b88655ba-7469-48b8-a296-b9011ab73ef3",
+            "type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+            "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+            "title": "DAMN.",
+            "primary-type": "Album"
+          },
+          "date": "2017-12-08",
+          "country": "US",
+          "release-events": [
+            {
+              "date": "2017-12-08",
+              "area": {
+                "id": "489ce91b-6658-3307-9877-795b68554c98",
+                "name": "United States",
+                "sort-name": "United States",
+                "iso-3166-1-codes": [
+                  "US"
+                ]
+              }
+            }
+          ],
+          "track-count": 14,
+          "media": [
+            {
+              "id": "edd547a4-619e-4d3d-bbb1-a0292de84484",
+              "position": 1,
+              "format": "CD",
+              "track": [
+                {
+                  "id": "c82debef-61af-421b-aa62-e39b6d33213b",
+                  "number": "7",
+                  "title": "HUMBLE.",
+                  "length": 177000
+                }
+              ],
+              "track-count": 14,
+              "track-offset": 6
+            }
+          ]
+        },
+        {
+          "id": "b423aaa0-e326-4f60-89d8-20fc2fb485cd",
+          "status-id": "6a3772de-4605-4132-993d-aa315cd19b4b",
+          "artist-credit-id": "2c9554a3-3ee3-37cb-8ac3-2c9bdc4ef7d2",
+          "count": 1,
+          "title": "DAMN.",
+          "status": "Withdrawn",
+          "disambiguation": "signed",
+          "artist-credit": [
+            {
+              "name": "Kendrick Lamar",
+              "artist": {
+                "id": "381086ea-f511-4aba-bdf9-71c753dc5077",
+                "name": "Kendrick Lamar",
+                "sort-name": "Lamar, Kendrick"
+              }
+            }
+          ],
+          "release-group": {
+            "id": "b88655ba-7469-48b8-a296-b9011ab73ef3",
+            "type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+            "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+            "title": "DAMN.",
+            "primary-type": "Album"
+          },
+          "date": "2017-04-14",
+          "country": "US",
+          "release-events": [
+            {
+              "date": "2017-04-14",
+              "area": {
+                "id": "489ce91b-6658-3307-9877-795b68554c98",
+                "name": "United States",
+                "sort-name": "United States",
+                "iso-3166-1-codes": [
+                  "US"
+                ]
+              }
+            }
+          ],
+          "track-count": 14,
+          "media": [
+            {
+              "id": "f2c2bc97-b8a1-4200-a8a2-54d2b1037aaa",
+              "position": 1,
+              "format": "CD",
+              "track": [
+                {
+                  "id": "d62a97e9-8d56-4ee1-925d-e1f05b13f60d",
+                  "number": "8",
+                  "title": "HUMBLE.",
+                  "length": 176973
+                }
+              ],
+              "track-count": 14,
+              "track-offset": 7
+            }
+          ]
+        },
+        {
+          "id": "60212761-7efe-407b-98eb-9e0efab59502",
+          "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
+          "artist-credit-id": "2c9554a3-3ee3-37cb-8ac3-2c9bdc4ef7d2",
+          "count": 1,
+          "title": "DAMN.",
+          "status": "Official",
+          "disambiguation": "Optimal Media GmbH",
+          "artist-credit": [
+            {
+              "name": "Kendrick Lamar",
+              "artist": {
+                "id": "381086ea-f511-4aba-bdf9-71c753dc5077",
+                "name": "Kendrick Lamar",
+                "sort-name": "Lamar, Kendrick"
+              }
+            }
+          ],
+          "release-group": {
+            "id": "b88655ba-7469-48b8-a296-b9011ab73ef3",
+            "type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+            "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+            "title": "DAMN.",
+            "primary-type": "Album"
+          },
+          "date": "2022",
+          "country": "XE",
+          "release-events": [
+            {
+              "date": "2022",
+              "area": {
+                "id": "89a675c2-3e37-3518-b83c-418bad59a85a",
+                "name": "Europe",
+                "sort-name": "Europe",
+                "iso-3166-1-codes": [
+                  "XE"
+                ]
+              }
+            }
+          ],
+          "track-count": 14,
+          "media": [
+            {
+              "id": "0572ccfe-3737-4df2-a238-87e9f69c450c",
+              "position": 1,
+              "format": "CD",
+              "track": [
+                {
+                  "id": "8163ef58-561a-4a5d-b5fb-878712beef3a",
+                  "number": "8",
+                  "title": "HUMBLE.",
+                  "length": 177000
+                }
+              ],
+              "track-count": 14,
+              "track-offset": 7
+            }
+          ]
+        },
+        {
+          "id": "31108fa9-7874-4fa7-8f03-259887fe8917",
+          "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
+          "artist-credit-id": "2c9554a3-3ee3-37cb-8ac3-2c9bdc4ef7d2",
+          "count": 1,
+          "title": "DAMN.",
+          "status": "Official",
+          "artist-credit": [
+            {
+              "name": "Kendrick Lamar",
+              "artist": {
+                "id": "381086ea-f511-4aba-bdf9-71c753dc5077",
+                "name": "Kendrick Lamar",
+                "sort-name": "Lamar, Kendrick"
+              }
+            }
+          ],
+          "release-group": {
+            "id": "b88655ba-7469-48b8-a296-b9011ab73ef3",
+            "type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+            "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+            "title": "DAMN.",
+            "primary-type": "Album"
+          },
+          "date": "2020-10-07",
+          "country": "JP",
+          "release-events": [
+            {
+              "date": "2020-10-07",
+              "area": {
+                "id": "2db42837-c832-3c27-b4a3-08198f75693c",
+                "name": "Japan",
+                "sort-name": "Japan",
+                "iso-3166-1-codes": [
+                  "JP"
+                ]
+              }
+            }
+          ],
+          "track-count": 14,
+          "media": [
+            {
+              "id": "aa11033c-744a-44a2-b801-9e85c9b9a7f4",
+              "position": 1,
+              "format": "CD",
+              "track": [
+                {
+                  "id": "a4fa7b14-758b-4bd6-bccd-4c5d9707d428",
+                  "number": "8",
+                  "title": "HUMBLE.",
+                  "length": 177000
+                }
+              ],
+              "track-count": 14,
+              "track-offset": 7
+            }
+          ]
+        },
+        {
+          "id": "954760fd-956c-497c-be57-1eaf97aced44",
+          "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
+          "artist-credit-id": "2c9554a3-3ee3-37cb-8ac3-2c9bdc4ef7d2",
+          "count": 1,
+          "title": "DAMN.",
+          "status": "Official",
+          "artist-credit": [
+            {
+              "name": "Kendrick Lamar",
+              "artist": {
+                "id": "381086ea-f511-4aba-bdf9-71c753dc5077",
+                "name": "Kendrick Lamar",
+                "sort-name": "Lamar, Kendrick"
+              }
+            }
+          ],
+          "release-group": {
+            "id": "b88655ba-7469-48b8-a296-b9011ab73ef3",
+            "type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+            "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+            "title": "DAMN.",
+            "primary-type": "Album"
+          },
+          "date": "2017-05",
+          "country": "MY",
+          "release-events": [
+            {
+              "date": "2017-05",
+              "area": {
+                "id": "305d19c7-c040-349c-8d5f-6ac75d2d2a09",
+                "name": "Malaysia",
+                "sort-name": "Malaysia",
+                "iso-3166-1-codes": [
+                  "MY"
+                ]
+              }
+            }
+          ],
+          "track-count": 14,
+          "media": [
+            {
+              "id": "15fb70a9-c0ee-40b6-9743-8fe4940f7ba1",
+              "position": 1,
+              "format": "CD",
+              "track": [
+                {
+                  "id": "9364537e-e999-410e-bec9-5ee79b63c7ba",
+                  "number": "8",
+                  "title": "HUMBLE.",
+                  "length": 177000
+                }
+              ],
+              "track-count": 14,
+              "track-offset": 7
+            }
+          ]
+        },
+        {
+          "id": "f784b36a-e5ce-4624-b355-87e22703d216",
+          "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
+          "artist-credit-id": "2c9554a3-3ee3-37cb-8ac3-2c9bdc4ef7d2",
+          "count": 1,
+          "title": "DAMN.",
+          "status": "Official",
+          "disambiguation": "with content warning",
+          "artist-credit": [
+            {
+              "name": "Kendrick Lamar",
+              "artist": {
+                "id": "381086ea-f511-4aba-bdf9-71c753dc5077",
+                "name": "Kendrick Lamar",
+                "sort-name": "Lamar, Kendrick"
+              }
+            }
+          ],
+          "release-group": {
+            "id": "b88655ba-7469-48b8-a296-b9011ab73ef3",
+            "type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+            "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+            "title": "DAMN.",
+            "primary-type": "Album"
+          },
+          "date": "2017-04-28",
+          "country": "CA",
+          "release-events": [
+            {
+              "date": "2017-04-28",
+              "area": {
+                "id": "71bbafaa-e825-3e15-8ca9-017dcad1748b",
+                "name": "Canada",
+                "sort-name": "Canada",
+                "iso-3166-1-codes": [
+                  "CA"
+                ]
+              }
+            }
+          ],
+          "track-count": 14,
+          "media": [
+            {
+              "id": "1d354235-ab1d-4311-9cb1-d74c39e4663f",
+              "position": 1,
+              "format": "CD",
+              "track": [
+                {
+                  "id": "7681026f-3935-482d-ae92-94f1de00994a",
+                  "number": "8",
+                  "title": "HUMBLE.",
+                  "length": 177000
+                }
+              ],
+              "track-count": 14,
+              "track-offset": 7
+            }
+          ]
+        },
+        {
+          "id": "24dfc5e0-74b8-4d99-8597-0fa1058769a4",
+          "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
+          "artist-credit-id": "2c9554a3-3ee3-37cb-8ac3-2c9bdc4ef7d2",
+          "count": 1,
+          "title": "DAMN.",
+          "status": "Official",
+          "artist-credit": [
+            {
+              "name": "Kendrick Lamar",
+              "artist": {
+                "id": "381086ea-f511-4aba-bdf9-71c753dc5077",
+                "name": "Kendrick Lamar",
+                "sort-name": "Lamar, Kendrick"
+              }
+            }
+          ],
+          "release-group": {
+            "id": "b88655ba-7469-48b8-a296-b9011ab73ef3",
+            "type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+            "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+            "title": "DAMN.",
+            "primary-type": "Album"
+          },
+          "date": "2017",
+          "country": "IL",
+          "release-events": [
+            {
+              "date": "2017",
+              "area": {
+                "id": "03691455-bb46-37e3-91d2-cb064a35ffcc",
+                "name": "Israel",
+                "sort-name": "Israel",
+                "iso-3166-1-codes": [
+                  "IL"
+                ]
+              }
+            }
+          ],
+          "track-count": 14,
+          "media": [
+            {
+              "id": "cc534464-054a-477a-ad05-e28c4f490b80",
+              "position": 1,
+              "format": "CD",
+              "track": [
+                {
+                  "id": "ea24cdab-ead8-4b95-8669-c730f14e4ed0",
+                  "number": "8",
+                  "title": "HUMBLE.",
+                  "length": 177000
+                }
+              ],
+              "track-count": 14,
+              "track-offset": 7
+            }
+          ]
+        },
+        {
+          "id": "337f4d50-7e11-42ec-91d1-ea5ac818abab",
+          "status-id": "518ffc83-5cde-34df-8627-81bff5093d92",
+          "artist-credit-id": "2c9554a3-3ee3-37cb-8ac3-2c9bdc4ef7d2",
+          "count": 1,
+          "title": "DAMN.",
+          "status": "Promotion",
+          "artist-credit": [
+            {
+              "name": "Kendrick Lamar",
+              "artist": {
+                "id": "381086ea-f511-4aba-bdf9-71c753dc5077",
+                "name": "Kendrick Lamar",
+                "sort-name": "Lamar, Kendrick"
+              }
+            }
+          ],
+          "release-group": {
+            "id": "b88655ba-7469-48b8-a296-b9011ab73ef3",
+            "type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+            "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+            "title": "DAMN.",
+            "primary-type": "Album"
+          },
+          "date": "2017-07",
+          "country": "AR",
+          "release-events": [
+            {
+              "date": "2017-07",
+              "area": {
+                "id": "0df04709-c7d8-3b55-a6ea-f3e5069a947b",
+                "name": "Argentina",
+                "sort-name": "Argentina",
+                "iso-3166-1-codes": [
+                  "AR"
+                ]
+              }
+            },
+            {
+              "date": "2017-07",
+              "area": {
+                "id": "82d5f4d6-aed4-3ff5-81d1-5363ac6e97a7",
+                "name": "Chile",
+                "sort-name": "Chile",
+                "iso-3166-1-codes": [
+                  "CL"
+                ]
+              }
+            },
+            {
+              "date": "2017-07",
+              "area": {
+                "id": "ea88d395-87c9-3c47-b49a-114cad41fd39",
+                "name": "Uruguay",
+                "sort-name": "Uruguay",
+                "iso-3166-1-codes": [
+                  "UY"
+                ]
+              }
+            }
+          ],
+          "track-count": 14,
+          "media": [
+            {
+              "id": "b2e38f41-570e-4065-bba8-4fc2839b72ff",
+              "position": 1,
+              "format": "CD",
+              "track": [
+                {
+                  "id": "4cd6b54a-f567-4a18-bea6-c6ac69bdfa5b",
+                  "number": "8",
+                  "title": "HUMBLE.",
+                  "length": 177000
+                }
+              ],
+              "track-count": 14,
+              "track-offset": 7
+            }
+          ]
+        },
+        {
+          "id": "e674b499-b098-47f5-b7a5-33927a408359",
+          "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
+          "artist-credit-id": "2c9554a3-3ee3-37cb-8ac3-2c9bdc4ef7d2",
+          "count": 1,
+          "title": "DAMN.",
+          "status": "Official",
+          "artist-credit": [
+            {
+              "name": "Kendrick Lamar",
+              "artist": {
+                "id": "381086ea-f511-4aba-bdf9-71c753dc5077",
+                "name": "Kendrick Lamar",
+                "sort-name": "Lamar, Kendrick"
+              }
+            }
+          ],
+          "release-group": {
+            "id": "b88655ba-7469-48b8-a296-b9011ab73ef3",
+            "type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+            "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+            "title": "DAMN.",
+            "primary-type": "Album"
+          },
+          "date": "2017-05-18",
+          "country": "KR",
+          "release-events": [
+            {
+              "date": "2017-05-18",
+              "area": {
+                "id": "b9f7d640-46e8-313e-b158-ded6d18593b3",
+                "name": "South Korea",
+                "sort-name": "South Korea",
+                "iso-3166-1-codes": [
+                  "KR"
+                ]
+              }
+            }
+          ],
+          "track-count": 14,
+          "media": [
+            {
+              "id": "a5b64997-85be-4bb2-b00e-647bdfce19c6",
+              "position": 1,
+              "format": "CD",
+              "track": [
+                {
+                  "id": "147f4cd1-3137-44d5-8f6c-8d55677d6d13",
+                  "number": "8",
+                  "title": "HUMBLE.",
+                  "length": 177000
+                }
+              ],
+              "track-count": 14,
+              "track-offset": 7
+            }
+          ]
+        },
+        {
+          "id": "daeafe49-5de7-451b-9a7f-534c3442f730",
+          "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
+          "artist-credit-id": "2c9554a3-3ee3-37cb-8ac3-2c9bdc4ef7d2",
+          "count": 1,
+          "title": "DAMN.",
+          "status": "Official",
+          "disambiguation": "updated tracks, Sony DADC",
+          "artist-credit": [
+            {
+              "name": "Kendrick Lamar",
+              "artist": {
+                "id": "381086ea-f511-4aba-bdf9-71c753dc5077",
+                "name": "Kendrick Lamar",
+                "sort-name": "Lamar, Kendrick"
+              }
+            }
+          ],
+          "release-group": {
+            "id": "b88655ba-7469-48b8-a296-b9011ab73ef3",
+            "type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+            "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+            "title": "DAMN.",
+            "primary-type": "Album"
+          },
+          "date": "2017",
+          "country": "US",
+          "release-events": [
+            {
+              "date": "2017",
+              "area": {
+                "id": "489ce91b-6658-3307-9877-795b68554c98",
+                "name": "United States",
+                "sort-name": "United States",
+                "iso-3166-1-codes": [
+                  "US"
+                ]
+              }
+            }
+          ],
+          "track-count": 14,
+          "media": [
+            {
+              "id": "69820fc7-741b-4e78-afdc-2a49f4878136",
+              "position": 1,
+              "format": "CD",
+              "track": [
+                {
+                  "id": "61aedcda-3eaf-4d89-8c0e-4640358bb08f",
+                  "number": "8",
+                  "title": "HUMBLE.",
+                  "length": 177000
+                }
+              ],
+              "track-count": 14,
+              "track-offset": 7
+            }
+          ]
+        },
+        {
+          "id": "7d593841-16b5-4569-9b69-53d26a4866e5",
+          "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
+          "artist-credit-id": "2c9554a3-3ee3-37cb-8ac3-2c9bdc4ef7d2",
+          "count": 1,
+          "title": "DAMN.",
+          "status": "Official",
+          "disambiguation": "no content warning",
+          "artist-credit": [
+            {
+              "name": "Kendrick Lamar",
+              "artist": {
+                "id": "381086ea-f511-4aba-bdf9-71c753dc5077",
+                "name": "Kendrick Lamar",
+                "sort-name": "Lamar, Kendrick"
+              }
+            }
+          ],
+          "release-group": {
+            "id": "b88655ba-7469-48b8-a296-b9011ab73ef3",
+            "type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+            "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+            "title": "DAMN.",
+            "primary-type": "Album"
+          },
+          "date": "2017-04-28",
+          "country": "CA",
+          "release-events": [
+            {
+              "date": "2017-04-28",
+              "area": {
+                "id": "71bbafaa-e825-3e15-8ca9-017dcad1748b",
+                "name": "Canada",
+                "sort-name": "Canada",
+                "iso-3166-1-codes": [
+                  "CA"
+                ]
+              }
+            }
+          ],
+          "track-count": 14,
+          "media": [
+            {
+              "id": "6342b139-c55f-4adc-911b-4daa61079391",
+              "position": 1,
+              "format": "CD",
+              "track": [
+                {
+                  "id": "06a53785-30d4-48a7-be4c-dda4e4241e59",
+                  "number": "8",
+                  "title": "HUMBLE.",
+                  "length": 177000
+                }
+              ],
+              "track-count": 14,
+              "track-offset": 7
+            }
+          ]
+        },
+        {
+          "id": "aae4b34e-a301-49fa-baed-97401e679eb0",
+          "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
+          "artist-credit-id": "2c9554a3-3ee3-37cb-8ac3-2c9bdc4ef7d2",
+          "count": 1,
+          "title": "DAMN.",
+          "status": "Official",
+          "artist-credit": [
+            {
+              "name": "Kendrick Lamar",
+              "artist": {
+                "id": "381086ea-f511-4aba-bdf9-71c753dc5077",
+                "name": "Kendrick Lamar",
+                "sort-name": "Lamar, Kendrick"
+              }
+            }
+          ],
+          "release-group": {
+            "id": "b88655ba-7469-48b8-a296-b9011ab73ef3",
+            "type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+            "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+            "title": "DAMN.",
+            "primary-type": "Album"
+          },
+          "date": "2017-07",
+          "country": "MX",
+          "release-events": [
+            {
+              "date": "2017-07",
+              "area": {
+                "id": "3e08b2cd-69f3-317c-b1e4-e71be581839e",
+                "name": "Mexico",
+                "sort-name": "Mexico",
+                "iso-3166-1-codes": [
+                  "MX"
+                ]
+              }
+            }
+          ],
+          "track-count": 14,
+          "media": [
+            {
+              "id": "bb0e5a8f-be1e-484d-ad8e-f43f4476d84c",
+              "position": 1,
+              "format": "CD",
+              "track": [
+                {
+                  "id": "90060780-f56e-4428-a9ee-47c97d02c232",
+                  "number": "8",
+                  "title": "HUMBLE.",
+                  "length": 177000
+                }
+              ],
+              "track-count": 14,
+              "track-offset": 7
+            }
+          ]
+        },
+        {
+          "id": "ff4d3232-cfb0-44a9-b7e9-c651348aad03",
+          "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
+          "artist-credit-id": "2c9554a3-3ee3-37cb-8ac3-2c9bdc4ef7d2",
+          "count": 1,
+          "title": "DAMN.",
+          "status": "Official",
+          "artist-credit": [
+            {
+              "name": "Kendrick Lamar",
+              "artist": {
+                "id": "381086ea-f511-4aba-bdf9-71c753dc5077",
+                "name": "Kendrick Lamar",
+                "sort-name": "Lamar, Kendrick"
+              }
+            }
+          ],
+          "release-group": {
+            "id": "b88655ba-7469-48b8-a296-b9011ab73ef3",
+            "type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+            "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+            "title": "DAMN.",
+            "primary-type": "Album"
+          },
+          "date": "2017-07",
+          "country": "AR",
+          "release-events": [
+            {
+              "date": "2017-07",
+              "area": {
+                "id": "0df04709-c7d8-3b55-a6ea-f3e5069a947b",
+                "name": "Argentina",
+                "sort-name": "Argentina",
+                "iso-3166-1-codes": [
+                  "AR"
+                ]
+              }
+            },
+            {
+              "date": "2017-07",
+              "area": {
+                "id": "82d5f4d6-aed4-3ff5-81d1-5363ac6e97a7",
+                "name": "Chile",
+                "sort-name": "Chile",
+                "iso-3166-1-codes": [
+                  "CL"
+                ]
+              }
+            },
+            {
+              "date": "2017-07",
+              "area": {
+                "id": "ea88d395-87c9-3c47-b49a-114cad41fd39",
+                "name": "Uruguay",
+                "sort-name": "Uruguay",
+                "iso-3166-1-codes": [
+                  "UY"
+                ]
+              }
+            }
+          ],
+          "track-count": 14,
+          "media": [
+            {
+              "id": "39b1f2db-fe24-41fb-81f9-4b16ed8e15e3",
+              "position": 1,
+              "format": "CD",
+              "track": [
+                {
+                  "id": "9636fe4f-b6f9-4d46-bcab-e6cae994eb41",
+                  "number": "8",
+                  "title": "HUMBLE.",
+                  "length": 177000
+                }
+              ],
+              "track-count": 14,
+              "track-offset": 7
+            }
+          ]
+        },
+        {
+          "id": "10ccf28d-6622-4900-af4a-47ed0a79e4c6",
+          "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
+          "artist-credit-id": "2c9554a3-3ee3-37cb-8ac3-2c9bdc4ef7d2",
+          "count": 1,
+          "title": "DAMN.",
+          "status": "Official",
+          "artist-credit": [
+            {
+              "name": "Kendrick Lamar",
+              "artist": {
+                "id": "381086ea-f511-4aba-bdf9-71c753dc5077",
+                "name": "Kendrick Lamar",
+                "sort-name": "Lamar, Kendrick"
+              }
+            }
+          ],
+          "release-group": {
+            "id": "b88655ba-7469-48b8-a296-b9011ab73ef3",
+            "type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+            "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+            "title": "DAMN.",
+            "primary-type": "Album"
+          },
+          "date": "2017-06-09",
+          "country": "BG",
+          "release-events": [
+            {
+              "date": "2017-06-09",
+              "area": {
+                "id": "114c14ad-9776-34e9-81b0-6299507f3771",
+                "name": "Bulgaria",
+                "sort-name": "Bulgaria",
+                "iso-3166-1-codes": [
+                  "BG"
+                ]
+              }
+            },
+            {
+              "date": "2017-06-09",
+              "area": {
+                "id": "61ed84b8-5a10-30a7-8376-ccd51801d6d1",
+                "name": "Romania",
+                "sort-name": "Romania",
+                "iso-3166-1-codes": [
+                  "RO"
+                ]
+              }
+            }
+          ],
+          "track-count": 14,
+          "media": [
+            {
+              "id": "39f35058-9d61-4048-bf61-2308aeb0916f",
+              "position": 1,
+              "format": "CD",
+              "track": [
+                {
+                  "id": "647a3651-90a9-4cc8-9c9b-2dec6b60212c",
+                  "number": "8",
+                  "title": "HUMBLE.",
+                  "length": 177000
+                }
+              ],
+              "track-count": 14,
+              "track-offset": 7
+            }
+          ]
+        },
+        {
+          "id": "e8886e11-c45b-4f51-927b-87fc64d6444b",
+          "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
+          "artist-credit-id": "2c9554a3-3ee3-37cb-8ac3-2c9bdc4ef7d2",
+          "count": 1,
+          "title": "DAMN.",
+          "status": "Official",
+          "artist-credit": [
+            {
+              "name": "Kendrick Lamar",
+              "artist": {
+                "id": "381086ea-f511-4aba-bdf9-71c753dc5077",
+                "name": "Kendrick Lamar",
+                "sort-name": "Lamar, Kendrick"
+              }
+            }
+          ],
+          "release-group": {
+            "id": "b88655ba-7469-48b8-a296-b9011ab73ef3",
+            "type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+            "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+            "title": "DAMN.",
+            "primary-type": "Album"
+          },
+          "date": "2017-06-09",
+          "country": "PL",
+          "release-events": [
+            {
+              "date": "2017-06-09",
+              "area": {
+                "id": "dd7f80c8-f017-3d01-8608-2a8c9c32b954",
+                "name": "Poland",
+                "sort-name": "Poland",
+                "iso-3166-1-codes": [
+                  "PL"
+                ]
+              }
+            }
+          ],
+          "track-count": 14,
+          "media": [
+            {
+              "id": "311da57c-a03c-4b13-b89e-a6488fcdbb7d",
+              "position": 1,
+              "format": "CD",
+              "track": [
+                {
+                  "id": "1d9c3614-858a-4c64-b656-2359a8cd74fd",
+                  "number": "8",
+                  "title": "HUMBLE.",
+                  "length": 177000
+                }
+              ],
+              "track-count": 14,
+              "track-offset": 7
+            }
+          ]
+        },
+        {
+          "id": "3d008adb-7cd0-46c5-838b-5152e050400b",
+          "status-id": "41121bb9-3413-3818-8a9a-9742318349aa",
+          "artist-credit-id": "74b9187f-7369-4cab-85aa-e75cfedeed88",
+          "count": 1,
+          "title": "ダム",
+          "status": "Pseudo-Release",
+          "artist-credit": [
+            {
+              "name": "ケンドリック・ラマー",
+              "artist": {
+                "id": "381086ea-f511-4aba-bdf9-71c753dc5077",
+                "name": "Kendrick Lamar",
+                "sort-name": "Lamar, Kendrick"
+              }
+            }
+          ],
+          "release-group": {
+            "id": "b88655ba-7469-48b8-a296-b9011ab73ef3",
+            "type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+            "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+            "title": "DAMN.",
+            "primary-type": "Album"
+          },
+          "track-count": 14,
+          "media": [
+            {
+              "id": "e4ac6866-5b3e-4931-89d8-cee00b02f60a",
+              "position": 1,
+              "track": [
+                {
+                  "id": "18b9e3b7-5ce2-422d-a8ce-dc644b9981fa",
+                  "number": "8",
+                  "title": "ハンブル",
+                  "length": 177000
+                }
+              ],
+              "track-count": 14,
+              "track-offset": 7
+            }
+          ]
+        },
+        {
+          "id": "916b11a0-bf63-4ac2-bdd7-16a8a654bb55",
+          "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
+          "artist-credit-id": "74b9187f-7369-4cab-85aa-e75cfedeed88",
+          "count": 1,
+          "title": "DAMN.",
+          "status": "Official",
+          "artist-credit": [
+            {
+              "name": "ケンドリック・ラマー",
+              "artist": {
+                "id": "381086ea-f511-4aba-bdf9-71c753dc5077",
+                "name": "Kendrick Lamar",
+                "sort-name": "Lamar, Kendrick"
+              }
+            }
+          ],
+          "release-group": {
+            "id": "b88655ba-7469-48b8-a296-b9011ab73ef3",
+            "type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+            "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+            "title": "DAMN.",
+            "primary-type": "Album"
+          },
+          "date": "2017-05-24",
+          "country": "JP",
+          "release-events": [
+            {
+              "date": "2017-05-24",
+              "area": {
+                "id": "2db42837-c832-3c27-b4a3-08198f75693c",
+                "name": "Japan",
+                "sort-name": "Japan",
+                "iso-3166-1-codes": [
+                  "JP"
+                ]
+              }
+            }
+          ],
+          "track-count": 14,
+          "media": [
+            {
+              "id": "d679d2d2-2b9d-4b0d-92c4-9a0db362b896",
+              "position": 1,
+              "format": "CD",
+              "track": [
+                {
+                  "id": "cfd1e779-4173-4418-86ba-d5b174e693c1",
+                  "number": "8",
+                  "title": "HUMBLE.",
+                  "length": 177000
+                }
+              ],
+              "track-count": 14,
+              "track-offset": 7
+            }
+          ]
+        },
+        {
+          "id": "e8243fc3-d743-4e77-979d-b037e2e4993b",
+          "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
+          "artist-credit-id": "949a7fd5-fe73-3e8f-922e-01ff4ca958f7",
+          "count": 4,
+          "title": "NRJ Music Awards 2017",
+          "status": "Official",
+          "disambiguation": "deluxe edition",
+          "artist-credit": [
+            {
+              "name": "Various Artists",
+              "artist": {
+                "id": "89ad4ac3-39f7-470e-963a-56509c546377",
+                "name": "Various Artists",
+                "sort-name": "Various Artists",
+                "disambiguation": "add compilations to this artist"
+              }
+            }
+          ],
+          "release-group": {
+            "id": "596cdf9d-8e1e-45eb-a238-46ca6b7481a6",
+            "type-id": "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1",
+            "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+            "title": "NRJ Music Awards 2017",
+            "primary-type": "Album",
+            "secondary-types": [
+              "Compilation"
+            ],
+            "secondary-type-ids": [
+              "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1"
+            ]
+          },
+          "date": "2017-12-08",
+          "country": "FR",
+          "release-events": [
+            {
+              "date": "2017-12-08",
+              "area": {
+                "id": "08310658-51eb-3801-80de-5a0739207115",
+                "name": "France",
+                "sort-name": "France",
+                "iso-3166-1-codes": [
+                  "FR"
+                ]
+              }
+            }
+          ],
+          "track-count": 88,
+          "media": [
+            {
+              "id": "9089a0bf-c9a0-380a-93d0-0ede2ab2e5e0",
+              "position": 4,
+              "format": "CD",
+              "track": [
+                {
+                  "id": "9bc96417-801d-4cfe-af5e-a885300e9373",
+                  "number": "10",
+                  "title": "Humble",
+                  "length": 178933
+                }
+              ],
+              "track-count": 22,
+              "track-offset": 9
+            }
+          ]
+        },
+        {
+          "id": "29c7037c-2e2f-45d5-a564-28ae9c5144d6",
+          "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
+          "artist-credit-id": "2c9554a3-3ee3-37cb-8ac3-2c9bdc4ef7d2",
+          "count": 2,
+          "title": "DAMN.",
+          "status": "Official",
+          "disambiguation": "COLLECTORS EDITION.",
+          "artist-credit": [
+            {
+              "name": "Kendrick Lamar",
+              "artist": {
+                "id": "381086ea-f511-4aba-bdf9-71c753dc5077",
+                "name": "Kendrick Lamar",
+                "sort-name": "Lamar, Kendrick"
+              }
+            }
+          ],
+          "release-group": {
+            "id": "b88655ba-7469-48b8-a296-b9011ab73ef3",
+            "type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+            "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+            "title": "DAMN.",
+            "primary-type": "Album"
+          },
+          "date": "2018-02-16",
+          "country": "US",
+          "release-events": [
+            {
+              "date": "2018-02-16",
+              "area": {
+                "id": "489ce91b-6658-3307-9877-795b68554c98",
+                "name": "United States",
+                "sort-name": "United States",
+                "iso-3166-1-codes": [
+                  "US"
+                ]
+              }
+            }
+          ],
+          "track-count": 14,
+          "media": [
+            {
+              "id": "0c2c31c7-00b0-41cc-bd99-c6a71f0457e0",
+              "position": 2,
+              "format": "12\" Vinyl",
+              "track": [
+                {
+                  "id": "5ef86d3c-d8b8-45bb-8bc2-0dc5dee61ea0",
+                  "number": "C1",
+                  "title": "HUMBLE.",
+                  "length": 177000
+                }
+              ],
+              "track-count": 8,
+              "track-offset": 0
+            }
+          ]
+        },
+        {
+          "id": "87eca35f-24cb-4f33-bdd8-12bb4d08dcd6",
+          "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
+          "artist-credit-id": "2c9554a3-3ee3-37cb-8ac3-2c9bdc4ef7d2",
+          "count": 1,
+          "title": "DAMN.",
+          "status": "Official",
+          "disambiguation": "COLLECTORS EDITION. explicit",
+          "artist-credit": [
+            {
+              "name": "Kendrick Lamar",
+              "artist": {
+                "id": "381086ea-f511-4aba-bdf9-71c753dc5077",
+                "name": "Kendrick Lamar",
+                "sort-name": "Lamar, Kendrick"
+              }
+            }
+          ],
+          "release-group": {
+            "id": "b88655ba-7469-48b8-a296-b9011ab73ef3",
+            "type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+            "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+            "title": "DAMN.",
+            "primary-type": "Album"
+          },
+          "date": "2017-12-08",
+          "country": "XW",
+          "release-events": [
+            {
+              "date": "2017-12-08",
+              "area": {
+                "id": "525d4e18-3d00-31b9-a58b-a146a916de8f",
+                "name": "[Worldwide]",
+                "sort-name": "[Worldwide]",
+                "iso-3166-1-codes": [
+                  "XW"
+                ]
+              }
+            }
+          ],
+          "track-count": 14,
+          "media": [
+            {
+              "id": "a70f33c9-c50e-35d7-833d-b1abd949a22b",
+              "position": 1,
+              "format": "Digital Media",
+              "track": [
+                {
+                  "id": "f9b2b92f-7abf-477e-aa01-dc3d8d848a93",
+                  "number": "7",
+                  "title": "HUMBLE.",
+                  "length": 177000
+                }
+              ],
+              "track-count": 14,
+              "track-offset": 6
+            }
+          ]
+        },
+        {
+          "id": "12214720-a174-4b9b-803a-b7d559d6425e",
+          "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
+          "artist-credit-id": "949a7fd5-fe73-3e8f-922e-01ff4ca958f7",
+          "count": 1,
+          "title": "Best of 2017",
+          "status": "Official",
+          "artist-credit": [
+            {
+              "name": "Various Artists",
+              "artist": {
+                "id": "89ad4ac3-39f7-470e-963a-56509c546377",
+                "name": "Various Artists",
+                "sort-name": "Various Artists",
+                "disambiguation": "add compilations to this artist"
+              }
+            }
+          ],
+          "release-group": {
+            "id": "5b018d2c-21c9-4bf4-976a-3a3409e5427d",
+            "type-id": "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1",
+            "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+            "title": "Best of 2017",
+            "primary-type": "Album",
+            "secondary-types": [
+              "Compilation"
+            ],
+            "secondary-type-ids": [
+              "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1"
+            ]
+          },
+          "track-count": 50,
+          "media": [
+            {
+              "id": "f1e7eff8-e777-3f62-ae3c-4fe0d635bc04",
+              "position": 1,
+              "format": "Digital Media",
+              "track": [
+                {
+                  "id": "5eb061e3-f222-46ce-afda-abd93e5e8686",
+                  "number": "2",
+                  "title": "HUMBLE.",
+                  "length": 177632
+                }
+              ],
+              "track-count": 50,
+              "track-offset": 1
+            }
+          ]
+        },
+        {
+          "id": "894436d8-34da-4d47-b924-440ff2e20650",
+          "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
+          "artist-credit-id": "949a7fd5-fe73-3e8f-922e-01ff4ca958f7",
+          "count": 1,
+          "title": "Power Hits 2017",
+          "status": "Official",
+          "artist-credit": [
+            {
+              "name": "Various Artists",
+              "artist": {
+                "id": "89ad4ac3-39f7-470e-963a-56509c546377",
+                "name": "Various Artists",
+                "sort-name": "Various Artists",
+                "disambiguation": "add compilations to this artist"
+              }
+            }
+          ],
+          "release-group": {
+            "id": "77a9b931-b3a6-49c3-bec3-d45b55147d0a",
+            "type-id": "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1",
+            "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+            "title": "Power Hits 2017",
+            "primary-type": "Album",
+            "secondary-types": [
+              "Compilation"
+            ],
+            "secondary-type-ids": [
+              "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1"
+            ]
+          },
+          "date": "2017-10-25",
+          "country": "KR",
+          "release-events": [
+            {
+              "date": "2017-10-25",
+              "area": {
+                "id": "b9f7d640-46e8-313e-b158-ded6d18593b3",
+                "name": "South Korea",
+                "sort-name": "South Korea",
+                "iso-3166-1-codes": [
+                  "KR"
+                ]
+              }
+            }
+          ],
+          "track-count": 20,
+          "media": [
+            {
+              "id": "5b7b09af-5adb-3432-97ac-546dfa6b9d83",
+              "position": 1,
+              "format": "Digital Media",
+              "track": [
+                {
+                  "id": "6a1983b8-1eaf-4b55-98ed-6f64757fd602",
+                  "number": "2",
+                  "title": "HUMBLE.",
+                  "length": 177000
+                }
+              ],
+              "track-count": 20,
+              "track-offset": 1
+            }
+          ]
+        },
+        {
+          "id": "f5258b9c-ff46-4433-b59f-20427bd1cfcc",
+          "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
+          "artist-credit-id": "949a7fd5-fe73-3e8f-922e-01ff4ca958f7",
+          "count": 2,
+          "title": "Now That’s What I Call Music! 97",
+          "status": "Official",
+          "artist-credit": [
+            {
+              "name": "Various Artists",
+              "artist": {
+                "id": "89ad4ac3-39f7-470e-963a-56509c546377",
+                "name": "Various Artists",
+                "sort-name": "Various Artists",
+                "disambiguation": "add compilations to this artist"
+              }
+            }
+          ],
+          "release-group": {
+            "id": "7ce36630-7888-4eaa-81b9-2775ed398d87",
+            "type-id": "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1",
+            "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+            "title": "Now That’s What I Call Music! 97",
+            "disambiguation": "UK",
+            "primary-type": "Album",
+            "secondary-types": [
+              "Compilation"
+            ],
+            "secondary-type-ids": [
+              "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1"
+            ]
+          },
+          "date": "2017-07-21",
+          "country": "GB",
+          "release-events": [
+            {
+              "date": "2017-07-21",
+              "area": {
+                "id": "8a754a16-0027-3a29-b6d7-2b40ea0481ed",
+                "name": "United Kingdom",
+                "sort-name": "United Kingdom",
+                "iso-3166-1-codes": [
+                  "GB"
+                ]
+              }
+            }
+          ],
+          "track-count": 45,
+          "media": [
+            {
+              "id": "4ea8cdbd-2078-3009-9157-f0fbb8a47bcd",
+              "position": 2,
+              "format": "CD",
+              "track": [
+                {
+                  "id": "20033eb5-901d-43f2-9285-b955965de001",
+                  "number": "10",
+                  "title": "HUMBLE.",
+                  "length": 178053
+                }
+              ],
+              "track-count": 23,
+              "track-offset": 9
+            }
+          ]
+        },
+        {
+          "id": "c3d9e5b1-23d8-4536-a511-9211c4aba7b0",
+          "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
+          "artist-credit-id": "2c9554a3-3ee3-37cb-8ac3-2c9bdc4ef7d2",
+          "count": 1,
+          "title": "DAMN.",
+          "status": "Official",
+          "disambiguation": "updated tracks, Technicolor",
+          "artist-credit": [
+            {
+              "name": "Kendrick Lamar",
+              "artist": {
+                "id": "381086ea-f511-4aba-bdf9-71c753dc5077",
+                "name": "Kendrick Lamar",
+                "sort-name": "Lamar, Kendrick"
+              }
+            }
+          ],
+          "release-group": {
+            "id": "b88655ba-7469-48b8-a296-b9011ab73ef3",
+            "type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+            "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+            "title": "DAMN.",
+            "primary-type": "Album"
+          },
+          "date": "2017",
+          "country": "US",
+          "release-events": [
+            {
+              "date": "2017",
+              "area": {
+                "id": "489ce91b-6658-3307-9877-795b68554c98",
+                "name": "United States",
+                "sort-name": "United States",
+                "iso-3166-1-codes": [
+                  "US"
+                ]
+              }
+            }
+          ],
+          "track-count": 14,
+          "media": [
+            {
+              "id": "ef47404b-c410-3c78-8cd2-e47f90808442",
+              "position": 1,
+              "format": "CD",
+              "track": [
+                {
+                  "id": "cb55fdfa-a25f-4be9-b2a2-3e5394a290bf",
+                  "number": "8",
+                  "title": "HUMBLE.",
+                  "length": 177000
+                }
+              ],
+              "track-count": 14,
+              "track-offset": 7
+            }
+          ]
+        },
+        {
+          "id": "73e90644-8528-4bf8-9689-e03fb3168d73",
+          "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
+          "artist-credit-id": "2c9554a3-3ee3-37cb-8ac3-2c9bdc4ef7d2",
+          "count": 2,
+          "title": "DAMN.",
+          "status": "Official",
+          "artist-credit": [
+            {
+              "name": "Kendrick Lamar",
+              "artist": {
+                "id": "381086ea-f511-4aba-bdf9-71c753dc5077",
+                "name": "Kendrick Lamar",
+                "sort-name": "Lamar, Kendrick"
+              }
+            }
+          ],
+          "release-group": {
+            "id": "b88655ba-7469-48b8-a296-b9011ab73ef3",
+            "type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+            "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+            "title": "DAMN.",
+            "primary-type": "Album"
+          },
+          "date": "2017-07-14",
+          "country": "US",
+          "release-events": [
+            {
+              "date": "2017-07-14",
+              "area": {
+                "id": "489ce91b-6658-3307-9877-795b68554c98",
+                "name": "United States",
+                "sort-name": "United States",
+                "iso-3166-1-codes": [
+                  "US"
+                ]
+              }
+            }
+          ],
+          "track-count": 14,
+          "media": [
+            {
+              "id": "2c545a2a-ae62-3c3f-9007-4db35977248e",
+              "position": 1,
+              "format": "12\" Vinyl",
+              "track": [
+                {
+                  "id": "ed28c315-daaf-44cd-b6d5-b0c88ad8ecb3",
+                  "number": "B4",
+                  "title": "HUMBLE.",
+                  "length": 177000
+                }
+              ],
+              "track-count": 8,
+              "track-offset": 7
+            }
+          ]
+        },
+        {
+          "id": "671e0261-32a6-4206-b3f7-afa689025aab",
+          "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
+          "artist-credit-id": "2c9554a3-3ee3-37cb-8ac3-2c9bdc4ef7d2",
+          "count": 1,
+          "title": "DAMN.",
+          "status": "Official",
+          "disambiguation": "COLLECTORS EDITION. explicit",
+          "artist-credit": [
+            {
+              "name": "Kendrick Lamar",
+              "artist": {
+                "id": "381086ea-f511-4aba-bdf9-71c753dc5077",
+                "name": "Kendrick Lamar",
+                "sort-name": "Lamar, Kendrick"
+              }
+            }
+          ],
+          "release-group": {
+            "id": "b88655ba-7469-48b8-a296-b9011ab73ef3",
+            "type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+            "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+            "title": "DAMN.",
+            "primary-type": "Album"
+          },
+          "date": "2017-12-08",
+          "country": "XW",
+          "release-events": [
+            {
+              "date": "2017-12-08",
+              "area": {
+                "id": "525d4e18-3d00-31b9-a58b-a146a916de8f",
+                "name": "[Worldwide]",
+                "sort-name": "[Worldwide]",
+                "iso-3166-1-codes": [
+                  "XW"
+                ]
+              }
+            }
+          ],
+          "track-count": 14,
+          "media": [
+            {
+              "id": "ca552d0a-5db9-3bca-8a98-b972624b5fee",
+              "position": 1,
+              "format": "Digital Media",
+              "track": [
+                {
+                  "id": "8abd26c7-5f5b-4df5-b979-ea82e34112e9",
+                  "number": "7",
+                  "title": "HUMBLE.",
+                  "length": 177000
+                }
+              ],
+              "track-count": 14,
+              "track-offset": 6
+            }
+          ]
+        },
+        {
+          "id": "00fdcdd7-15a2-43a4-922d-3c651b4cd970",
+          "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
+          "artist-credit-id": "949a7fd5-fe73-3e8f-922e-01ff4ca958f7",
+          "count": 3,
+          "title": "NRJ Music Awards 2017",
+          "status": "Official",
+          "artist-credit": [
+            {
+              "name": "Various Artists",
+              "artist": {
+                "id": "89ad4ac3-39f7-470e-963a-56509c546377",
+                "name": "Various Artists",
+                "sort-name": "Various Artists",
+                "disambiguation": "add compilations to this artist"
+              }
+            }
+          ],
+          "release-group": {
+            "id": "18c4f105-9a47-48a2-901b-8253575358d1",
+            "type-id": "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1",
+            "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+            "title": "NRJ Music Awards 2017",
+            "primary-type": "Album",
+            "secondary-types": [
+              "Compilation"
+            ],
+            "secondary-type-ids": [
+              "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1"
+            ]
+          },
+          "date": "2017-10-27",
+          "country": "FR",
+          "release-events": [
+            {
+              "date": "2017-10-27",
+              "area": {
+                "id": "08310658-51eb-3801-80de-5a0739207115",
+                "name": "France",
+                "sort-name": "France",
+                "iso-3166-1-codes": [
+                  "FR"
+                ]
+              }
+            }
+          ],
+          "track-count": 69,
+          "media": [
+            {
+              "id": "839cc25a-da6c-3fd6-b880-d770abe809ec",
+              "position": 3,
+              "format": "CD",
+              "track": [
+                {
+                  "id": "c18f70c9-d292-478c-8498-ba4991b11a0e",
+                  "number": "11",
+                  "title": "Humble",
+                  "length": 200573
+                }
+              ],
+              "track-count": 23,
+              "track-offset": 10
+            }
+          ]
+        },
+        {
+          "id": "588becd9-5bf6-4aa7-92cd-3595ce71e255",
+          "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
+          "artist-credit-id": "949a7fd5-fe73-3e8f-922e-01ff4ca958f7",
+          "count": 2,
+          "title": "Bravo Black Hits: Best of 2017/18",
+          "status": "Official",
+          "artist-credit": [
+            {
+              "name": "Various Artists",
+              "artist": {
+                "id": "89ad4ac3-39f7-470e-963a-56509c546377",
+                "name": "Various Artists",
+                "sort-name": "Various Artists",
+                "disambiguation": "add compilations to this artist"
+              }
+            }
+          ],
+          "release-group": {
+            "id": "6f4e956b-143a-4ecc-b8f8-6b3bc0fc3120",
+            "type-id": "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1",
+            "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+            "title": "Bravo Black Hits: Best of 2017/18",
+            "primary-type": "Album",
+            "secondary-types": [
+              "Compilation"
+            ],
+            "secondary-type-ids": [
+              "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1"
+            ]
+          },
+          "date": "2017-12-08",
+          "country": "DE",
+          "release-events": [
+            {
+              "date": "2017-12-08",
+              "area": {
+                "id": "85752fda-13c4-31a3-bee5-0e5cb1f51dad",
+                "name": "Germany",
+                "sort-name": "Germany",
+                "iso-3166-1-codes": [
+                  "DE"
+                ]
+              }
+            }
+          ],
+          "track-count": 44,
+          "media": [
+            {
+              "id": "66a1ce4e-2ac4-3005-84df-4d21b754f3d4",
+              "position": 1,
+              "format": "CD",
+              "track": [
+                {
+                  "id": "4399c66f-a3e3-4baf-a12b-117320c24620",
+                  "number": "2",
+                  "title": "Humble.",
+                  "length": 177613
+                }
+              ],
+              "track-count": 22,
+              "track-offset": 1
+            }
+          ]
+        },
+        {
+          "id": "d47e2f25-0533-4f3d-a33f-22f284c88459",
+          "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
+          "artist-credit-id": "2c9554a3-3ee3-37cb-8ac3-2c9bdc4ef7d2",
+          "count": 1,
+          "title": "DAMN.",
+          "status": "Official",
+          "artist-credit": [
+            {
+              "name": "Kendrick Lamar",
+              "artist": {
+                "id": "381086ea-f511-4aba-bdf9-71c753dc5077",
+                "name": "Kendrick Lamar",
+                "sort-name": "Lamar, Kendrick"
+              }
+            }
+          ],
+          "release-group": {
+            "id": "b88655ba-7469-48b8-a296-b9011ab73ef3",
+            "type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+            "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+            "title": "DAMN.",
+            "primary-type": "Album"
+          },
+          "date": "2017-04-28",
+          "country": "AU",
+          "release-events": [
+            {
+              "date": "2017-04-28",
+              "area": {
+                "id": "106e0bec-b638-3b37-b731-f53d507dc00e",
+                "name": "Australia",
+                "sort-name": "Australia",
+                "iso-3166-1-codes": [
+                  "AU"
+                ]
+              }
+            }
+          ],
+          "track-count": 14,
+          "media": [
+            {
+              "id": "20327a0d-ff98-3173-a2f5-4a81ff3e3df5",
+              "position": 1,
+              "format": "CD",
+              "track": [
+                {
+                  "id": "a06f13d3-c489-4ae8-8ba9-383e4d14ba78",
+                  "number": "8",
+                  "title": "HUMBLE.",
+                  "length": 177000
+                }
+              ],
+              "track-count": 14,
+              "track-offset": 7
+            }
+          ]
+        },
+        {
+          "id": "c58e11b5-bec2-4617-b94b-7cdd8259c32e",
+          "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
+          "artist-credit-id": "949a7fd5-fe73-3e8f-922e-01ff4ca958f7",
+          "count": 2,
+          "title": "Triple J: Hottest 100, Volume 25",
+          "status": "Official",
+          "artist-credit": [
+            {
+              "name": "Various Artists",
+              "artist": {
+                "id": "89ad4ac3-39f7-470e-963a-56509c546377",
+                "name": "Various Artists",
+                "sort-name": "Various Artists",
+                "disambiguation": "add compilations to this artist"
+              }
+            }
+          ],
+          "release-group": {
+            "id": "d7f7bd25-e52b-4280-a654-f3560fed0f84",
+            "type-id": "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1",
+            "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+            "title": "Triple J: Hottest 100, Volume 25",
+            "primary-type": "Album",
+            "secondary-types": [
+              "Compilation"
+            ],
+            "secondary-type-ids": [
+              "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1"
+            ]
+          },
+          "date": "2018-02-23",
+          "country": "AU",
+          "release-events": [
+            {
+              "date": "2018-02-23",
+              "area": {
+                "id": "106e0bec-b638-3b37-b731-f53d507dc00e",
+                "name": "Australia",
+                "sort-name": "Australia",
+                "iso-3166-1-codes": [
+                  "AU"
+                ]
+              }
+            }
+          ],
+          "track-count": 43,
+          "media": [
+            {
+              "id": "8fa3c3f2-c37d-3a48-9f31-09677c6b8ed0",
+              "position": 1,
+              "format": "CD",
+              "track": [
+                {
+                  "id": "777546bc-39f0-4705-bbaf-6474421a497e",
+                  "number": "1",
+                  "title": "Humble",
+                  "length": 177213
+                }
+              ],
+              "track-count": 22,
+              "track-offset": 0
+            }
+          ]
+        },
+        {
+          "id": "4d6cea5f-eafb-4af3-b784-6c7641874aee",
+          "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
+          "artist-credit-id": "949a7fd5-fe73-3e8f-922e-01ff4ca958f7",
+          "count": 2,
+          "title": "Bravo Hits 98",
+          "status": "Official",
+          "artist-credit": [
+            {
+              "name": "Various Artists",
+              "artist": {
+                "id": "89ad4ac3-39f7-470e-963a-56509c546377",
+                "name": "Various Artists",
+                "sort-name": "Various Artists",
+                "disambiguation": "add compilations to this artist"
+              }
+            }
+          ],
+          "release-group": {
+            "id": "afaf4d76-cdc7-498c-9d68-e88b7037fb19",
+            "type-id": "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1",
+            "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+            "title": "Bravo Hits 98",
+            "primary-type": "Album",
+            "secondary-types": [
+              "Compilation"
+            ],
+            "secondary-type-ids": [
+              "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1"
+            ]
+          },
+          "date": "2017-07-21",
+          "country": "DE",
+          "release-events": [
+            {
+              "date": "2017-07-21",
+              "area": {
+                "id": "85752fda-13c4-31a3-bee5-0e5cb1f51dad",
+                "name": "Germany",
+                "sort-name": "Germany",
+                "iso-3166-1-codes": [
+                  "DE"
+                ]
+              }
+            }
+          ],
+          "track-count": 46,
+          "media": [
+            {
+              "id": "2210c3d8-5e8e-3e88-a058-ea8ea385a5aa",
+              "position": 1,
+              "format": "CD",
+              "track": [
+                {
+                  "id": "84113882-c591-4428-9203-c71438bb6f33",
+                  "number": "14",
+                  "title": "HUMBLE",
+                  "length": 178400
+                }
+              ],
+              "track-count": 23,
+              "track-offset": 13
+            }
+          ]
+        },
+        {
+          "id": "c6c469ac-ee6c-4f26-abe7-4e4ab22177fa",
+          "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
+          "artist-credit-id": "2c9554a3-3ee3-37cb-8ac3-2c9bdc4ef7d2",
+          "count": 1,
+          "title": "HUMBLE.",
+          "status": "Official",
+          "artist-credit": [
+            {
+              "name": "Kendrick Lamar",
+              "artist": {
+                "id": "381086ea-f511-4aba-bdf9-71c753dc5077",
+                "name": "Kendrick Lamar",
+                "sort-name": "Lamar, Kendrick"
+              }
+            }
+          ],
+          "release-group": {
+            "id": "6985c51b-7c0c-4339-8001-0cad8114aa58",
+            "type-id": "d6038452-8ee0-3f68-affc-2de9a1ede0b9",
+            "primary-type-id": "d6038452-8ee0-3f68-affc-2de9a1ede0b9",
+            "title": "HUMBLE.",
+            "primary-type": "Single"
+          },
+          "date": "2017-03-31",
+          "country": "XW",
+          "release-events": [
+            {
+              "date": "2017-03-31",
+              "area": {
+                "id": "525d4e18-3d00-31b9-a58b-a146a916de8f",
+                "name": "[Worldwide]",
+                "sort-name": "[Worldwide]",
+                "iso-3166-1-codes": [
+                  "XW"
+                ]
+              }
+            }
+          ],
+          "track-count": 1,
+          "media": [
+            {
+              "id": "07e9bbf0-58dc-340a-a2f6-97dc6db3a356",
+              "position": 1,
+              "format": "Digital Media",
+              "track": [
+                {
+                  "id": "81445463-e1be-45b4-aa98-0cf697690ad0",
+                  "number": "1",
+                  "title": "HUMBLE.",
+                  "length": 177604
+                }
+              ],
+              "track-count": 1,
+              "track-offset": 0
+            }
+          ]
+        },
+        {
+          "id": "f5eddaa6-3a79-47d5-ab80-f2e1d8f6bfd8",
+          "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
+          "artist-credit-id": "2c9554a3-3ee3-37cb-8ac3-2c9bdc4ef7d2",
+          "count": 1,
+          "title": "DAMN.",
+          "status": "Official",
+          "disambiguation": "explicit",
+          "artist-credit": [
+            {
+              "name": "Kendrick Lamar",
+              "artist": {
+                "id": "381086ea-f511-4aba-bdf9-71c753dc5077",
+                "name": "Kendrick Lamar",
+                "sort-name": "Lamar, Kendrick"
+              }
+            }
+          ],
+          "release-group": {
+            "id": "b88655ba-7469-48b8-a296-b9011ab73ef3",
+            "type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+            "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+            "title": "DAMN.",
+            "primary-type": "Album"
+          },
+          "date": "2017-04-14",
+          "country": "XW",
+          "release-events": [
+            {
+              "date": "2017-04-14",
+              "area": {
+                "id": "525d4e18-3d00-31b9-a58b-a146a916de8f",
+                "name": "[Worldwide]",
+                "sort-name": "[Worldwide]",
+                "iso-3166-1-codes": [
+                  "XW"
+                ]
+              }
+            }
+          ],
+          "track-count": 14,
+          "media": [
+            {
+              "id": "ffaec020-a6a7-32d6-89e3-aafc891feaac",
+              "position": 1,
+              "format": "Digital Media",
+              "track": [
+                {
+                  "id": "ba58e457-37ee-418e-a60b-e0cd4ea49265",
+                  "number": "8",
+                  "title": "HUMBLE.",
+                  "length": 177000
+                }
+              ],
+              "track-count": 14,
+              "track-offset": 7
+            }
+          ]
+        }
+      ],
+      "isrcs": [
+        "USUM71703085"
+      ],
+      "tags": [
+        {
+          "count": 1,
+          "name": "pop"
+        },
+        {
+          "count": 3,
+          "name": "hip hop"
+        },
+        {
+          "count": 1,
+          "name": "pop rap"
+        },
+        {
+          "count": 1,
+          "name": "english"
+        },
+        {
+          "count": 1,
+          "name": "west coast hip hop"
+        },
+        {
+          "count": 1,
+          "name": "trap"
+        },
+        {
+          "count": 1,
+          "name": "westcoast rap"
+        },
+        {
+          "count": 1,
+          "name": "offizielle charts"
+        },
+        {
+          "count": 1,
+          "name": "5+ wochen"
+        },
+        {
+          "count": 1,
+          "name": "ph_temp_checken"
+        }
+      ]
+    },
+    {
+      "id": "0cbef5ee-96b0-44d5-b829-f969c56f03a0",
+      "score": 100,
+      "artist-credit-id": "97b732fb-38fe-462a-8659-b045124e3e38",
+      "title": "humble.",
+      "length": 89000,
+      "video": null,
+      "artist-credit": [
+        {
+          "name": "TEARY EYED FOX",
+          "artist": {
+            "id": "0529b937-e436-4316-bf3c-8c69b02c6a0d",
+            "name": "TEARY EYED FOX",
+            "sort-name": "TEARY EYED FOX",
+            "disambiguation": "Indie Rap Musician"
+          }
+        }
+      ],
+      "first-release-date": "2023-12-21",
+      "releases": [
+        {
+          "id": "5d31997f-0882-4b7d-b75f-62c0c5c118ad",
+          "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
+          "count": 1,
+          "title": "Tales from the soul.",
+          "status": "Official",
+          "release-group": {
+            "id": "e41ba7ec-bbaf-4b04-8c64-027dec8243dc",
+            "type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+            "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+            "title": "Tales from the soul.",
+            "disambiguation": "Final Album",
+            "primary-type": "Album"
+          },
+          "date": "2023-12-21",
+          "country": "US",
+          "release-events": [
+            {
+              "date": "2023-12-21",
+              "area": {
+                "id": "489ce91b-6658-3307-9877-795b68554c98",
+                "name": "United States",
+                "sort-name": "United States",
+                "iso-3166-1-codes": [
+                  "US"
+                ]
+              }
+            }
+          ],
+          "track-count": 7,
+          "media": [
+            {
+              "id": "d54b6722-5422-48c1-bbff-64a3d5d6e8a7",
+              "position": 1,
+              "format": "Digital Media",
+              "track": [
+                {
+                  "id": "52be2132-8a19-450f-8b7a-8fe6ddbda07b",
+                  "number": "1",
+                  "title": "humble.",
+                  "length": 89000
+                }
+              ],
+              "track-count": 7,
+              "track-offset": 0
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

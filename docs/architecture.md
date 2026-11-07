@@ -187,10 +187,11 @@ flowchart TD
     req["EnrichmentRequest,<br/>limit"] --> identity{"identity provider<br/>registered?"}
     identity -->|yes| primary["identity.searchCandidates"]
     identity -->|no| supplement
-    primary --> enough{"limit already<br/>met?"}
+    primary --> collapse["collapse identical<br/>visible rows"]
+    collapse --> enough{"limit already<br/>met?"}
     enough -->|yes| results
     enough -->|no| supplement["registry.searchProviders():<br/>every other provider,<br/>remaining slots each"]
-    supplement --> dedupe["drop what duplicates<br/>the identity provider,<br/>on lowercased title:artist"]
+    supplement --> dedupe["collapse identical visible<br/>rows across providers,<br/>then apply limit"]
     dedupe --> results["List&lt;SearchCandidate&gt;"]
 ```
 
@@ -214,7 +215,14 @@ budget, whichever is smaller. That includes the normal 3-second rate-limit wait,
 timeouts and retries see this smaller budget. Failure or timeout is logged; MusicBrainz ranking
 still runs.
 MusicBrainz ranks a broad pool and can add one artist-specific pool before applying the limit.
-Track searches with an artist also add a canonical recording pool to keep main takes reachable.
+Track searches with an artist also add a canonical recording pool to keep main takes reachable,
+unless an album-hinted query already answered. Ranking collapses identical visible rows before the
+limit, retaining differences such as year, country and type. The engine also collapses primary
+rows before counting remaining slots, then collapses the combined provider contributions. Each
+secondary provider receives that same remaining count; there is no paging to replace rows that
+collapse, so a search can return fewer than `limit`. Default iTunes and Deezer candidate searches
+make network requests only for albums; a short track or artist list adds no requests to those
+providers. A short album list can add one request to each.
 A provider that throws is logged and treated as an empty contribution, because one upstream's
 outage should shrink the candidate list, not fail the search. `ensureActive()` is what stops that from swallowing a cancellation: the
 caller cancelling, or our own deadline firing, must still fail the call rather than read as a

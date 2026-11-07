@@ -103,6 +103,8 @@ ALLOWLIST: dict[str, str] = {
     "musicbrainz/lookupReleaseGroupWikiLinks": INLINE_URL,
     "musicbrainz/searchArtistsFuzzy": INLINE_URL,
     "musicbrainz/searchCanonicalRecordings": INLINE_URL,
+    "musicbrainz/searchCandidateRecordingPool": INLINE_URL,
+    "musicbrainz/searchCandidateCanonicalRecordings": INLINE_URL,
     "musicbrainz/searchRecordings": INLINE_URL,
     "musicbrainz/searchRecordingsFuzzy": INLINE_URL,
     "musicbrainz/searchReleasesFuzzy": INLINE_URL,
