@@ -190,6 +190,12 @@ canonical search ladder for the leading artist; an album needs an extra artist-s
 an unmarked exact title by that artist is present. Extra-pool failures are logged and preserve the
 general pool. These queries never affect `enrich()`'s resolution.
 
+When a strict candidate search misses and the artist is blank, the fuzzy recording and release
+queries require every whitespace-separated title word in the title field, with typo tolerance on
+each word. They omit the artist clause. Album enrichment uses the same query for suggestions when
+its strict pool is empty; track enrichment still refuses a blank artist without searching. With
+an artist supplied, fuzzy queries and request counts are unchanged.
+
 The pool is searched **once per `enrich()`**, not once per type. That is a correctness rule before it
 is a cost one: MusicBrainz does not order identical searches identically, and the ranking keeps the
 first maximum among ties, so a second search of the same query can pick a different recording and

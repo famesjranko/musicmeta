@@ -55,13 +55,13 @@ internal class MusicBrainzApi(
         return MusicBrainzParser.parseArtistDisambiguations(json)
     }
 
-    /** Broader fuzzy search (unquoted + Lucene ~) for near-miss suggestions. */
+    /** Near-miss suggestions; without an artist, every title word must match the title field. */
     suspend fun searchReleasesFuzzy(
         title: String,
         artist: String,
         limit: Int = 3,
     ): List<MusicBrainzRelease> {
-        val query = encodeQueryValue("release:${escapeLucene(title)}~ AND artistname:${escapeLucene(artist)}~")
+        val query = fuzzyTitleQuery("release", title, artist) ?: return emptyList()
         val json = rateLimiter.execute {
             httpClient.fetchJsonResult("$BASE_URL/release?query=$query&fmt=json&limit=$limit").bodyOrThrowTransient()
         } ?: return emptyList()
@@ -268,8 +268,8 @@ internal class MusicBrainzApi(
         }
 
     /**
-     * Broader fuzzy search (unquoted + Lucene `~`) for near-miss suggestions — same shape as
-     * [searchReleasesFuzzy]/[searchArtistsFuzzy]. [searchRecordings]'s own hint-less retry only
+     * Near-miss suggestions; without an artist, every title word must match the title field.
+     * [searchRecordings]'s own hint-less retry only
      * drops the `release:"…"` album term; it re-sends [title] quoted, so it can never rescue a typo
      * the way this loosened match can. Like the release/artist variants, this deliberately takes no
      * album hint — a fuzzy near-miss query is already loose, and a release term would narrow it.
@@ -279,7 +279,7 @@ internal class MusicBrainzApi(
         artist: String,
         limit: Int = 3,
     ): List<MusicBrainzRecording> {
-        val query = encodeQueryValue("recording:${escapeLucene(title)}~ AND artistname:${escapeLucene(artist)}~")
+        val query = fuzzyTitleQuery("recording", title, artist) ?: return emptyList()
         val json = rateLimiter.execute {
             httpClient.fetchJsonResult("$BASE_URL/recording?query=$query&fmt=json&limit=$limit").bodyOrThrowTransient()
         } ?: return emptyList()
@@ -475,6 +475,17 @@ internal class MusicBrainzApi(
 
         fun escapeLucene(value: String): String =
             value.replace(LUCENE_SPECIAL_CHARS) { "\\${it.value}" }
+
+        private fun fuzzyTitleQuery(field: String, title: String, artist: String): String? {
+            val query = if (artist.isBlank()) {
+                if (title.isBlank()) return null
+                // A field prefix and fuzzy suffix bind to one term, so require each title word.
+                title.trim().split(Regex("\\s+")).joinToString(" AND ") { "$field:${escapeLucene(it)}~" }
+            } else {
+                "$field:${escapeLucene(title)}~ AND artistname:${escapeLucene(artist)}~"
+            }
+            return encodeQueryValue(query)
+        }
 
         /** Build a Lucene query with two fields and URL-encode the ENTIRE thing. */
         private fun buildQuery(field1: String, value1: String, field2: String, value2: String): String =

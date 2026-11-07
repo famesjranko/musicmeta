@@ -522,6 +522,21 @@ private to previews. An album hint is a preference among those eligible recordin
 recording constraint. Keep its edition-tolerant preference even when a nonmatching compilation
 comes first, but never strip a track-title qualifier to satisfy the album hint.
 
+## 44. Removing an empty Lucene field does not constrain a multiword fuzzy title
+
+MusicBrainz accepted `recording:Karma Polise~ AND artistname:~` and returned 7,216,213 hits,
+led by `Polise II` (2026-11-07). The release equivalent returned 552,522, led by `Polise`.
+Removing only the empty artist clause still returned 74,629 recording hits led by `Kängpolisen`
+and 43,933 release hits led by `Boråspolisen Blues`. The field prefix and fuzzy suffix do not
+make the intervening words one required title: each word needs its own field and fuzzy suffix,
+joined with `AND`. `recording:Karma~ AND recording:Polise~` returned 412 hits, and the release
+equivalent returned 22; both displayed only `Karma Police` in their first three rows. Quoting
+the typo instead returned nothing, because phrase search does not correct spelling.
+
+The captures and the same six-input comparison are in `pools/musicbrainz-fuzzy-title-only/`
+under core's test resources. Each response predates the query change. This constrains suggestions,
+not identity: a title without an artist still cannot identify which recording the caller means.
+
 ## 3. `org.json` returns a default for a missing key — it does not fail
 
 ```kotlin
