@@ -24,7 +24,7 @@ import kotlinx.coroutines.ensureActive
 
 /**
  * Enrichment provider using Apple's iTunes Search and Lookup APIs.
- * Provides album art, album metadata, album tracks, and artist discography.
+ * Provides album art, album metadata, album tracks, artist discography, and track previews.
  * No API key needed.
  *
  * Artwork URL trick: iTunes returns 100x100 thumbnails, but replacing
@@ -63,6 +63,7 @@ public class ITunesProvider(
     override val isAvailable: Boolean = true
 
     override val capabilities: List<ProviderCapability> = listOf(
+        ProviderCapability(EnrichmentType.TRACK_PREVIEW, priority = 40),
         ProviderCapability(EnrichmentType.ALBUM_ART, priority = 40),
         ProviderCapability(EnrichmentType.ALBUM_METADATA, priority = 30),
         ProviderCapability(EnrichmentType.ALBUM_TRACKS, priority = 30),
@@ -89,6 +90,7 @@ public class ITunesProvider(
         request: EnrichmentRequest,
         type: EnrichmentType,
     ): EnrichmentResult = when (type) {
+        EnrichmentType.TRACK_PREVIEW -> enrichPreview(request, api)
         EnrichmentType.ALBUM_TRACKS -> enrichAlbumTracks(request, type)
         EnrichmentType.ARTIST_DISCOGRAPHY -> enrichArtistDiscography(request, type)
         else -> enrichAlbumType(request, type)

@@ -1139,7 +1139,7 @@ resultEl.addEventListener('click', async (e) => {
     btn.classList.remove('loading');
     btn.classList.add('error');
     btn.innerHTML = '!';
-    btn.title = 'No preview available: ' + err.message;
+    btn.title = 'Preview failed: ' + err.message;
     btn._errorTimer = setTimeout(() => {
       btn.classList.remove('error');
       btn.innerHTML = PLAY_GLYPH;
