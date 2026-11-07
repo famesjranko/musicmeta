@@ -32,6 +32,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - The demo web UI marks a provider that refused this host at startup with a warning and explains it on hover (demo only)
 
+### Fixed
+- Search prefers exact titles, requested artists and main recordings; title-only discovery uses iTunes artist hints, falling back to MusicBrainz ranking on signal failure.
+
 ## [0.14.0] - 2026-10-08
 
 ### Breaking Changes

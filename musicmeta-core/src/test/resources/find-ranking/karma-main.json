@@ -1,0 +1,296 @@
+{
+  "recordings": [
+    {
+      "id": "262bef76-1b10-4c8a-b2be-a9921a33b4fc",
+      "score": 100,
+      "artist-credit-id": "021661c1-84c5-30d7-9bb2-f0766affb734",
+      "title": "Karma Police",
+      "length": 280000,
+      "video": null,
+      "artist-credit": [
+        {
+          "name": "Radiohead",
+          "artist": {
+            "id": "a74b1b7f-71a5-4011-9441-d0b5e4122711",
+            "name": "Radiohead",
+            "sort-name": "Radiohead",
+            "aliases": [
+              {
+                "sort-name": "Radiohead",
+                "type-id": "894afba6-2816-3c24-8072-eadb66bd04bc",
+                "name": "Radiohead",
+                "locale": "en",
+                "type": "Artist name",
+                "primary": true,
+                "begin-date": null,
+                "end-date": null
+              },
+              {
+                "sort-name": "r/head",
+                "type-id": "1937e404-b981-3cb7-8151-4c86ebfc8d8e",
+                "name": "r/head",
+                "locale": null,
+                "type": "Search hint",
+                "primary": null,
+                "begin-date": null,
+                "end-date": null
+              },
+              {
+                "sort-name": "电台司令",
+                "type-id": "894afba6-2816-3c24-8072-eadb66bd04bc",
+                "name": "电台司令",
+                "locale": "zh",
+                "type": "Artist name",
+                "primary": true,
+                "begin-date": null,
+                "end-date": null
+              },
+              {
+                "sort-name": "れでぃおへっど",
+                "type-id": "894afba6-2816-3c24-8072-eadb66bd04bc",
+                "name": "レディオヘッド",
+                "locale": "ja",
+                "type": "Artist name",
+                "primary": true,
+                "begin-date": null,
+                "end-date": null
+              },
+              {
+                "sort-name": "Radiohead & Thom Yorke",
+                "type-id": "1937e404-b981-3cb7-8151-4c86ebfc8d8e",
+                "name": "Radiohead & Thom Yorke",
+                "locale": null,
+                "type": "Search hint",
+                "primary": null,
+                "begin-date": null,
+                "end-date": null
+              },
+              {
+                "sort-name": "Radio Head",
+                "type-id": "1937e404-b981-3cb7-8151-4c86ebfc8d8e",
+                "name": "Radio Head",
+                "locale": null,
+                "type": "Search hint",
+                "primary": null,
+                "begin-date": null,
+                "end-date": null
+              }
+            ]
+          }
+        }
+      ],
+      "first-release-date": "2003",
+      "releases": [
+        {
+          "id": "3a566aa2-a9d3-420a-b023-5472ee8cedf3",
+          "status-id": "1156806e-d06a-38bd-83f0-cf2284a808b9",
+          "artist-credit-id": "021661c1-84c5-30d7-9bb2-f0766affb734",
+          "count": 1,
+          "title": "Go to Sleep",
+          "status": "Bootleg",
+          "artist-credit": [
+            {
+              "name": "Radiohead",
+              "artist": {
+                "id": "a74b1b7f-71a5-4011-9441-d0b5e4122711",
+                "name": "Radiohead",
+                "sort-name": "Radiohead"
+              }
+            }
+          ],
+          "release-group": {
+            "id": "f4b8f066-a9f2-428d-b962-982fe90ab52a",
+            "type-id": "6fd474e2-6b58-3102-9d17-d6f7eb7da0a0",
+            "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+            "title": "Go to Sleep",
+            "primary-type": "Album",
+            "secondary-types": [
+              "Live"
+            ],
+            "secondary-type-ids": [
+              "6fd474e2-6b58-3102-9d17-d6f7eb7da0a0"
+            ]
+          },
+          "date": "2003",
+          "country": "DE",
+          "release-events": [
+            {
+              "date": "2003",
+              "area": {
+                "id": "85752fda-13c4-31a3-bee5-0e5cb1f51dad",
+                "name": "Germany",
+                "sort-name": "Germany",
+                "iso-3166-1-codes": [
+                  "DE"
+                ]
+              }
+            }
+          ],
+          "track-count": 19,
+          "media": [
+            {
+              "id": "a3ca0d85-c9a4-4633-b933-c8ea470b7b98",
+              "position": 1,
+              "format": "CD-R",
+              "track": [
+                {
+                  "id": "9213b29e-45bc-42d1-a15e-21dd955345a7",
+                  "number": "9",
+                  "title": "Karma Police",
+                  "length": 280000
+                }
+              ],
+              "track-count": 19,
+              "track-offset": 8
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "b56697ff-f614-424b-8b50-3f92c9e11feb",
+      "score": 100,
+      "artist-credit-id": "021661c1-84c5-30d7-9bb2-f0766affb734",
+      "title": "Karma Police",
+      "video": null,
+      "artist-credit": [
+        {
+          "name": "Radiohead",
+          "artist": {
+            "id": "a74b1b7f-71a5-4011-9441-d0b5e4122711",
+            "name": "Radiohead",
+            "sort-name": "Radiohead",
+            "aliases": [
+              {
+                "sort-name": "Radiohead",
+                "type-id": "894afba6-2816-3c24-8072-eadb66bd04bc",
+                "name": "Radiohead",
+                "locale": "en",
+                "type": "Artist name",
+                "primary": true,
+                "begin-date": null,
+                "end-date": null
+              },
+              {
+                "sort-name": "r/head",
+                "type-id": "1937e404-b981-3cb7-8151-4c86ebfc8d8e",
+                "name": "r/head",
+                "locale": null,
+                "type": "Search hint",
+                "primary": null,
+                "begin-date": null,
+                "end-date": null
+              },
+              {
+                "sort-name": "电台司令",
+                "type-id": "894afba6-2816-3c24-8072-eadb66bd04bc",
+                "name": "电台司令",
+                "locale": "zh",
+                "type": "Artist name",
+                "primary": true,
+                "begin-date": null,
+                "end-date": null
+              },
+              {
+                "sort-name": "れでぃおへっど",
+                "type-id": "894afba6-2816-3c24-8072-eadb66bd04bc",
+                "name": "レディオヘッド",
+                "locale": "ja",
+                "type": "Artist name",
+                "primary": true,
+                "begin-date": null,
+                "end-date": null
+              },
+              {
+                "sort-name": "Radiohead & Thom Yorke",
+                "type-id": "1937e404-b981-3cb7-8151-4c86ebfc8d8e",
+                "name": "Radiohead & Thom Yorke",
+                "locale": null,
+                "type": "Search hint",
+                "primary": null,
+                "begin-date": null,
+                "end-date": null
+              },
+              {
+                "sort-name": "Radio Head",
+                "type-id": "1937e404-b981-3cb7-8151-4c86ebfc8d8e",
+                "name": "Radio Head",
+                "locale": null,
+                "type": "Search hint",
+                "primary": null,
+                "begin-date": null,
+                "end-date": null
+              }
+            ]
+          }
+        }
+      ],
+      "first-release-date": "1997-09",
+      "releases": [
+        {
+          "id": "86788c5a-6ca3-46e2-9436-af7dbe313922",
+          "status-id": "518ffc83-5cde-34df-8627-81bff5093d92",
+          "artist-credit-id": "021661c1-84c5-30d7-9bb2-f0766affb734",
+          "count": 1,
+          "title": "BBC In Concert 725: Glastonbury 1997",
+          "status": "Promotion",
+          "artist-credit": [
+            {
+              "name": "Radiohead",
+              "artist": {
+                "id": "a74b1b7f-71a5-4011-9441-d0b5e4122711",
+                "name": "Radiohead",
+                "sort-name": "Radiohead"
+              }
+            }
+          ],
+          "release-group": {
+            "id": "dd4a4025-93a4-4468-a0b7-f84f6317a19b",
+            "type-id": "3b2e49e1-2875-37b8-9fa9-1f7cf3f49900",
+            "primary-type-id": "3b2e49e1-2875-37b8-9fa9-1f7cf3f49900",
+            "title": "BBC In Concert 725: Glastonbury 1997",
+            "primary-type": "Broadcast",
+            "secondary-types": [
+              "Live"
+            ],
+            "secondary-type-ids": [
+              "6fd474e2-6b58-3102-9d17-d6f7eb7da0a0"
+            ]
+          },
+          "date": "1997-09",
+          "country": "GB",
+          "release-events": [
+            {
+              "date": "1997-09",
+              "area": {
+                "id": "8a754a16-0027-3a29-b6d7-2b40ea0481ed",
+                "name": "United Kingdom",
+                "sort-name": "United Kingdom",
+                "iso-3166-1-codes": [
+                  "GB"
+                ]
+              }
+            }
+          ],
+          "track-count": 12,
+          "media": [
+            {
+              "id": "adbbb4d4-f30e-3456-b550-54a3d71c1ede",
+              "position": 1,
+              "format": "CD",
+              "track": [
+                {
+                  "id": "19b9c012-a616-45e8-b73a-f568dcceccf9",
+                  "number": "5",
+                  "title": "Karma Police"
+                }
+              ],
+              "track-count": 12,
+              "track-offset": 4
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

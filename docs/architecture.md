@@ -206,10 +206,17 @@ bounded imposes the bound itself.
 Everything `enrich()` does between a request and a result, `search()` skips: no cache read or
 write, no identity resolution as `enrich()` runs it (the identity provider is asked directly, as
 one candidate source among others, not to backfill the request), no merging, no gating. The
-identity provider goes first and the rest fill in only what it left short of `limit`, so a
-well-known entity costs one call, not one per provider. A provider that throws is logged and
-treated as an empty contribution, because one upstream's outage should shrink the candidate list,
-not fail the search. `ensureActive()` is what stops that from swallowing a cancellation: the
+identity provider supplies the primary pool and the rest fill in only the remainder of `limit`, so an
+artist search normally costs one call. For MusicBrainz title-only album and track searches,
+the engine first asks a registered iTunes provider for ordered artist hints. This best-effort
+signal uses the same iTunes limiter with a 5-second budget or a quarter of the remaining retry
+budget, whichever is smaller. That includes the normal 3-second rate-limit wait, and both socket
+timeouts and retries see this smaller budget. Failure or timeout is logged; MusicBrainz ranking
+still runs.
+MusicBrainz ranks a broad pool and can add one artist-specific pool before applying the limit.
+Track searches with an artist also add a canonical recording pool to keep main takes reachable.
+A provider that throws is logged and treated as an empty contribution, because one upstream's
+outage should shrink the candidate list, not fail the search. `ensureActive()` is what stops that from swallowing a cancellation: the
 caller cancelling, or our own deadline firing, must still fail the call rather than read as a
 provider that returned nothing.
 

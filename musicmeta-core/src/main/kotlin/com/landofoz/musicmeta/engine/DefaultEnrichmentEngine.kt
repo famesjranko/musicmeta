@@ -617,10 +617,15 @@ internal class DefaultEnrichmentEngine(
         withContext(EnrichDeadline(config.enrichTimeoutMs)) { searchCandidates(request, limit) }
 
     private suspend fun searchCandidates(request: EnrichmentRequest, limit: Int): List<SearchCandidate> {
+        if (limit <= 0) return emptyList()
         val identity = registry.identityProvider()
         val primary = if (identity != null) {
             try {
-                identity.searchCandidates(request, limit)
+                if (identity is MusicBrainzProvider) {
+                    identity.searchCandidates(
+                        request, limit, SearchArtistHints(registry, logger).artists(request), logger,
+                    )
+                } else identity.searchCandidates(request, limit)
             } catch (e: Exception) {
                 // ensureActive() throws only when *this* job is cancelled. A CancellationException
                 // from elsewhere — a provider's own withTimeout — falls through and is handled as

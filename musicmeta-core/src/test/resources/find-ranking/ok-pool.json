@@ -1,0 +1,286 @@
+{
+  "releases": [
+    {
+      "id": "de3726da-05b8-4c1a-a19d-1bf53b7889ea",
+      "score": 100,
+      "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
+      "packaging-id": "119eba76-b343-3e02-a292-f0f00644bb9b",
+      "artist-credit-id": "cafc529d-3603-3705-956c-5926a8e2ad40",
+      "count": 1,
+      "title": "Ok Computer",
+      "status": "Official",
+      "packaging": "None",
+      "text-representation": {
+        "language": "eng",
+        "script": "Latn"
+      },
+      "artist-credit": [
+        {
+          "joinphrase": " & ",
+          "name": "Lemaitre",
+          "artist": {
+            "id": "7bc012a7-c5cc-4e7a-9ca6-15db02bbcde4",
+            "name": "Lemaitre",
+            "sort-name": "Lemaitre",
+            "disambiguation": "Oslo‐based, Norwegian indie‐electronica duo"
+          }
+        },
+        {
+          "name": "RebMoe",
+          "artist": {
+            "id": "481ae6c0-d3cc-4ae7-9995-5850fbf15479",
+            "name": "RebMoe",
+            "sort-name": "RebMoe"
+          }
+        }
+      ],
+      "release-group": {
+        "id": "a5e4bd1a-63c9-4dfc-9e63-ed0c3dc049be",
+        "type-id": "d6038452-8ee0-3f68-affc-2de9a1ede0b9",
+        "primary-type-id": "d6038452-8ee0-3f68-affc-2de9a1ede0b9",
+        "title": "Ok Computer",
+        "primary-type": "Single"
+      },
+      "date": "2021-08-20",
+      "country": "XW",
+      "release-events": [
+        {
+          "date": "2021-08-20",
+          "area": {
+            "id": "525d4e18-3d00-31b9-a58b-a146a916de8f",
+            "name": "[Worldwide]",
+            "sort-name": "[Worldwide]",
+            "iso-3166-1-codes": [
+              "XW"
+            ]
+          }
+        }
+      ],
+      "barcode": "192641788758",
+      "label-info": [
+        {
+          "label": {
+            "id": "3f4dfc42-a2d2-4fe9-8c56-e855f69f882e",
+            "name": "Substellar"
+          }
+        }
+      ],
+      "track-count": 1,
+      "media": [
+        {
+          "id": "ac7b2970-935e-3e2e-bd49-d678b0d8219f",
+          "format": "Digital Media",
+          "disc-count": 0,
+          "track-count": 1
+        }
+      ]
+    },
+    {
+      "id": "fba5f8fe-c6c8-4511-8562-c9febf482674",
+      "score": 100,
+      "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
+      "packaging-id": "c70b737a-0114-39a9-88f7-82843e54f906",
+      "artist-credit-id": "021661c1-84c5-30d7-9bb2-f0766affb734",
+      "count": 1,
+      "title": "OK Computer",
+      "status": "Official",
+      "packaging": "Cassette Case",
+      "text-representation": {
+        "language": "eng",
+        "script": "Latn"
+      },
+      "artist-credit": [
+        {
+          "name": "Radiohead",
+          "artist": {
+            "id": "a74b1b7f-71a5-4011-9441-d0b5e4122711",
+            "name": "Radiohead",
+            "sort-name": "Radiohead"
+          }
+        }
+      ],
+      "release-group": {
+        "id": "b1392450-e666-3926-a536-22c65f834433",
+        "type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+        "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+        "title": "OK Computer",
+        "primary-type": "Album"
+      },
+      "date": "1997-06-16",
+      "country": "GB",
+      "release-events": [
+        {
+          "date": "1997-06-16",
+          "area": {
+            "id": "8a754a16-0027-3a29-b6d7-2b40ea0481ed",
+            "name": "United Kingdom",
+            "sort-name": "United Kingdom",
+            "iso-3166-1-codes": [
+              "GB"
+            ]
+          }
+        }
+      ],
+      "barcode": "724385522949",
+      "asin": "B000002UJR",
+      "label-info": [
+        {
+          "catalog-number": "TCNODATA 02",
+          "label": {
+            "id": "df7d1c7f-ef95-425f-8eef-445b3d7bcbd9",
+            "name": "Parlophone"
+          }
+        }
+      ],
+      "track-count": 12,
+      "media": [
+        {
+          "id": "2de5342c-a798-35cc-bf75-97f06c7cdbde",
+          "format": "Cassette",
+          "disc-count": 0,
+          "track-count": 12
+        }
+      ]
+    },
+    {
+      "id": "52e7fc61-fcf3-4b46-ac72-38e9644bf982",
+      "score": 100,
+      "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
+      "packaging-id": "8f931351-d2e2-310f-afc6-37b89ddba246",
+      "artist-credit-id": "021661c1-84c5-30d7-9bb2-f0766affb734",
+      "count": 2,
+      "title": "OK Computer",
+      "status": "Official",
+      "packaging": "Digipak",
+      "text-representation": {
+        "language": "eng",
+        "script": "Latn"
+      },
+      "artist-credit": [
+        {
+          "name": "Radiohead",
+          "artist": {
+            "id": "a74b1b7f-71a5-4011-9441-d0b5e4122711",
+            "name": "Radiohead",
+            "sort-name": "Radiohead"
+          }
+        }
+      ],
+      "release-group": {
+        "id": "b1392450-e666-3926-a536-22c65f834433",
+        "type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+        "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+        "title": "OK Computer",
+        "primary-type": "Album"
+      },
+      "date": "1997",
+      "country": "XE",
+      "release-events": [
+        {
+          "date": "1997",
+          "area": {
+            "id": "89a675c2-3e37-3518-b83c-418bad59a85a",
+            "name": "Europe",
+            "sort-name": "Europe",
+            "iso-3166-1-codes": [
+              "XE"
+            ]
+          }
+        }
+      ],
+      "barcode": "724382133827",
+      "label-info": [
+        {
+          "catalog-number": "7243 8 21338 2 7",
+          "label": {
+            "id": "df7d1c7f-ef95-425f-8eef-445b3d7bcbd9",
+            "name": "Parlophone"
+          }
+        }
+      ],
+      "track-count": 15,
+      "media": [
+        {
+          "id": "3821105b-3aca-3a9a-81ee-3ba111610b67",
+          "format": "CD",
+          "disc-count": 0,
+          "track-count": 12
+        },
+        {
+          "id": "364a6659-4d19-3fc1-9d2d-9ddc3c9fe5e9",
+          "format": "CD",
+          "disc-count": 0,
+          "track-count": 3
+        }
+      ]
+    },
+    {
+      "id": "52709206-8816-3c12-9ff6-f957f2f1eecf",
+      "score": 100,
+      "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
+      "packaging-id": "ec27701a-4a22-37f4-bfac-6616e0f9750a",
+      "artist-credit-id": "021661c1-84c5-30d7-9bb2-f0766affb734",
+      "count": 1,
+      "title": "OK Computer",
+      "status": "Official",
+      "disambiguation": "EMI UDEN, made in Italy, printed in Italy",
+      "packaging": "Jewel Case",
+      "text-representation": {
+        "language": "eng",
+        "script": "Latn"
+      },
+      "artist-credit": [
+        {
+          "name": "Radiohead",
+          "artist": {
+            "id": "a74b1b7f-71a5-4011-9441-d0b5e4122711",
+            "name": "Radiohead",
+            "sort-name": "Radiohead"
+          }
+        }
+      ],
+      "release-group": {
+        "id": "b1392450-e666-3926-a536-22c65f834433",
+        "type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+        "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+        "title": "OK Computer",
+        "primary-type": "Album"
+      },
+      "date": "1997-06-16",
+      "country": "XE",
+      "release-events": [
+        {
+          "date": "1997-06-16",
+          "area": {
+            "id": "89a675c2-3e37-3518-b83c-418bad59a85a",
+            "name": "Europe",
+            "sort-name": "Europe",
+            "iso-3166-1-codes": [
+              "XE"
+            ]
+          }
+        }
+      ],
+      "barcode": "724385522925",
+      "asin": "B000002UJQ",
+      "label-info": [
+        {
+          "catalog-number": "8 55229 2",
+          "label": {
+            "id": "df7d1c7f-ef95-425f-8eef-445b3d7bcbd9",
+            "name": "Parlophone"
+          }
+        }
+      ],
+      "track-count": 12,
+      "media": [
+        {
+          "id": "7b8296aa-96c5-3817-8ab4-cb28bddf6932",
+          "format": "CD",
+          "disc-count": 12,
+          "track-count": 12
+        }
+      ]
+    }
+  ]
+}
