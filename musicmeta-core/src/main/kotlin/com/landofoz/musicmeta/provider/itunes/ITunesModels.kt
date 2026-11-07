@@ -21,3 +21,13 @@ internal data class ITunesTrackResult(
     val artistName: String,
     val collectionName: String? = null,
 )
+
+/** Song row used only by the preview search and lookup routes. */
+internal data class ITunesPreviewTrack(
+    val trackId: Long,
+    val collectionId: Long,
+    val title: String,
+    val artist: String,
+    val album: String,
+    val previewUrl: String,
+)

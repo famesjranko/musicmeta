@@ -199,17 +199,23 @@ public object ProviderPolicies {
     private val iTunes = ProviderPolicy(
         providerId = "itunes",
         commercialUse = CommercialUse.CONDITIONAL,
-        commercialUseNote = "Conditional on Apple's badge, streaming-only and promotional rules. Apple's " +
-            "governing terms document 404s, so those rules could not be confirmed against it.",
-        dataLicence = "Search and lookup JSON may be cached — \"Large websites should set up caching logic for " +
-            "the search and lookup requests\". The preview-media restriction could not be verified.",
+        commercialUseNote = "Store promotion only, with a nearby Apple-approved badge linking to the promoted " +
+            "store item. No independent entertainment or promotion of other goods or services. Affiliate " +
+            "terms also require content appropriate to the target country.",
+        dataLicence = "Search and lookup JSON caching is encouraged. Song and music-video previews must be " +
+            "streamed only, never downloaded, saved, cached or synchronized with video.",
         attribution = AttributionRequirement.DEPENDS_ON_DATA,
-        attributionNote = "\"provided courtesy of iTunes\" is triggered by showing previews, not by showing " +
-            "factual metadata; musicmeta surfaces no previews, so a consumer owes it only if it plays them " +
-            "itself. The words are in attributionNotice for the consumer that does.",
+        attributionNote = "Search API previews require the courtesy notice below; affiliate terms use " +
+            "\"provided courtesy of Apple\". Consumers playing previews must show a nearby approved, linked " +
+            "store badge, stream directly without storing media, and use the content for store promotion. " +
+            "Preview search uses the US store. Credit iTunes Store when using its badge.",
         attributionNotice = "provided courtesy of iTunes",
-        sourceUrls = listOf("https://performance-partners.apple.com/search-api"),
-        asReadOn = AS_READ_ON,
+        sourceUrls = listOf(
+            "https://performance-partners.apple.com/search-api",
+            "https://docs.partnerize.com/itunes/terms/en.pdf",
+            "https://marketing.services.apple/itunes-identity-guidelines",
+        ),
+        asReadOn = "2026-11-07",
     )
 
     private val lrcLib = ProviderPolicy(

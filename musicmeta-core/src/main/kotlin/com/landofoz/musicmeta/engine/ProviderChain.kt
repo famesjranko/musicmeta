@@ -226,7 +226,7 @@ internal class ProviderChain(
     ): WalkStep = when (val gate = gateFor(provider, request.identifiers, identifierOnly)) {
         Gate.Ineligible -> WalkStep(null, null)
         is Gate.MissingIdentifier -> { ledger.missing[provider.id] = gate.requirement; WalkStep(null, null) }
-        Gate.BreakerOpen -> { ledger.tripped.add(provider); WalkStep(null, null) }
+        Gate.BreakerOpen -> { ledger.tripped.add(provider); WalkStep(null, previewCooldownResult(provider)) }
         Gate.Attempt -> attemptStep(provider, request, ledger)
     }
 
@@ -239,7 +239,7 @@ internal class ProviderChain(
         val result = callThroughBreaker(provider, request)
         if (result == null) {
             ledger.tripped.add(provider)
-            return WalkStep(null, null)
+            return WalkStep(null, previewCooldownResult(provider))
         }
         ledger.attempted.add(provider.id)
         return when (result) {
@@ -307,6 +307,17 @@ internal class ProviderChain(
             errorKind = ErrorKind.NETWORK,
         )
     }
+
+    // A preview miss cannot establish absence while another source is in cooldown.
+    private fun previewCooldownResult(provider: EnrichmentProvider): EnrichmentResult.Error? =
+        if (type == EnrichmentType.TRACK_PREVIEW) {
+            EnrichmentResult.Error(
+                type, provider.id, "Preview provider is in circuit-breaker cooldown; data was not looked up",
+                errorKind = ErrorKind.NETWORK,
+            )
+        } else {
+            null
+        }
 
     /** Whether [provider]'s capability for [type] is keyed on an identifier rather than a name. */
     private fun requiresIdentifier(provider: EnrichmentProvider): Boolean =

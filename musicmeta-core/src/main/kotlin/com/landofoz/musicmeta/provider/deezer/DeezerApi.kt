@@ -7,7 +7,9 @@ import com.landofoz.musicmeta.engine.TitleMatcher
 import com.landofoz.musicmeta.engine.artistNameTier
 import com.landofoz.musicmeta.engine.bestArtistMatchOrAlias
 import com.landofoz.musicmeta.engine.resolvedAliasPool
+import com.landofoz.musicmeta.http.AuthException
 import com.landofoz.musicmeta.http.HttpClient
+import com.landofoz.musicmeta.http.HttpResult
 import com.landofoz.musicmeta.http.RateLimiter
 import com.landofoz.musicmeta.http.bodyOrThrowTransient
 import com.landofoz.musicmeta.provider.encodeQueryValue
@@ -388,6 +390,7 @@ internal class DeezerApi(
     /**
      * The single fetch every call above goes through: rate limit, HTTP-level transient
      * classification ([bodyOrThrowTransient]), then Deezer's own application-level one.
+     * HTTP 403 is a host refusal, not absence, and becomes an authorization error.
      *
      * Deezer answers application errors with **HTTP 200** and an `error` object in place of the
      * payload, so no HTTP-layer classification can see them. Treating that body as an empty result
@@ -403,7 +406,11 @@ internal class DeezerApi(
      * speculatively.
      */
     private suspend fun fetchJson(url: String): JSONObject? = rateLimiter.execute {
-        val json = httpClient.fetchJsonResult(url).bodyOrThrowTransient() ?: return@execute null
+        val response = httpClient.fetchJsonResult(url)
+        if (response is HttpResult.ClientError && response.statusCode == 403) {
+            throw AuthException(403, "HTTP 403: Deezer blocked access from this host")
+        }
+        val json = response.bodyOrThrowTransient() ?: return@execute null
         val error = json.optJSONObject("error") ?: return@execute json
         if (error.optInt("code") == QUOTA_ERROR_CODE) {
             throw IOException("Deezer quota exceeded: ${error.optString("message")}")

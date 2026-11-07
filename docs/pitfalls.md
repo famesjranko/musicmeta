@@ -404,6 +404,14 @@ permanently, silently blank while the provider reported healthy. `ListenBrainzAp
 therefore checks for `ClientError` before the helper runs and throws, so `mapError` reaches an
 `Error` the consumer sees.
 
+Deezer's public routes need the same distinction for HTTP 403: there is no key to repair,
+but the host was refused, so the shared API reader throws an authorization failure with a
+host-block message before the helper runs. An empty search remains `NotFound`. The demo must
+read the raw enrichment result to retain this distinction; `resolveTrackPreviews` intentionally
+returns only nullable previews and discards failure details. A preview provider skipped during
+breaker cooldown must also leave an error when its fallback has no clip, or repeated blocked
+requests start negative-caching absence as soon as the breaker opens.
+
 Ask what the route's own "nothing" looks like before reaching for the helper. Where the upstream has
 a success shape for absence, a 4xx is a statement about the *request*, and collapsing it to absence
 destroys the only signal that the request stopped being valid.
