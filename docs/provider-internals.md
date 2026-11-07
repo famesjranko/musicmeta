@@ -162,16 +162,23 @@ enrichment's shared title matcher keeps its own policy.
 Before ranking, merged recording and release pools keep each MusicBrainz ID once at its highest
 upstream score.
 
-For album candidates, exact-title releases with the same structured artist ids are reordered
-inside their existing artist slots. Complete date/status/type evidence leads, then official
-status, Album primary type, no secondary types, earliest pressing date at its supplied precision,
-blank disambiguation, score and MBID. This preserves supplied and hinted artist priority without
-letting edition evidence compare different artists. Releases without structured artist ids use
-the complete display credit as their group; an absent credit is not grouped. Missing and
-alternative releases are retained before the requested limit is applied, so a small limit may
-still omit them. This ordering spends no additional request and cannot establish an original
-release outside the returned pool: release search supplies pressing dates, not the group's
-first-release date (checked on 2026-11-07).
+For album candidates, exact-title releases are first reordered within the same structured
+artist-id set. Different display-credit forms for those people can exchange places, even when
+a supplied artist or hint matched one form more closely. Releases without structured ids use
+the complete display credit; an absent credit is not grouped. A second pass orders editions
+of one release group together, including guest-credit variations, only when each pair shares
+at least one credited artist id. Disjoint credits cannot exchange slots or be joined through
+an overlapping guest credit. These groups are formed in MBID order so upstream order cannot
+change membership.
+
+Complete date/status/type evidence leads, then official status, Album primary type, no secondary
+types, earliest pressing date, blank disambiguation, score and MBID. Within a year or month,
+fuller dates lead partial dates for that period: `1997-05-21`, then `1997-05`, then `1997-06-16`,
+then the rest of 1997, with year-only `1997` last. Any 1996 date still precedes any 1997 date.
+Missing and alternative releases are retained before the requested limit is applied, so a small
+limit may still omit them. This ordering spends no additional request and cannot establish an
+original release outside the returned pool: release search supplies pressing dates, not the
+group's first-release date (checked on 2026-11-07).
 
 After ranking, candidates with identical title, artist, year, country, type, thumbnail,
 disambiguation and score collapse to the first row before the limit. Distinct visible editions

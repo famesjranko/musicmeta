@@ -34,3 +34,29 @@ Same User-Agent and spacing. SHA-256: `c9a33584c2a8107d0030dd0d29852479c51bf8bf6
 This supplies unchanged same-title, same-artist official album and compilation
 rows: the compilation dates to 1967, before the 1968 album, so date alone would
 prefer the wrong release type.
+
+## Credit variation and date precision captures
+
+Copied byte-for-byte from the reviewer's complete raw response envelopes before
+the follow-up implementation. Each body has `created`, `count`, `offset` and the
+full returned `releases` array; none is a reduced row selection. The capture
+script uses the same User-Agent above, with 1.3 seconds between requests and
+3 seconds before retries. URLs and row counts come from `live-meta.json`; that
+file does not contain timestamps. The timestamps below are the raw responses'
+MusicBrainz `created` values, not independently recorded wall-clock fetch times.
+
+- `getz-gilberto.json`: `2026-11-07T16:40:19.994Z`, 46 of 46 hits.
+  URL: `https://musicbrainz.org/ws/2/release?query=release%3A%22Getz%5C%2FGilberto%22+AND+artistname%3A%22Stan+Getz%22&fmt=json&limit=100`
+  SHA-256: `3aeee247f9b9948a97a34815be49395515a2b03147f9d80bfd66cb636f2a988a`
+- `ok-computer.json`: `2026-11-07T16:33:57.155Z`, 39 of 39 hits.
+  URL: `https://musicbrainz.org/ws/2/release?query=release%3A%22OK+Computer%22+AND+artistname%3A%22Radiohead%22&fmt=json&limit=100`
+  SHA-256: `b2a6c0dcd91bb8a5fe5693cb31b91ad67efde75d7f308dede0aa5d567dcc2560`
+- `rumours.json`: `2026-11-07T16:33:53.736Z`, 90 of 90 hits.
+  URL: `https://musicbrainz.org/ws/2/release?query=release%3A%22Rumours%22+AND+artistname%3A%22Fleetwood+Mac%22&fmt=json&limit=100`
+  SHA-256: `13dc4ef678eb4194e2a554d5f2d333f0fd61e10903dd6de62f05529d67065a99`
+
+The disjoint-credit boundary tests deliberately replace or select artist credits
+from captured rows while retaining a release group. These model inconsistent
+credits, not additional upstream observations. The date-policy unit test uses
+explicit boundary dates on a captured DTO; the live-pool date regressions use
+unchanged response bodies. No test claims the modelled cases were seen live.

@@ -574,8 +574,19 @@ Release search also omits `release-group.first-release-date`: none of the 200 Th
 hits captured on 2026-11-07 carried it. The pressing's `date` is the available chronology signal,
 not proof of the album's worldwide original date. Keep its month/day precision until ranking:
 `SearchCandidate.year` has already discarded it, so sorting that display field cannot distinguish
-November and December pressings of the same year. Rank incomplete releases before `take(limit)`
+November and December pressings of the same year. Raw string comparison also puts `1997`
+before `1997-05-21`, though the year-only value provides no evidence it was earlier. Pad missing
+month/day components after known components in the same period, so fuller dates lead without
+moving a date across a year or month boundary. Rank incomplete releases before `take(limit)`
 without filtering them; retention in the pool does not promise a place inside every result limit.
+
+One release group's credits can vary between pressings: Getz/Gilberto's 1964 original credits
+Jobim as well as Getz and Gilberto, while the captured 2011 reissue credits only the latter two.
+An exact artist-id set splits these editions and leaves the reissue first. Compare editions by
+release group as well, but require a shared credited artist id between every pair that can
+exchange slots; a guest credit must not bridge disjoint artists. Artist-id sets also do not
+preserve display-credit priority: `&`, `and` and `-` forms naming the same people may exchange
+places even when a supplied name or hint matches one form more closely.
 
 ## 32. Normalizing an upstream's convention at one call site gives one entity two names
 
