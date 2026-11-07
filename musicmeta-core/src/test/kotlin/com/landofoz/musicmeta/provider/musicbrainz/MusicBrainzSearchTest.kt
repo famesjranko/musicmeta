@@ -121,6 +121,9 @@ class MusicBrainzSearchTest {
             assertEquals(1, candidates.size)
             assertEquals("Enter Sandman", candidates[0].title)
             assertEquals("rec-fuzzy", candidates[0].identifiers.musicBrainzId)
+
+            // And - only the strict and fuzzy searches spend the rate-limit budget.
+            assertEquals(2, httpClient.requestedUrls.size)
         }
 
     @Test

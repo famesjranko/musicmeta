@@ -217,7 +217,13 @@ public interface EnrichmentEngine {
      * merging entirely. Every call re-asks providers over the network; nothing here reads or
      * writes [cache].
      *
-     * Asks the provider whose [EnrichmentProvider.isIdentityProvider] is true first, for up to
+     * MusicBrainz searches rank exact titles first, then the supplied artist, then main recordings.
+     * Artist matching includes individual collaboration credits at same-name quality. With a
+     * registered iTunes provider, title-only album and track searches use its artist order as a
+     * popularity hint. This optional signal has a short timeout; failures are logged and search
+     * continues with MusicBrainz ranking. Artist search and enrichment identity are unaffected.
+     *
+     * Asks the provider whose [EnrichmentProvider.isIdentityProvider] is true for up to
      * [limit] candidates. Only if that returns fewer does it also ask every other provider whose
      * [EnrichmentProvider.isAvailable] is true for the remainder. A candidate whose lowercased
      * `title:artist` duplicates one the identity provider already returned is dropped. That dedup

@@ -104,10 +104,17 @@ class MusicBrainzCanonicalRecordingSearchTest {
         // When - candidates are searched for the same track
         val candidates = provider.searchCandidates(EnrichmentRequest.forTrack(TITLE, ARTIST), 10)
 
-        // Then - the live takes are still offered: a "did you mean?" list narrowed to canonical
-        // recordings cannot answer "I want the Moscow one"
-        assertEquals(listOf(LIVE_MBID, "rec-demo"), candidates.map { it.identifiers.musicBrainzId })
-        assertTrue(urlsMatching(CANONICAL_QUERY).isEmpty())
+        // Then - the main take leads while both marked alternatives remain selectable.
+        assertEquals(STUDIO_MBID, candidates.first().identifiers.musicBrainzId)
+        assertEquals(4, candidates.size)
+        assertEquals(
+            setOf(STUDIO_MBID, "rec-sampler", LIVE_MBID, "rec-demo"),
+            candidates.map { it.identifiers.musicBrainzId }.toSet(),
+        )
+
+        // And - the broad pool and canonical supplement cost one request each.
+        assertEquals(2, urlsMatching(RECORDING_SEARCH).size)
+        assertEquals(1, urlsMatching(CANONICAL_QUERY).size)
     }
 
     @Test

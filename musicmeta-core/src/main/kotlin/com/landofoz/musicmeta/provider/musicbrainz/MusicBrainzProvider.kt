@@ -1,6 +1,6 @@
 package com.landofoz.musicmeta.provider.musicbrainz
 
-import com.landofoz.musicmeta.EnrichmentIdentifiers
+import com.landofoz.musicmeta.EnrichmentLogger
 import com.landofoz.musicmeta.EnrichmentProvider
 import com.landofoz.musicmeta.EnrichmentRequest
 import com.landofoz.musicmeta.EnrichmentResult
@@ -9,7 +9,6 @@ import com.landofoz.musicmeta.IdentifierRequirement
 import com.landofoz.musicmeta.MusicBrainzEntityType
 import com.landofoz.musicmeta.ProviderCapability
 import com.landofoz.musicmeta.SearchCandidate
-import com.landofoz.musicmeta.engine.ConfidenceCalculator
 import com.landofoz.musicmeta.engine.ProviderCallScope
 import com.landofoz.musicmeta.http.HttpClient
 import com.landofoz.musicmeta.http.RateLimiter
@@ -93,79 +92,14 @@ public class MusicBrainzProvider(
     override suspend fun searchCandidates(
         request: EnrichmentRequest,
         limit: Int,
-    ): List<SearchCandidate> =
-        when (request) {
-            is EnrichmentRequest.ForAlbum -> searchAlbumCandidates(request, limit)
-            is EnrichmentRequest.ForArtist -> searchArtistCandidates(request, limit)
-            is EnrichmentRequest.ForTrack -> searchTrackCandidates(request, limit)
-        }
+    ): List<SearchCandidate> = searchCandidates(request, limit, emptyList(), EnrichmentLogger.NoOp)
 
-    /**
-     * Every candidate built here has a null [SearchCandidate.thumbnailUrl]: a release search
-     * response carries nothing that tells real cover art from a Cover Art Archive 404, and asking
-     * per candidate would cost one rate-limited lookup each.
-     */
-    private suspend fun searchAlbumCandidates(
-        request: EnrichmentRequest.ForAlbum, limit: Int,
-    ): List<SearchCandidate> {
-        val releases = api.searchReleases(request.title, request.artist, limit)
-            .ifEmpty { api.searchReleasesFuzzy(request.title, request.artist, limit) }
-        return releases.map { release ->
-            SearchCandidate(
-                title = release.title, artist = release.artistCredit,
-                year = release.date?.take(4)?.toIntOrNull(), country = release.country,
-                releaseType = release.releaseType,
-                matchScore = ConfidenceCalculator.searchScore(release.score),
-                thumbnailUrl = null, provider = id,
-                identifiers = EnrichmentIdentifiers(
-                    musicBrainzId = release.id,
-                    musicBrainzReleaseGroupId = release.releaseGroupId,
-                ),
-                disambiguation = release.disambiguation,
-            )
-        }
-    }
-
-    private suspend fun searchArtistCandidates(
-        request: EnrichmentRequest.ForArtist, limit: Int,
-    ): List<SearchCandidate> {
-        val artists = api.searchArtists(request.name, limit)
-            .ifEmpty { api.searchArtistsFuzzy(request.name, limit) }
-        return artists.map { artist ->
-            SearchCandidate(
-                title = artist.name, artist = null,
-                year = artist.beginDate?.take(4)?.toIntOrNull(), country = artist.country,
-                releaseType = artist.type,
-                matchScore = ConfidenceCalculator.searchScore(artist.score),
-                thumbnailUrl = null, provider = id,
-                identifiers = EnrichmentIdentifiers(musicBrainzId = artist.id),
-                disambiguation = artist.disambiguation,
-            )
-        }
-    }
-
-    private suspend fun searchTrackCandidates(
-        request: EnrichmentRequest.ForTrack, limit: Int,
-    ): List<SearchCandidate> {
-        val recordings = api.searchRecordings(request.title, request.artist, request.album, limit)
-            .ifEmpty { api.searchRecordingsFuzzy(request.title, request.artist, limit) }
-        return recordings.map { recording ->
-            // year/country/releaseType/thumbnailUrl are null — a recording search hit carries
-            // none of its own (see MusicBrainzTrackEnrichment's MusicBrainzRecording.toCandidate).
-            SearchCandidate(
-                title = recording.title, artist = recording.artistCredit,
-                year = null, country = null,
-                releaseType = null,
-                matchScore = ConfidenceCalculator.searchScore(recording.score),
-                thumbnailUrl = null, provider = id,
-                identifiers = EnrichmentIdentifiers(
-                    musicBrainzId = recording.id,
-                    musicBrainzReleaseGroupId = recording.artReleaseGroupId,
-                ),
-                disambiguation = recording.disambiguation,
-            )
-        }
-    }
+    internal suspend fun searchCandidates(
+        request: EnrichmentRequest,
+        limit: Int,
+        artists: List<String>,
+        logger: EnrichmentLogger,
+    ): List<SearchCandidate> = MusicBrainzCandidateSearch(api, id, logger).search(request, limit, artists)
 
     override suspend fun enrich(
         request: EnrichmentRequest,

@@ -97,10 +97,24 @@ The measurements behind all of this live on `MusicBrainzApi.CANONICAL_SEARCH_LIM
 `scripts/probes/recording-pool-filter-probe.sh` as the recipe. They are not repeated here on purpose:
 figures decay as MusicBrainz's catalogue grows, and a copy rots while it moves.
 
-Neither surface a consumer *chooses* from is filtered: not `searchCandidates`, and not the
+The broad pool on either surface a consumer *chooses* from stays unfiltered: `searchCandidates` and the
 suggestions on a `NotFound`. Both exist for picking a version, and one narrowed to canonical
 recordings cannot answer "I want the Moscow one" — so a miss searches unfiltered to build them,
 which is the one request that path costs.
+
+Candidate discovery fetches up to 100 releases or recordings before ranking. Exact normalized
+titles lead, then a same-name match for the supplied artist, then blank disambiguations, the
+engine's artist-hint order, an official album release on a recording, upstream score, and stable
+artist/title/id ties. A supplied artist is request evidence, so a different artist's unmarked cover
+cannot outrank that artist's marked performance of the same title. Artist matching checks the
+whole display credit and the individually credited names from MusicBrainz's structured data,
+at same-name quality only; a tribute act containing the name does not inherit its rank.
+Artist search keeps its existing policy. A nonempty strict track search with a supplied artist
+adds the existing canonical pool to the unfiltered pool. A fuzzy rescue does not repeat the empty
+strict query. Without an artist, the engine can supply iTunes title-search artist hints and add a
+canonical pool for the leading artist; an album only needs an extra artist-specific pool when that
+artist is absent. Extra-pool failures are logged and preserve the general pool. These queries never
+affect `enrich()`'s resolution.
 
 The pool is searched **once per `enrich()`**, not once per type. That is a correctness rule before it
 is a cost one: MusicBrainz does not order identical searches identically, and the ranking keeps the
@@ -223,8 +237,10 @@ pool is accepted on both artist and album title, not artist alone, before `ALBUM
 we fetch: `collectionViewUrl`, `collectionPrice`, `copyright`, `contentAdvisoryRating`,
 `collectionExplicitness`, `amgArtistId`, `artistViewUrl`; from a track lookup, `previewUrl` (Deezer
 serves `TRACK_PREVIEW`), `discNumber`, `discCount`, `trackPrice`, `isStreamable`. Entities never
-searched: `song`, `musicVideo`, `podcast`, `audiobook`. `lookup?isrc=` looks like the ISRC
-equivalent of `lookup?upc=` and is not: it returns `200 resultCount: 0` for an ISRC known to be in
+searched: `musicVideo`, `podcast`, `audiobook`. Title-only discovery searches `song` or `album`
+for artist hints in iTunes order. For a bare track title, same-base variants can identify an artist
+without selecting that variant as the recording. Album hints admit remaster-only decorations.
+`lookup?isrc=` looks like the ISRC equivalent of `lookup?upc=` and is not: it returns `200 resultCount: 0` for an ISRC known to be in
 catalogue, so it is silently unsupported rather than broken (probed 2026-08-12) — never called.
 As with Deezer, the name-search pool behind `ALBUM_ART`, `ALBUM_METADATA` and `ALBUM_TRACKS` is
 accepted on `collectionName` as well as artist and shared as one ranked result; the exact

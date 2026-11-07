@@ -425,6 +425,13 @@ siblings.
 
 ## Area — Provider data and matching
 
+- A popularity hint about an artist is not an acceptance decision about a recording. On
+  2026-11-07, iTunes' first result for `Creep` was Radiohead's `Creep (Acoustic)`, before bare-title
+  results from Stone Temple Pilots and TLC. Applying recording-title equality before reading the
+  artist order discarded Radiohead's signal and filled Find with another artist's versions.
+  For a bare track title, the artist-hint route accepts same-base qualifiers; MusicBrainz still
+  searches and ranks the requested recording title. Keep this tolerance out of identity resolution.
+
 - A MusicBrainz `inc=` that names a relationship gets you the **link**, not the linked entity's own
   relations. `inc=work-rels` returns each work as a stub — id and title, no `relations` array — and
   the sub-entity's relations need `work-level-rels` (or `recording-level-rels`,
@@ -594,6 +601,13 @@ so a split can never displace a match the field already has, and an act whose ow
 (`Earth, Wind & Fire`) is still matched as itself. A part is then accepted at **same name only**,
 for the reason `NameMatchTier` refuses a partial alias match: taking one field apart multiplies the
 strings a request is compared against, and a partial match against one of many is not a name.
+
+MusicBrainz supplies individual names in structured `artist-credit` entries. Keep those names
+through candidate mapping: the joined display `Queen & David Bowie` is not the same name as
+`Queen`, and lowering the bar to containment also admits `Killer Queen`. Candidate discovery needs
+the same-name test against each structured credit for both supplied artists and popularity hints.
+A supplied artist must have its own comparator tier before disambiguation; an empty hint list
+cannot stand in for the artist the request already named.
 
 ## 5. A capability's `identifierRequirement` defaults to `NONE`
 
