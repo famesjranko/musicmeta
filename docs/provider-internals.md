@@ -104,6 +104,14 @@ The two Deezer provider ids have separate breakers, even when they share the API
 For previews, a source skipped during cooldown remains an error when the fallback has no clip;
 it cannot establish a cacheable absence for the unavailable source.
 
+## Title-only fuzzy suggestions
+
+When a strict candidate search misses and the artist is blank, the fuzzy recording and release
+queries require every whitespace-separated title word in the title field, with typo tolerance on
+each word. They omit the artist clause. Album enrichment uses the same query for suggestions when
+its strict pool is empty; track enrichment still refuses a blank artist without searching. With
+an artist supplied, fuzzy queries and request counts are unchanged.
+
 ## Resolving a track by name
 
 A track request naming **no album** is resolved out of a pool MusicBrainz has already filtered with
@@ -189,12 +197,6 @@ Without an artist, the engine can supply iTunes title-search artist hints and ad
 canonical search ladder for the leading artist; an album needs an extra artist-specific pool unless
 an unmarked exact title by that artist is present. Extra-pool failures are logged and preserve the
 general pool. These queries never affect `enrich()`'s resolution.
-
-When a strict candidate search misses and the artist is blank, the fuzzy recording and release
-queries require every whitespace-separated title word in the title field, with typo tolerance on
-each word. They omit the artist clause. Album enrichment uses the same query for suggestions when
-its strict pool is empty; track enrichment still refuses a blank artist without searching. With
-an artist supplied, fuzzy queries and request counts are unchanged.
 
 The pool is searched **once per `enrich()`**, not once per type. That is a correctness rule before it
 is a cost one: MusicBrainz does not order identical searches identically, and the ranking keeps the
