@@ -34,10 +34,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The demo web UI marks a provider that refused this host at startup with a warning and explains it on hover (demo only)
 
 ### Fixed
+- iTunes previews prefer exact titles, reject conflicting featured artists and preserve ordinary title words; a malformed preview URL skips only its row
+- Deezer host refusals remain visible as warnings after fallback success; demo iTunes lookup logs exclude cache hits
 - Deezer HTTP 403 now reports `ErrorKind.AUTH` on all routes, including similar albums, and counts as a provider breaker failure; blocked previews and preview cooldown remain uncached errors
 - The web demo preview endpoint distinguishes upstream blocks and failures (HTTP 502) from missing previews (404); the play button reports the failure
 
 ### Changed
+- iTunes preview clips use `.m4a` URLs with `durationMs = null`; players must accept both these and Deezer's 30-second MP3 clips
+- `STALE_IF_ERROR` can now replace a Deezer 403 with an expired cache entry; inspect `isStale`
+- A failed `TRACK_PREVIEW` chain reports its last failing provider instead of `all_providers`
+- Each Deezer preview miss takes a serial 3-second iTunes slot shared with art and metadata; batches can hit the engine deadline, which `resolveTrackPreviews` returns as null
+- Keeping iTunes art while refusing its previews requires checking `preview.source` or hand-wiring providers; there is no per-capability opt-out
 - Apple's policy snapshot now records verified preview restrictions: store promotion, a linked approved badge, courtesy attribution, and streaming without saving or caching media
 
 ## [0.14.0] - 2026-10-08

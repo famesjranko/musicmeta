@@ -62,17 +62,21 @@ two response shapes under one cache key. `MusicBrainzQualifierFallback.kt` strip
 
 `TRACK_PREVIEW` tries Deezer first, then iTunes. The preview-only song search is separate from
 album search. Preview text folds typographic apostrophes before title and album-hint comparisons.
-Track titles may differ only by a featured credit (`feat.`, `ft.`, `featuring`), in parentheses,
-brackets or a bare suffix. Other qualifiers still pass unchanged to `TitleMatcher`; a credit group
-containing a version marker is kept intact. The primary artist must still be the same normalized
-name or a name in the resolved alias pool, and the album must agree with a supplied hint. A supplied
+An exact title match outranks a match that omits a featured credit. Only credits in parentheses
+or brackets (`feat.`, `ft.`, `featuring`) may be omitted, and stripping must leave a nonempty title.
+If both titles carry credits, the credited artists must match under the existing same-name rules.
+Other qualifiers still pass unchanged to `TitleMatcher`; a credit group containing a version marker
+is kept intact. The primary artist must still be the same normalized name or a name in the resolved
+alias pool, and the album must agree with a supplied hint. A supplied
 `itunesTrackId` or `ITUNES_COLLECTION` uses lookup and must still agree with the request; a wrong identifier never triggers a name-search substitution. ISRC lookup is unsupported
 by iTunes. The US store is explicit on both routes.
 
-Only HTTPS preview URLs are returned. Clip duration is null because the song result states the
-full track duration, not the clip duration. No audio is downloaded or proxied. Cached preview
-results contain the URL and provider identifiers, not media. The demo logs iTunes fallback
-successes. A failed chain retains its last error; an empty fallback does not hide a Deezer block.
+Only HTTPS preview URLs are returned; a malformed URL disqualifies its row alone. Clip duration is
+null because the song result states the full track duration, not the clip duration. No audio is downloaded or proxied. Cached preview
+results contain the URL and provider identifiers, not media. The demo logs live iTunes preview
+successes, including after an empty Deezer search, and warns when a Deezer refusal reaches the chain.
+Cache hits do not log a new lookup. A failed chain retains its last error; an empty fallback does
+not hide a Deezer block.
 
 ## Deezer host refusals
 

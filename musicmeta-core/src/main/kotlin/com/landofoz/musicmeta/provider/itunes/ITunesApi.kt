@@ -207,11 +207,13 @@ internal class ITunesApi(
         val SCHEMA_PIN_TARGETS: List<SchemaTarget> = listOf(
             SchemaTarget(
                 provider = "itunes", route = "previewTracks", url = previewSearchUrl("Radiohead Karma Police"),
-                requiredPaths = listOf("results[0].trackId", "results[0].trackName", "results[0].artistName"),
+                requiredPaths = listOf("results[0].trackId", "results[0].trackName", "results[0].artistName",
+                    "results[*].previewUrl"),
             ),
             SchemaTarget(
                 provider = "itunes", route = "previewTracks", url = previewLookupUrl(1097861836),
-                requiredPaths = listOf("results[0].trackId", "results[0].trackName", "results[0].artistName"),
+                requiredPaths = listOf("results[0].trackId", "results[0].trackName", "results[0].artistName",
+                    "results[*].previewUrl"),
             ),
             SchemaTarget(
                 provider = "itunes",

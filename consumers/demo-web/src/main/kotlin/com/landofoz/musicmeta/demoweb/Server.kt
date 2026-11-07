@@ -1173,7 +1173,6 @@ private fun handlePreview(exchange: HttpExchange, engine: EnrichmentEngine) {
                 if (preview == null) {
                     exchange.respondJson(502, ApiError("Preview provider returned an invalid response."))
                 } else {
-                    if (preview.source == "itunes") println("Preview fallback: iTunes supplied TRACK_PREVIEW.")
                     exchange.respondJson(200, PreviewResponse(preview.url, preview.durationMs, preview.source))
                 }
             }

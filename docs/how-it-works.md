@@ -520,7 +520,7 @@ when a key is present, and CAA is a fallback, not a second entry in the same res
 ### Preview (1 type)
 | Type | Providers (by priority) | Notes |
 |------|------------------------|-------|
-| TRACK_PREVIEW | Deezer(100) | 30-second MP3 preview URL; on-demand (not in default types) |
+| TRACK_PREVIEW | Deezer(100), iTunes(40) | Deezer: 30-second MP3; iTunes: M4A, unknown clip duration; on-demand |
 
 ### Composite (1 type)
 | Type | Dependencies | Notes |

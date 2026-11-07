@@ -16,3 +16,16 @@ These fixtures select complete, unchanged rows by track id from each captured po
 live versions, remixes, featured credits, and a compilation album with an apostrophe.
 The tests vary request text and select subsets; they do not rewrite catalogue titles.
 No preview media was saved.
+
+Full US song-search pools captured 2026-11-07 with HTTP 200, before the credit-ranking fix:
+
+- `girls.json`: https://itunes.apple.com/search?media=music&entity=song&country=us&term=Maroon+5+Girls+Like+You&limit=25
+- `girls-album.json`: https://itunes.apple.com/search?media=music&entity=song&country=us&term=Maroon+5+Girls+Like+You+Red+Pill+Blues&limit=25
+- `levitating.json`: https://itunes.apple.com/search?media=music&entity=song&country=us&term=Dua+Lipa+Levitating&limit=25
+- `cheap-thrills.json`: https://itunes.apple.com/search?media=music&entity=song&country=us&term=Sia+Cheap+Thrills&limit=25
+
+These files preserve complete response bytes and upstream order. Each pool contains plain and
+credited recordings. Plain-request tests reverse a two-row subset to prove that title preference
+beats upstream order in both directions. Boundary tests explicitly replace a captured title or URL
+to exercise malformed data and ordinary title words; these replacements are not upstream claims.
+The schema-pin test removes `previewUrl` to simulate drift. No preview media was requested or saved.

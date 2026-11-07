@@ -24,6 +24,65 @@ class DeezerBlockedTest {
     private val fallback = FakeProvider("fallback", capabilities = listOf(ProviderCapability(type, 50)))
 
     @Test
+    fun `an iTunes preview lookup is logged once while a cache hit is silent`() = runTest {
+        // Given - Deezer has no track and iTunes can supply a cacheable preview.
+        http.givenJsonResponse("search/track", """{"data":[]}""")
+        val itunes = FakeProvider("itunes", capabilities = listOf(ProviderCapability(type, 40)))
+        itunes.givenResult(type, EnrichmentResult.Success(
+            type, EnrichmentData.TrackPreview("https://example.com/clip", "itunes"), "itunes", 0.9f,
+        ))
+        val lookups = mutableListOf<String>()
+        val logger = object : EnrichmentLogger {
+            override fun debug(tag: String, message: String) {
+                if (message.startsWith("Preview lookup:")) lookups.add(message)
+            }
+            override fun warn(tag: String, message: String, throwable: Throwable?) = Unit
+        }
+        val engine = EnrichmentEngine.Builder().addProvider(deezer).addProvider(itunes)
+            .cache(FakeEnrichmentCache()).logger(logger)
+            .config(EnrichmentConfig(enableIdentityResolution = false)).build()
+
+        // When - requesting the preview twice so the second request reads the cache.
+        try {
+            val first = engine.enrich(request, setOf(type)).raw[type]
+            val second = engine.enrich(request, setOf(type)).raw[type]
+
+            // Then - one successful lookup is logged without claiming that Deezer was blocked.
+            assertTrue(first is EnrichmentResult.Success)
+            assertTrue(second is EnrichmentResult.Success)
+            assertEquals(1, itunes.enrichCalls.size)
+            assertEquals(listOf("Preview lookup: iTunes supplied TRACK_PREVIEW."), lookups)
+        } finally {
+            engine.close()
+        }
+    }
+
+    @Test
+    fun `a Deezer block logs one warning even when the fallback succeeds`() = runTest {
+        // Given - Deezer refuses this host and a later provider can supply the preview.
+        http.givenHttpResult("api.deezer.com", HttpResult.ClientError(403))
+        fallback.givenResult(type, EnrichmentResult.Success(
+            type, EnrichmentData.TrackPreview("https://example.com/clip", "fallback"), "fallback", 0.9f,
+        ))
+        val warnings = mutableListOf<String>()
+        val logger = object : EnrichmentLogger {
+            override fun debug(tag: String, message: String) = Unit
+            override fun warn(tag: String, message: String, throwable: Throwable?) { warnings.add(message) }
+        }
+        val chain = ProviderChain(type, listOf(deezer, fallback), logger = logger)
+
+        // When - a successful fallback hides the refusal from the returned result.
+        val result = chain.resolve(request)
+
+        // Then - exactly one warning retains the provider, HTTP status and host refusal.
+        assertTrue(result is EnrichmentResult.Success)
+        assertEquals(1, warnings.size)
+        assertTrue(warnings.single().contains("deezer", ignoreCase = true))
+        assertTrue(warnings.single().contains("403"))
+        assertTrue(warnings.single().contains("blocked"))
+    }
+
+    @Test
     fun `a refused preview remains an authorization error after an empty fallback and is not cached`() = runTest {
         // Given - Deezer refuses this host with HTTP 403 and the next provider has no preview.
         http.givenHttpResult("api.deezer.com", HttpResult.ClientError(403))

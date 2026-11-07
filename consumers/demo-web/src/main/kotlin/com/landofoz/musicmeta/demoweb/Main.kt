@@ -4,6 +4,7 @@ import com.landofoz.musicmeta.ApiKey
 import com.landofoz.musicmeta.ApiKeyConfig
 import com.landofoz.musicmeta.EnrichmentConfig
 import com.landofoz.musicmeta.EnrichmentEngine
+import com.landofoz.musicmeta.EnrichmentLogger
 import com.landofoz.musicmeta.KeyRequirement
 import com.landofoz.musicmeta.ProviderCatalog
 import com.landofoz.musicmeta.cache.CacheMode
@@ -63,6 +64,14 @@ fun main() {
             cacheMode = cacheMode,
         )
         val engine = EnrichmentEngine.Builder()
+            .logger(object : EnrichmentLogger {
+                override fun debug(tag: String, message: String) {
+                    if (message.startsWith("Preview lookup:")) println(message)
+                }
+                override fun warn(tag: String, message: String, throwable: Throwable?) {
+                    System.err.println("WARN $tag: $message")
+                }
+            })
             .apiKeys(keys)
             .config(config)
             .cache(cache)

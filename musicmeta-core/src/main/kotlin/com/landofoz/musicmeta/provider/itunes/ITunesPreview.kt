@@ -13,6 +13,7 @@ import com.landofoz.musicmeta.engine.TitleMatcher
 import com.landofoz.musicmeta.engine.resolvedAliasPool
 import com.landofoz.musicmeta.engine.sameNameTier
 import java.net.URI
+import java.net.URISyntaxException
 
 /** Preview URLs and store identifiers only; media is fetched directly by the consumer's player. */
 internal suspend fun ITunesProvider.enrichPreview(request: EnrichmentRequest, api: ITunesApi): EnrichmentResult {
@@ -24,7 +25,9 @@ internal suspend fun ITunesProvider.enrichPreview(request: EnrichmentRequest, ap
             .joinToString(" ").foldPreviewApostrophes()
         val candidates = api.previewTracks(term, constraints.trackId, constraints.collectionId)
             .filter(constraints::accepts)
-        val selected = candidates.selectArtist(request.artist) ?: return EnrichmentResult.NotFound(type, id)
+        val selected = candidates.groupBy { constraints.titlePreference(it) }.toSortedMap(reverseOrder())
+            .values.firstNotNullOfOrNull { it.selectArtist(request.artist) }
+            ?: return EnrichmentResult.NotFound(type, id)
         val track = selected.value
         EnrichmentResult.Success(
             type = type,
@@ -45,18 +48,30 @@ private class PreviewConstraints(
     val trackId: Long?,
     val collectionId: Long?,
 ) {
+    private val title = parsePreviewTitle(request.title)
+
     val hasIdentifier: Boolean get() = trackId != null || collectionId != null
 
     fun accepts(track: ITunesPreviewTrack): Boolean {
         if (track.trackId <= 0 || track.collectionId <= 0) return false
         if (trackId != null && track.trackId != trackId) return false
         if (collectionId != null && track.collectionId != collectionId) return false
-        if (!TitleMatcher.equivalent(previewTitle(request.title), previewTitle(track.title))) return false
+        if (!title.matches(parsePreviewTitle(track.title))) return false
         val album = request.album
         if (!album.isNullOrBlank() &&
             !TitleMatcher.equivalent(album.foldPreviewApostrophes(), track.album.foldPreviewApostrophes())) return false
-        val url = URI(track.previewUrl)
+        val url = try {
+            URI(track.previewUrl)
+        } catch (_: URISyntaxException) {
+            return false
+        }
         return url.scheme == "https" && url.host != null
+    }
+
+    fun titlePreference(track: ITunesPreviewTrack): Int = when {
+        TitleMatcher.equivalent(request.title.foldPreviewApostrophes(), track.title.foldPreviewApostrophes()) -> 2
+        title.credits.isNotEmpty() && parsePreviewTitle(track.title).credits.isNotEmpty() -> 1
+        else -> 0
     }
 
     companion object {
@@ -81,15 +96,36 @@ private suspend fun List<ITunesPreviewTrack>.selectArtist(artist: String): Artis
 
 private fun String.foldPreviewApostrophes(): String = replace('‘', '\'').replace('’', '\'')
 
-// Credit spelling is presentation; a version label remains part of the recording's identity.
-private fun previewTitle(title: String): String = FEATURED_CREDIT.replace(title.foldPreviewApostrophes()) { credit ->
-    if (VERSION_IN_CREDIT.containsMatchIn(credit.value)) credit.value else ""
-}.trim()
+private data class PreviewTitle(val base: String, val credits: List<String>) {
+    fun matches(other: PreviewTitle): Boolean {
+        if (!TitleMatcher.equivalent(base, other.base)) return false
+        if (credits.isEmpty() || other.credits.isEmpty()) return true
+        return credits.size == other.credits.size && credits.zip(other.credits).all { (a, b) ->
+            sameNameTier(a, b, emptyList()) != null
+        }
+    }
+}
+
+private fun previewTitle(title: String): String = parsePreviewTitle(title).base
+
+// Bracketed credits may be omitted by a catalogue, but never erase the whole title.
+private fun parsePreviewTitle(title: String): PreviewTitle {
+    val folded = title.foldPreviewApostrophes()
+    val credits = mutableListOf<String>()
+    val base = FEATURED_CREDIT.replace(folded) { credit ->
+        if (VERSION_IN_CREDIT.containsMatchIn(credit.value)) {
+            credit.value
+        } else {
+            credits.add(checkNotNull(credit.groups[1] ?: credit.groups[2]).value.trim())
+            ""
+        }
+    }.trim()
+    return if (base.isEmpty()) PreviewTitle(folded.trim(), emptyList()) else PreviewTitle(base, credits)
+}
 
 private const val FEATURE_PREFIX = "(?:feat\\.?|ft\\.?|featuring)\\s+"
 private val FEATURED_CREDIT = Regex(
-    """\s*\($FEATURE_PREFIX[^()\[\]]+\)|\s*\[$FEATURE_PREFIX[^()\[\]]+\]""" +
-        """|(?:\s+[-–—])?\s+$FEATURE_PREFIX[^()\[\]]+$""",
+    """\s*\($FEATURE_PREFIX([^()\[\]]+)\)|\s*\[$FEATURE_PREFIX([^()\[\]]+)\]""",
     RegexOption.IGNORE_CASE,
 )
 private val VERSION_IN_CREDIT = Regex(

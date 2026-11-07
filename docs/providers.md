@@ -236,7 +236,7 @@ composer and MusicBrainz credits the performer.
 
 ## Terms, licences, attribution
 
-What each provider's terms said on **2026-08-12** — verify before relying on any of it. This is not
+What each provider's terms said on the date in its row — verify before relying on any of it. This is not
 a compliance promise and not legal advice: it is a dated snapshot of public terms pages, collected
 once, with no mechanism keeping it current. musicmeta takes no standing position on any provider's
 terms; a consumer enabling a provider is bound by that provider's terms, not by anything below.
@@ -274,7 +274,11 @@ content appropriate to the target country. iTunes supplies `TRACK_PREVIEW` as a 
 the US store. A consumer must show an Apple-approved badge linked to that store item near its
 preview, include the courtesy notice, and stream directly without downloading, saving, caching
 or proxying the audio. Only search metadata, including the media URL, is cached by musicmeta.
-`resolvedIdentifiers.extra["itunesTrackId"]` and `ITUNES_COLLECTION` identify the store item.
+Use `enrich()` and read the preview success's `resolvedIdentifiers.extra["itunesTrackId"]`
+and `ITUNES_COLLECTION` to look up the store item and obtain its store URL. musicmeta does not
+return Apple's `trackViewUrl`. `resolveTrackPreviews()` drops these identifiers; consumers using
+that helper must look the item up separately or switch to `enrich()` to build the required link.
+The demo does not supply the required nearby linked badge and courtesy notice.
 The [iTunes Store identity rules](https://marketing.services.apple/itunes-identity-guidelines)
 require unmodified official artwork, a minimum 30px badge height, clear space of at least a tenth
 of that height, placement below or to the right of the promoted content, and an iTunes Store

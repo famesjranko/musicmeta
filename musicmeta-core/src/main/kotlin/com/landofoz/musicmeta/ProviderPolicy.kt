@@ -97,7 +97,7 @@ public data class ProviderPolicy(
  */
 public object ProviderPolicies {
 
-    /** The date every entry's sources were read. */
+    /** Default reading date; an entry may carry a later date. */
     private const val AS_READ_ON: String = "2026-08-12"
 
     private val musicBrainz = ProviderPolicy(
