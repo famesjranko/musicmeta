@@ -176,9 +176,10 @@ suggestions on a `NotFound`. Both exist for picking a version, and one narrowed 
 recordings cannot answer "I want the Moscow one" — so a miss searches unfiltered to build them,
 which is the one request that path costs.
 
-Candidate discovery fetches up to 100 releases or recordings before ranking. Exact normalized
-titles lead, then a same-name match for the supplied artist. Non-exact titles use upstream score
-before edition evidence. The remaining tiers are the engine's artist-hint order, blank
+Candidate discovery fetches up to 100 releases or recordings before ranking. With a supplied artist,
+its exact or punctuation-equivalent titles lead, and its exact title leads its punctuation variants.
+Other exact normalized titles then lead a same-name match for the supplied artist. Non-exact titles use
+upstream score before edition evidence. The remaining tiers are the engine's artist-hint order, blank
 disambiguations, an official album release on a recording, upstream score, and stable artist/title/id
 ties. Artist evidence precedes disambiguation so a main artist's marked performance does not lose
 to an unmarked cover. Artist matching checks the whole display credit and the individually credited
