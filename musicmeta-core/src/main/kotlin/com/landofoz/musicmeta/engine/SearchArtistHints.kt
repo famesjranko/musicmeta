@@ -10,6 +10,8 @@ import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 
+private const val ITUNES_RATE_LIMIT_INTERVAL_MS = 3000L
+
 /** Cross-provider popularity is discovery policy and never evidence for enrichment identity. */
 internal class SearchArtistHints(private val registry: ProviderRegistry, private val logger: EnrichmentLogger) {
     suspend fun artists(request: EnrichmentRequest): List<String> {
@@ -34,6 +36,15 @@ internal class SearchArtistHints(private val registry: ProviderRegistry, private
         }
         // Leave the identity provider most of the retry budget, including on a throttled signal.
         val budget = minOf(5000L, (currentCoroutineContext()[EnrichDeadline]?.remainingMs ?: 20_000L) / 4)
+        // The threshold matches iTunes's default rate-limit interval.
+        if (budget <= ITUNES_RATE_LIMIT_INTERVAL_MS) {
+            logger.debug(
+                "Search",
+                "iTunes ranking signal skipped: budget does not exceed the ${ITUNES_RATE_LIMIT_INTERVAL_MS}ms " +
+                    "iTunes rate-limit interval",
+            )
+            return emptyList()
+        }
         return try {
             withTimeoutOrNull(budget.coerceAtLeast(1)) {
                 withContext(EnrichDeadline(budget.coerceAtLeast(1))) {
