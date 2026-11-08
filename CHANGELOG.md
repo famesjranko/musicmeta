@@ -30,8 +30,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
-- iTunes supplies `TRACK_PREVIEW` after Deezer with strict recording checks; exact titles win, requested guests must match, competing guest versions are refused and malformed URLs skip only their row
-- A provider auth refusal is logged as a warning on every route, even after fallback success; live preview successes name their provider in debug logs; cache hits add neither log
+- iTunes supplies `TRACK_PREVIEW` after Deezer and plays only the requested recording: exact titles win, named guests must match, and competing guest versions give no preview
+- Any provider's auth refusal now logs a warning, including a rejected Last.fm, Discogs or Fanart.tv key and a Deezer host block that iTunes covered; cache hits stay silent
 - The demo web UI marks a provider that refused this host at startup with a warning and explains it on hover (demo only)
 
 ### Fixed

@@ -67,7 +67,8 @@ or brackets (`feat.`, `ft.`, `featuring`) are recognized, and stripping must lea
 A credited request requires compatible candidate credits under the existing same-name rules.
 A plain request may accept a credited variant only when the eligible artist-matched rows at that
 title preference have one compatible credit group. Competing guest versions return no match;
-reordered or differently separated guest lists are not treated as equivalent.
+reordered guest lists are not treated as equivalent, and differently separated lists match only
+where the same-name rules equate the separators (`&` and `and`).
 Other qualifiers still pass unchanged to `TitleMatcher`; a credit group containing a version marker
 is kept intact. The primary artist must still be the same normalized name or a name in the resolved
 alias pool, and the album must agree with a supplied hint. A supplied
