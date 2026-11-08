@@ -601,10 +601,11 @@ led with `For All and None` by other artists; the word query retained `…And Ju
 `Karma Radiohead` by Radiohead returned rows lacking `karma` under the unsplit query and none
 under the word query. `Krama Police` and `Hotle California` retained their intended top three.
 
-Build artist terms from the same NFC word extraction as title terms. Lowercase with `Locale.ROOT`,
-then add `~` only to words with at least four NFC code points and no Unicode number; short and
-numeric words stay exact. An eligible title sends one fuzzy request even when no artist word is
-eligible, and an artist with no words adds no clause. Captures recover the first-word typo
+Build artist terms from the same NFC word extraction as title terms. Classify words by their NFC
+code points and Unicode numbers before lowercasing with `Locale.ROOT`; add `~` only to words with
+at least four NFC code points and no Unicode number. Short and numeric words stay exact. An eligible
+title sends one fuzzy request even when no artist word is eligible, and an artist with no words adds
+no clause. Captures recover the first-word typo
 `Micheal Jackson` and reject the constructed `Michael Radiohead` negative control in suggestion
 pools; they do not establish general artist exclusion. Captured AND cases retained their intended
 rows; OR/NOT have syntax coverage only. Aliases, repeated fuzzy matches and upstream ties can still

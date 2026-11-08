@@ -128,9 +128,10 @@ Combining marks can lift a short word over the floor even when upstream folds th
 Suggestions are not an identity claim or a guarantee of relevance across the search index.
 
 With a blank artist, the queries omit the artist clause. With an artist supplied, they extract NFC
-artist words, lowercase them with `Locale.ROOT`, and add one `artistname:` term per word joined by
-`AND`. Only words with at least four NFC code points and no Unicode number get `~`; short and
-numeric words stay exact. For example, `Rokc AND Roll` by `Kiss` sends
+artist words, classify them by NFC code-point length and Unicode numbers before lowercasing with
+`Locale.ROOT`, then add one `artistname:` term per word joined by `AND`. Only words with at least
+four NFC code points and no Unicode number get `~`; short and numeric words stay exact. For example,
+`Rokc AND Roll` by `Kiss` sends
 `recording:rokc~ AND recording:and AND recording:roll~ AND artistname:kiss~`.
 An eligible title costs one fuzzy request on either endpoint; ineligible titles cost none even
 with an artist supplied. Artist words do not add an eligibility guard or a request. On an empty
