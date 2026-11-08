@@ -104,6 +104,34 @@ The two Deezer provider ids have separate breakers, even when they share the API
 For previews, a source skipped during cooldown remains an error when the fallback has no clip;
 it cannot establish a cacheable absence for the unavailable source.
 
+## Title-only fuzzy suggestions
+
+When a strict candidate search misses and the artist is blank, fuzzy recording and release
+queries normalize the title to NFC, then extract words starting with a Unicode letter or number.
+Letters, numbers and combining marks can continue a word. Internal apostrophes are kept, with
+`’` normalized to ASCII apostrophe; other punctuation separates words. Extracted words are
+lowercased with `Locale.ROOT`, so uppercase title words such as `AND`, `OR` and `NOT` stay literal
+terms rather than Lucene operators. Every word is required in the title field. Words of at least
+four NFC code points before lowercasing take `~`, unless they contain a Unicode number; shorter
+words and words containing numbers are exact query terms.
+MusicBrainz normalises fuzzy case and accents without splitting words, and equally close spellings
+can tie; [pitfall 44](pitfalls.md#44-a-fuzzy-title-term-must-resemble-an-indexed-word) holds the live
+evidence and limits.
+
+With no qualifying long word, the fallback returns empty without an upstream request. Thus `U2`,
+`AC/DC`, `Hte`, `2012`, `sum41` and short CJK titles get no typo rescue, even when a correctly
+spelled title reaches this fallback. One approximate word can satisfy several fuzzy clauses.
+Edition words remain required: `Abbey Raod (Remastered)` can lead with
+`Bijelo Dugme (Abbey Road Remastered 2014)`, and blank-artist album enrichment skips qualifier stripping.
+Combining marks can lift a short word over the floor even when upstream folds them away, so
+`ज़ोर` (starting with U+095B) becomes four NFC code points and can return unrelated titles.
+Suggestions are not an identity claim or a guarantee of relevance across the search index.
+
+The queries omit the artist clause. Album enrichment uses the same fallback when its strict pool
+is empty, so misses without a qualifying word offer no fuzzy suggestions; track enrichment refuses
+a blank artist without searching. With an artist supplied, fuzzy search sends one unquoted
+title-and-artist query.
+
 ## Resolving a track by name
 
 A track request naming **no album** is resolved out of a pool MusicBrainz has already filtered with

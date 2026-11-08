@@ -522,6 +522,70 @@ private to previews. An album hint is a preference among those eligible recordin
 recording constraint. Keep its edition-tolerant preference even when a nonmatching compilation
 comes first, but never strip a track-title qualifier to satisfy the album hint.
 
+## 44. A fuzzy title term must resemble an indexed word
+
+MusicBrainz accepted `recording:Karma Polise~ AND artistname:~` and returned 7,216,213 hits,
+led by `Polise II` (2026-11-07). The release equivalent returned 552,522, led by `Polise`.
+Removing only the empty artist clause still returned 74,629 recording hits led by `Kängpolisen`
+and 43,933 release hits led by `Boråspolisen Blues`. The field prefix and fuzzy suffix do not
+make the intervening words one required title: each word needs its own field, joined with `AND`.
+That alone is insufficient. MusicBrainz normalises a fuzzy term's case and accents but does not
+split it into words. In a live probe on 2026-11-08 (limit=5), `recording:işıkk~` and
+`recording:isikk~` each returned 605 hits
+with the same top rows; their release equivalents each returned 148, also with the same top rows.
+Attached or standalone punctuation can become a required term that finds nothing, while two edits
+on a short token or CJK fragment can reach unrelated terms. `recording:東凉~` returned 5,743
+unrelated score-zero hits and the release equivalent 809.
+`release:F♯~ AND release:B♯~ AND release:∞~` returned 172 hits, led by `BV I Fk E`.
+Three characters are still unsafe: `recording:Hte~` returned 56,690 hits led by `Hoe komt het`,
+and correctly spelled `recording:千本桜~` returned 16,460 unrelated hits. The `Hte~1` probe did
+not improve the count or relevance.
+
+Normalize the title to NFC before extracting letter/digit runs including combining marks, retain
+internal apostrophes, and normalize curly apostrophes. Count code points before lowercasing: NFD
+Hangul can occupy more code points than NFC, and lowercasing `İyi` adds a combining dot. Two
+supplementary-plane letters occupy four UTF-16 units but only two code points. Require words
+shorter than four NFC code points exactly, and keep any word containing a Unicode number exact
+regardless of length, including mixed words such as `sum41`, `1980s` and `2012年`. Only qualifying
+words without numbers take `~`. Lowercase the extracted words with `Locale.ROOT`: uppercase `AND`,
+`OR` and `NOT` are operators even after a field prefix. `recording:Now AND recording:OR AND recording:Nevr~` returned
+7,341,859 hits led by `&=&=&=&=OR; immense` (2026-11-08); lowercasing the title words returned
+2,002 hits led by `Now or Never Now`. Keep the query's own Boolean operators uppercase.
+
+Numeric words distinguish editions: on 2026-11-08 (limit=3), the captured title-only strict
+queries for `Strman - 2012 Remaster` and `Live at Wembly 1986` both missed. Making the year exact
+in `recording:strman~ AND recording:2012~ AND recording:remaster~` narrowed 5 hits led by
+`Barman (2022 remaster)` to 2, both `Starman (2012 remastered version)`. Making the year exact
+in `release:live~ AND release:at AND release:wembly~ AND release:1986~` narrowed 14 hits led
+by `Live At Wembley 1988` to none. Mixed words containing numbers also need exact matching:
+`release:gratest~ AND release:hits~ AND release:of AND release:the AND release:1980s~` returned
+15 hits, led by other decades; making `1980s` exact returned one 1980s compilation.
+`recording:東凉2020~` returned 8,329 hits and `recording:2012年~` returned 7,795
+(2026-11-08, limit=3). Neither title has a word that can safely qualify for a fuzzy request.
+
+A word must start with a letter or number: NFC can decompose musical symbols into a symbol and
+combining marks, which must not become required words on their own. On 2026-11-08 (limit=3),
+`recording:𝅥 AND recording:karma~ AND recording:polise~` returned 2 hits against 412 without
+the mark; the release equivalents returned 0 and 22.
+
+Combining marks belong inside a word: omitting `\p{M}` split `ความรัก` into `ความร` and `ก`,
+losing the intended recording. The complete fuzzy word returned 15 hits led by `ความรัก`.
+One approximate word can satisfy several fuzzy clauses, as `Rolc` can for `Rokc Roll`.
+A typo equally close to the intended title and another real title can be led by the other
+one because upstream ranks equally close spellings as ties (`Işıkk` → `isiki`).
+The captured word-only Satisfaction and Rumours queries return related titles where the
+punctuated forms return none, without client-side filtering.
+
+If no long word qualifies, skip the request: an exact-only fallback cannot rescue a typo and an
+exact short CJK term can itself broaden (`recording:東凉` returned 8,429 hits led by `凉凉`).
+The recall cost includes `U2`, `AC/DC`, short CJK titles, three-letter typos and titles whose only
+long words contain numbers, including `sum41`.
+
+The captures, timestamps and query comparisons are in `pools/musicbrainz-fuzzy-title-only/`
+under core's test resources. The scenario records capture timestamps and exact queries; only the
+first three hits were inspected. These queries constrain suggestions, not identity or semantic
+relevance for every title: a title without an artist cannot identify which recording the caller means.
+
 ## 3. `org.json` returns a default for a missing key — it does not fail
 
 ```kotlin

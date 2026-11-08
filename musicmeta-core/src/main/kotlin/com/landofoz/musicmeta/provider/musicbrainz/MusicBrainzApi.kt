@@ -11,6 +11,8 @@ import com.landofoz.musicmeta.provider.encodePathSegment
 import com.landofoz.musicmeta.provider.encodeQueryValue
 import kotlinx.coroutines.currentCoroutineContext
 import org.json.JSONObject
+import java.text.Normalizer
+import java.util.Locale
 
 /**
  * MusicBrainz API client. Handles query building, rate limiting, and parsing.
@@ -55,13 +57,13 @@ internal class MusicBrainzApi(
         return MusicBrainzParser.parseArtistDisambiguations(json)
     }
 
-    /** Broader fuzzy search (unquoted + Lucene ~) for near-miss suggestions. */
+    /** Near-miss suggestions; title-only queries need a word with at least four NFC code points and no numbers. */
     suspend fun searchReleasesFuzzy(
         title: String,
         artist: String,
         limit: Int = 3,
     ): List<MusicBrainzRelease> {
-        val query = encodeQueryValue("release:${escapeLucene(title)}~ AND artistname:${escapeLucene(artist)}~")
+        val query = fuzzyTitleQuery("release", title, artist) ?: return emptyList()
         val json = rateLimiter.execute {
             httpClient.fetchJsonResult("$BASE_URL/release?query=$query&fmt=json&limit=$limit").bodyOrThrowTransient()
         } ?: return emptyList()
@@ -268,18 +270,17 @@ internal class MusicBrainzApi(
         }
 
     /**
-     * Broader fuzzy search (unquoted + Lucene `~`) for near-miss suggestions — same shape as
-     * [searchReleasesFuzzy]/[searchArtistsFuzzy]. [searchRecordings]'s own hint-less retry only
-     * drops the `release:"…"` album term; it re-sends [title] quoted, so it can never rescue a typo
-     * the way this loosened match can. Like the release/artist variants, this deliberately takes no
-     * album hint — a fuzzy near-miss query is already loose, and a release term would narrow it.
+     * Near-miss suggestions; title-only queries need a word with at least four NFC code points and no numbers.
+     * [searchRecordings]'s own hint-less retry only drops the `release:"…"` album term. It re-sends
+     * [title] quoted, so this loosened match is needed to rescue a typo. Like the release/artist
+     * variants, this takes no album hint — a release term would narrow a near-miss query.
      */
     suspend fun searchRecordingsFuzzy(
         title: String,
         artist: String,
         limit: Int = 3,
     ): List<MusicBrainzRecording> {
-        val query = encodeQueryValue("recording:${escapeLucene(title)}~ AND artistname:${escapeLucene(artist)}~")
+        val query = fuzzyTitleQuery("recording", title, artist) ?: return emptyList()
         val json = rateLimiter.execute {
             httpClient.fetchJsonResult("$BASE_URL/recording?query=$query&fmt=json&limit=$limit").bodyOrThrowTransient()
         } ?: return emptyList()
@@ -475,6 +476,30 @@ internal class MusicBrainzApi(
 
         fun escapeLucene(value: String): String =
             value.replace(LUCENE_SPECIAL_CHARS) { "\\${it.value}" }
+
+        private const val MIN_FUZZY_WORD_LENGTH = 4
+        private val FUZZY_TITLE_WORDS = Regex(
+            "[\\p{L}\\p{N}][\\p{L}\\p{M}\\p{N}]*(?:['’][\\p{L}\\p{N}][\\p{L}\\p{M}\\p{N}]*)*",
+        )
+        private val TITLE_NUMBERS = Regex("\\p{N}+")
+
+        private fun fuzzyTitleQuery(field: String, title: String, artist: String): String? {
+            if (artist.isNotBlank()) {
+                return encodeQueryValue("$field:${escapeLucene(title)}~ AND artistname:${escapeLucene(artist)}~")
+            }
+            // MusicBrainz folds fuzzy terms' case and accents but does not split them into words.
+            // Lowercasing keeps Boolean title words out of Lucene's grammar.
+            val words = FUZZY_TITLE_WORDS.findAll(Normalizer.normalize(title, Normalizer.Form.NFC))
+                .map { it.value.replace('’', '\'') }.toList()
+            val fuzzyWords = words.filter {
+                it.codePointCount(0, it.length) >= MIN_FUZZY_WORD_LENGTH && !TITLE_NUMBERS.containsMatchIn(it)
+            }.distinct()
+            if (fuzzyWords.isEmpty()) return null
+            val terms = words.joinToString(" AND ") {
+                "$field:${escapeLucene(it.lowercase(Locale.ROOT))}" + if (it in fuzzyWords) "~" else ""
+            }
+            return encodeQueryValue(terms)
+        }
 
         /** Build a Lucene query with two fields and URL-encode the ENTIRE thing. */
         private fun buildQuery(field1: String, value1: String, field2: String, value2: String): String =
