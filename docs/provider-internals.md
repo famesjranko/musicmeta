@@ -160,7 +160,26 @@ name does not inherit its rank. Search alone folds curly double quotes, typograp
 enrichment's shared title matcher keeps its own policy.
 
 Before ranking, merged recording and release pools keep each MusicBrainz ID once at its highest
-upstream score. After ranking, candidates with identical title, artist, year, country, type, thumbnail,
+upstream score.
+
+For album candidates, exact-title releases stay inside the existing supplied-artist-match and
+ordered artist-hint tiers. These tiers are contiguous before edition evidence is applied.
+Within a tier, rows are linked by the same structured artist-id set or by the same first
+credited artist id, including across release groups. Each connected component is ordered once
+inside its own slots; neither relation can move a row across an artist tier. Credits without ids use the complete
+display credit for the artist key; an absent credit makes no artist link. The first-artist
+link requires a non-empty ordered credit-id list.
+
+Complete date/status/type evidence leads, then official status, Album primary type, no secondary
+types, earliest pressing date, blank disambiguation, score and MBID. Within a year or month,
+fuller dates lead partial dates for that period: `1997-05-21`, then `1997-05`, then `1997-06-16`,
+then the rest of 1997, with year-only `1997` last. Any 1996 date still precedes any 1997 date.
+Missing and alternative releases are retained before the requested limit is applied, so a small
+limit may still omit them. This ordering spends no additional request and cannot establish an
+original release outside the returned pool: release search supplies pressing dates, not the
+group's first-release date (checked on 2026-11-07).
+
+After ranking, candidates with identical title, artist, year, country, type, thumbnail,
 disambiguation and score collapse to the first row before the limit. Distinct visible editions
 remain choices. Artist search keeps its upstream order with the same collapse rule.
 A nonempty strict track search with a supplied artist adds one filtered canonical pool, unless

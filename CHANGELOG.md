@@ -34,14 +34,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Any provider's auth refusal now logs a warning, including a rejected Last.fm, Discogs or Fanart.tv key and a Deezer host block that iTunes covered; cache hits stay silent
 - The demo web UI marks a provider that refused this host at startup with a warning and explains it on hover (demo only)
 
-### Fixed
-- Deezer HTTP 403 now reports `ErrorKind.AUTH` on all routes, including similar albums, and counts as a provider breaker failure; blocked previews and preview cooldown produce uncached errors
-- The web demo preview endpoint distinguishes upstream blocks and failures (HTTP 502) from missing previews (404); the play button reports the failure (demo only)
-- Search prefers exact titles, requested artists and main recordings; title-only discovery uses iTunes artist hints, falling back to MusicBrainz ranking on signal failure.
-- Search collapses identical visible rows and drops cross-provider title/artist duplicates unless edition details differ; distinct editions remain selectable, and the demo shows release country.
-- Search folds typographic quotes, apostrophes, hyphens and ellipses without changing enrichment matching; fuzzy results keep relevance ahead of edition evidence.
-- Search keeps a popular artist's marked recordings ahead of covers, fetches missing unmarked exact albums, and avoids repeated supplied-artist recording queries.
-
 ### Changed
 - iTunes preview clips use `.m4a` URLs with `durationMs = null`; players must accept both these and Deezer's 30-second MP3 clips
 - `STALE_IF_ERROR` can now replace a Deezer 403 with an expired cache entry; inspect `isStale`
@@ -49,6 +41,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Each Deezer preview miss takes up to two serial 3-second iTunes slots shared with art and metadata: an album-qualified miss retries without the hint; batches can hit the engine deadline
 - Keeping iTunes art while refusing its previews requires checking `preview.source` or hand-wiring providers; there is no per-capability opt-out
 - Apple's policy snapshot now records verified preview restrictions: store promotion, a linked approved badge, courtesy attribution, and streaming without saving or caching media
+
+### Fixed
+- Deezer HTTP 403 now reports `ErrorKind.AUTH` on all routes, including similar albums, and counts as a provider breaker failure; blocked previews and preview cooldown produce uncached errors
+- The web demo preview endpoint distinguishes upstream blocks and failures (HTTP 502) from missing previews (404); the play button reports the failure (demo only)
+- Album search favours an artist's complete official albums and earlier editions over singles and reissues; missing date, status or type ranks lower; other editions stay selectable (#413)
+- Search prefers exact titles, requested artists and main recordings; title-only discovery uses iTunes artist hints, falling back to MusicBrainz ranking on signal failure.
+- Search collapses identical visible rows and drops cross-provider title/artist duplicates unless edition details differ; distinct editions remain selectable, and the demo shows release country.
+- Search folds typographic quotes, apostrophes, hyphens and ellipses without changing enrichment matching; fuzzy results keep relevance ahead of edition evidence.
+- Search keeps a popular artist's marked recordings ahead of covers, fetches missing unmarked exact albums, and avoids repeated supplied-artist recording queries.
 
 ## [0.14.0] - 2026-10-08
 

@@ -570,6 +570,35 @@ fixtures agreed with each other, three of them carrying a hand-written `cover-ar
 search payload upstream never sends. A fixture copied from a real response of **the endpoint the
 caller actually uses** is what pins this — a lookup capture proves nothing about a search path.
 
+Release search also omits `release-group.first-release-date`: none of the 200 Thriller search
+hits captured on 2026-11-07 carried it. The pressing's `date` is the available chronology signal,
+not proof of the album's worldwide original date. Keep its month/day precision until ranking:
+`SearchCandidate.year` has already discarded it, so sorting that display field cannot distinguish
+November and December pressings of the same year. Raw string comparison also puts `1997`
+before `1997-05-21`, though the year-only value provides no evidence it was earlier. Pad missing
+month/day components after known components in the same period, so fuller dates lead without
+moving a date across a year or month boundary. Rank incomplete releases before `take(limit)`
+without filtering them; retention in the pool does not promise a place inside every result limit.
+
+One release group's credits can vary between pressings: Getz/Gilberto's 1964 original credits
+Jobim as well as Getz and Gilberto, while the captured 2011 reissue credits only the latter two.
+An exact artist-id set splits these editions. Linking by first credited artist across release
+groups joins them, but that link says nothing about the requested artist: a Jobim edition must not give
+its slot to a duet that does not credit Jobim. Both relation keys must include the comparator's
+supplied-artist match and ordered hint rank, computed once for the candidate.
+
+Independent slot sorts over overlapping groups do not compose. Within one artist tier, moving
+a 1970 guest album into a 1980 album's slot can leave a 1990 single between the two albums;
+reversing the passes can instead break chronology. Find the connected components of both
+relations first, then order each component once. Exact-title rows have a constant relevance
+score tier between supplied-artist match and hint rank, so these artist tiers are contiguous.
+
+A completeness test must make later tiers favour the incomplete row when the completeness tier
+is absent. A missing-status album against an official single proves nothing by itself: the
+Official tier already prefers the single. Pair the missing-status original with a complete
+bootleg instead; pair an undated album with a complete single, and an older missing-type album
+with a later complete single, so each missing field has a discriminating case.
+
 ## 32. Normalizing an upstream's convention at one call site gives one entity two names
 
 ```kotlin

@@ -34,20 +34,29 @@ internal class MusicBrainzCandidateSearch(
         return (pool + extra)
             .groupBy { it.value.identifiers.musicBrainzId }.values
             .map { entries -> entries.maxBy { it.value.matchScore } }
+            .map { candidate ->
+                candidate.copy(
+                    artistTier = MusicBrainzCandidateArtistTier(
+                        sameArtist(suppliedArtist, candidate), artistRank(artists, candidate),
+                    ),
+                )
+            }
             .sortedWith(
                 compareByDescending<Candidate> { SearchTitleMatcher.equivalent(title, it.value.title) }
-                    .thenByDescending { sameArtist(suppliedArtist, it) }
+                    .thenByDescending { it.artistTier.suppliedArtistMatch }
                     .thenByDescending {
                         if (SearchTitleMatcher.equivalent(title, it.value.title)) 0f else it.value.matchScore
                     }
-                    .thenBy { artistRank(artists, it) }
+                    .thenBy { it.artistTier.hintRank }
                     .thenByDescending { it.value.disambiguation.isNullOrBlank() }
                     .thenByDescending { it.officialAlbumRecording }
                     .thenByDescending { it.value.matchScore }
                     .thenBy { it.value.artist.orEmpty().lowercase() }
                     .thenBy { it.value.title.lowercase() }
                     .thenBy { it.value.identifiers.musicBrainzId },
-            ).map { it.value }.distinctBy { it.displayKey() }.take(limit)
+            ).let { candidates ->
+                MusicBrainzAlbumCandidateOrder.order(candidates, title, artistTierOf = { it.artistTier }) { it.release }
+            }.map { it.value }.distinctBy { it.displayKey() }.take(limit)
     }
 
     private fun artistRank(artists: List<String>, candidate: Candidate): Int =
@@ -105,6 +114,7 @@ internal class MusicBrainzCandidateSearch(
                     disambiguation = release.disambiguation,
                 ),
                 artistCredits = release.artistCredits,
+                release = release,
             )
         }
     }
@@ -170,5 +180,7 @@ internal class MusicBrainzCandidateSearch(
         val value: SearchCandidate,
         val artistCredits: List<String>,
         val officialAlbumRecording: Boolean = false,
+        val release: MusicBrainzRelease? = null,
+        val artistTier: MusicBrainzCandidateArtistTier = MusicBrainzCandidateArtistTier(),
     )
 }
