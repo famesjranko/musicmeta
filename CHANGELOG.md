@@ -29,6 +29,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Breaking Changes
+- Android minSdk is now 24 (was 21): raise your app's minSdk; 0.12.0–0.14.0 already needed API 24 at runtime and could throw NoSuchMethodError on API 21–23 (#427)
+
 ### Added
 - iTunes supplies `TRACK_PREVIEW` after Deezer: exact titles win, guests must match, and competing guests give no preview; album hints prefer compatible editions but allow other albums
 - Any provider's auth refusal now logs a warning, including a rejected Last.fm, Discogs or Fanart.tv key and a Deezer host block that iTunes covered; cache hits stay silent
