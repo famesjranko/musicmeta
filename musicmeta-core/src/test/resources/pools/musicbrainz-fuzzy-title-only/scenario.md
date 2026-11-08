@@ -257,7 +257,10 @@ pool relevance, latency or general recall was measured.
 | (I Can't Get No) Satisfacton old | `recording:\(I~ AND recording:Can't~ AND recording:Get~ AND recording:No\)~ AND recording:Satisfacton~` | 0 | ∅ |
 | Don't Stpo Me Now old | `recording:Don't~ AND recording:Stpo~ AND recording:Me~ AND recording:Now~` | 532 | Don't Stop Me Now (100); Don't Stop Me Now (100); Don’t Stop Me Now (100) |
 
-### Decision and recall cost
+### Rejected round-one rule and recall cost
+
+The exact-word requirement described here was rejected in round two below. Its query
+measurements remain as provenance, not as the current search policy.
 
 Extract Unicode letter/digit runs, retaining internal apostrophes and normalizing `’` to
 ASCII apostrophe. Words shorter than four Unicode code points are exact query terms.
@@ -271,3 +274,175 @@ returned unrelated rows. Titles containing no four-character word, including `U2
 the exact-word requirement can also lose the intended title. An empty list is preferable
 to those demonstrated false suggestions. Search-index matching remains approximate; the
 measurements do not promise semantic relevance for every title or every hit.
+
+## Round two: recall, case and combining marks
+
+Captured on 2026-11-08 before changing production code from `0127349`.
+Same User-Agent as above, limit=3, sequential requests with 1.1 seconds after each response.
+Each fixture is the complete unmodified HTTP 200 response. Errors were retried at most
+three times; all measurements below completed successfully.
+
+- `recording-round2-karma-polise.json` — 2026-11-08T00:32:20.903919+00:00, count=412
+  - `https://musicbrainz.org/ws/2/recording?query=recording%3Akarma~+AND+recording%3Apolise~&fmt=json&limit=3`
+- `recording-round2-karma-police.json` — 2026-11-08T00:32:25.946046+00:00, count=413
+  - `https://musicbrainz.org/ws/2/recording?query=recording%3Akarma~+AND+recording%3Apolice~&fmt=json&limit=3`
+- `recording-round2-paranojd.json` — 2026-11-08T00:32:29.768145+00:00, count=8049
+  - `https://musicbrainz.org/ws/2/recording?query=recording%3Aparanojd~&fmt=json&limit=3`
+- `recording-round2-short-words.json` — 2026-11-08T00:32:35.340518+00:00, count=509
+  - `https://musicbrainz.org/ws/2/recording?query=recording%3Adon%27t~+AND+recording%3Astpo~+AND+recording%3Ame+AND+recording%3Anow&fmt=json&limit=3`
+- `recording-round2-joined-words.json` — 2026-11-08T00:32:37.957123+00:00, count=4440
+  - `https://musicbrainz.org/ws/2/recording?query=recording%3Alove~+AND+recording%3Ahate~&fmt=json&limit=3`
+- `recording-round2-double-typo.json` — 2026-11-08T00:30:17.189987+00:00, count=676
+  - `https://musicbrainz.org/ws/2/recording?query=recording%3Ahotle~+AND+recording%3Acalifonia~&fmt=json&limit=3`
+- `recording-round2-double-typo-exact.json` — 2026-11-08T00:30:20.773518+00:00, count=0
+  - `https://musicbrainz.org/ws/2/recording?query=recording%3Ahotle~+AND+recording%3Acalifonia~+AND+%28recording%3Ahotle+OR+recording%3Acalifonia%29&fmt=json&limit=3`
+- `recording-round2-thai.json` — 2026-11-08T00:32:01.103770+00:00, count=15
+  - `https://musicbrainz.org/ws/2/recording?query=recording%3A%E0%B8%84%E0%B8%A7%E0%B8%B2%E0%B8%A1%E0%B8%A3%E0%B8%B1%E0%B8%81~&fmt=json&limit=3`
+- `recording-round2-thai-split.json` — 2026-11-08T00:31:58.620070+00:00, count=5
+  - `https://musicbrainz.org/ws/2/recording?query=recording%3A%E0%B8%84%E0%B8%A7%E0%B8%B2%E0%B8%A1%E0%B8%A3~+AND+recording%3A%E0%B8%81&fmt=json&limit=3`
+- `recording-round2-locale.json` — 2026-11-08T00:31:52.783022+00:00, count=1491
+  - `https://musicbrainz.org/ws/2/recording?query=recording%3Anot+AND+recording%3Aafraid~&fmt=json&limit=3`
+- `recording-round2-and.json` — 2026-11-08T00:31:06.156302+00:00, count=11572
+  - `https://musicbrainz.org/ws/2/recording?query=recording%3Arokc~+AND+recording%3Aand+AND+recording%3Aroll~&fmt=json&limit=3`
+- `recording-round2-and-old.json` — 2026-11-08T00:30:56.901512+00:00, count=7241512
+  - `https://musicbrainz.org/ws/2/recording?query=recording%3ARokc~+AND+recording%3AAND+AND+recording%3ARoll~&fmt=json&limit=3`
+- `recording-round2-or.json` — 2026-11-08T00:31:14.197731+00:00, count=2002
+  - `https://musicbrainz.org/ws/2/recording?query=recording%3Anow+AND+recording%3Aor+AND+recording%3Anevr~&fmt=json&limit=3`
+- `recording-round2-or-old.json` — 2026-11-08T00:31:11.239090+00:00, count=7341859
+  - `https://musicbrainz.org/ws/2/recording?query=recording%3ANow+AND+recording%3AOR+AND+recording%3ANevr~&fmt=json&limit=3`
+- `recording-round2-not.json` — 2026-11-08T00:31:31.951345+00:00, count=1493
+  - `https://musicbrainz.org/ws/2/recording?query=recording%3Anot+AND+recording%3Aafriad~&fmt=json&limit=3`
+- `recording-round2-not-old.json` — 2026-11-08T00:31:25.915385+00:00, count=7325620
+  - `https://musicbrainz.org/ws/2/recording?query=recording%3ANOT+AND+recording%3AAfriad~&fmt=json&limit=3`
+- `recording-round2-and-current.json` — 2026-11-08T00:31:01.554695+00:00, count=7345687
+  - `https://musicbrainz.org/ws/2/recording?query=recording%3ARokc~+AND+recording%3AAND+AND+recording%3ARoll~+AND+%28recording%3ARokc+OR+recording%3ARoll%29&fmt=json&limit=3`
+- `release-round2-karma-polise.json` — 2026-11-08T00:34:31.687489+00:00, count=22
+  - `https://musicbrainz.org/ws/2/release?query=release%3Akarma~+AND+release%3Apolise~&fmt=json&limit=3`
+- `release-round2-karma-police.json` — 2026-11-08T00:34:35.283022+00:00, count=22
+  - `https://musicbrainz.org/ws/2/release?query=release%3Akarma~+AND+release%3Apolice~&fmt=json&limit=3`
+- `release-round2-paranojd.json` — 2026-11-08T00:34:37.830036+00:00, count=1158
+  - `https://musicbrainz.org/ws/2/release?query=release%3Aparanojd~&fmt=json&limit=3`
+- `release-round2-short-words.json` — 2026-11-08T00:34:40.284521+00:00, count=46
+  - `https://musicbrainz.org/ws/2/release?query=release%3Adon%27t~+AND+release%3Astpo~+AND+release%3Ame+AND+release%3Anow&fmt=json&limit=3`
+- `release-round2-joined-words.json` — 2026-11-08T00:34:42.861190+00:00, count=958
+  - `https://musicbrainz.org/ws/2/release?query=release%3Alove~+AND+release%3Ahate~&fmt=json&limit=3`
+- `release-round2-double-typo.json` — 2026-11-08T00:32:42.843558+00:00, count=139
+  - `https://musicbrainz.org/ws/2/release?query=release%3Ahotle~+AND+release%3Acalifonia~&fmt=json&limit=3`
+- `release-round2-double-typo-exact.json` — 2026-11-08T00:32:45.405589+00:00, count=0
+  - `https://musicbrainz.org/ws/2/release?query=release%3Ahotle~+AND+release%3Acalifonia~+AND+%28release%3Ahotle+OR+release%3Acalifonia%29&fmt=json&limit=3`
+- `release-round2-thai.json` — 2026-11-08T00:34:24.202575+00:00, count=0
+  - `https://musicbrainz.org/ws/2/release?query=release%3A%E0%B8%84%E0%B8%A7%E0%B8%B2%E0%B8%A1%E0%B8%A3%E0%B8%B1%E0%B8%81~&fmt=json&limit=3`
+- `release-round2-thai-split.json` — 2026-11-08T00:34:20.698191+00:00, count=0
+  - `https://musicbrainz.org/ws/2/release?query=release%3A%E0%B8%84%E0%B8%A7%E0%B8%B2%E0%B8%A1%E0%B8%A3~+AND+release%3A%E0%B8%81&fmt=json&limit=3`
+- `release-round2-locale.json` — 2026-11-08T00:34:14.927722+00:00, count=181
+  - `https://musicbrainz.org/ws/2/release?query=release%3Anot+AND+release%3Aafraid~&fmt=json&limit=3`
+- `release-round2-and.json` — 2026-11-08T00:33:14.026981+00:00, count=2137
+  - `https://musicbrainz.org/ws/2/release?query=release%3Arokc~+AND+release%3Aand+AND+release%3Aroll~&fmt=json&limit=3`
+- `release-round2-and-old.json` — 2026-11-08T00:33:07.922949+00:00, count=556819
+  - `https://musicbrainz.org/ws/2/release?query=release%3ARokc~+AND+release%3AAND+AND+release%3ARoll~&fmt=json&limit=3`
+- `release-round2-or.json` — 2026-11-08T00:33:35.201212+00:00, count=283
+  - `https://musicbrainz.org/ws/2/release?query=release%3Anow+AND+release%3Aor+AND+release%3Anevr~&fmt=json&limit=3`
+- `release-round2-or-old.json` — 2026-11-08T00:33:28.873461+00:00, count=574251
+  - `https://musicbrainz.org/ws/2/release?query=release%3ANow+AND+release%3AOR+AND+release%3ANevr~&fmt=json&limit=3`
+- `release-round2-not.json` — 2026-11-08T00:33:51.285725+00:00, count=183
+  - `https://musicbrainz.org/ws/2/release?query=release%3Anot+AND+release%3Aafriad~&fmt=json&limit=3`
+- `release-round2-not-old.json` — 2026-11-08T00:33:40.975184+00:00, count=568441
+  - `https://musicbrainz.org/ws/2/release?query=release%3ANOT+AND+release%3AAfriad~&fmt=json&limit=3`
+- `release-round2-and-current.json` — 2026-11-08T00:33:10.488671+00:00, count=567295
+  - `https://musicbrainz.org/ws/2/release?query=release%3ARokc~+AND+release%3AAND+AND+release%3ARoll~+AND+%28release%3ARokc+OR+release%3ARoll%29&fmt=json&limit=3`
+- `recording-round2-satisfaction.json` — 2026-11-08T00:34:45.784113+00:00, count=1128
+  - `https://musicbrainz.org/ws/2/recording?query=recording%3Ai+AND+recording%3Acan%27t~+AND+recording%3Aget+AND+recording%3Ano+AND+recording%3Asatisfacton~&fmt=json&limit=3`
+- `release-round2-rumours.json` — 2026-11-08T00:34:48.365196+00:00, count=5
+  - `https://musicbrainz.org/ws/2/release?query=release%3Arumours~+AND+release%3Adeluxe~&fmt=json&limit=3`
+
+### Probe table
+
+Counts cover the upstream pool; only the first three rows were inspected. Mixed-case and
+uppercase fuzzy terms returned the same counts as lowercase terms in each paired probe.
+The lowercase exact Boolean words keep their title meaning instead of becoming operators.
+`Beyonce` plus U+0301 returned the same counts and top rows with and without the mark on
+both endpoints, so no separate Latin regression was added. The release query for `ความรัก`
+returned zero with or without marks; its test pins the query shape, while recording search
+supplies the positive Thai regression.
+
+| Arm | Decoded query | Count | Top titles (score) |
+|---|---|---:|---|
+| Hotle Califonia new | `recording:hotle~ AND recording:califonia~` | 676 | Hotel California (Hotel California) (100); Hotel Caliifornia (93); Hotel Cacafonia (92) |
+| Hotle Califonia exact-word clause | `recording:hotle~ AND recording:califonia~ AND (recording:hotle OR recording:califonia)` | 0 | ∅ |
+| Bohemain Rapsodie new | `recording:bohemain~ AND recording:rapsodie~` | 20 | Bohemian Rhapsody (Rapsodia Bohemia) (100); Bohemian rhapsodie (91); Bohemian Rhapsodie (90) |
+| Bohemain Rapsodie exact-word clause | `recording:bohemain~ AND recording:rapsodie~ AND (recording:bohemain OR recording:rapsodie)` | 0 | ∅ |
+| Stiarway to Heavn new | `recording:stiarway~ AND recording:to AND recording:heavn~` | 1752 | Stairway to Heaven (100); Stairway to Heaven (100); Stairway to Heaven (100) |
+| Stiarway to Heavn exact-word clause | `recording:stiarway~ AND recording:to AND recording:heavn~ AND (recording:stiarway OR recording:heavn)` | 0 | ∅ |
+| Wonderwal Oaisis new | `recording:wonderwal~ AND recording:oaisis~` | 53 | Wonderwall (Oasis) (100); Wonderwall (Oasis) (99); Wonderwall (OASIS) (99) |
+| Wonderwal Oaisis exact-word clause | `recording:wonderwal~ AND recording:oaisis~ AND (recording:wonderwal OR recording:oaisis)` | 0 | ∅ |
+| Rokc AND Roll bare operators | `recording:Rokc~ AND recording:AND AND recording:Roll~` | 7241512 | AND AND AND AND AND AND AND AND AND AND AND AND AND AND AND AND AND AND AND AND (100); Roll And Roll And Roll (99); Roll & Roll & Roll (99) |
+| Rokc AND Roll current code | `recording:Rokc~ AND recording:AND AND recording:Roll~ AND (recording:Rokc OR recording:Roll)` | 7345687 | Roll And Roll And Roll (100); Roll & Roll & Roll (100); &=&=&=&=OR; immense (99) |
+| Rokc AND Roll new | `recording:rokc~ AND recording:and AND recording:roll~` | 11572 | Rock and Roll, Rock and Roll (100); Mr Rock And Roll Role (99); ROCK AND ROLL / ROCK AND ROLL (93) |
+| Rokc AND Roll uppercase fuzzy terms | `recording:ROKC~ AND recording:and AND recording:ROLL~` | 11572 | Mr Rock And Roll Role (100); Rock and Roll, Rock and Roll (99); ROCK AND ROLL / ROCK AND ROLL (93) |
+| Now OR Nevr bare operators | `recording:Now AND recording:OR AND recording:Nevr~` | 7341859 | &=&=&=&=OR; immense (100); AND AND AND AND AND AND AND AND AND AND AND AND AND AND AND AND AND AND AND AND (94); And And And And And And And And And And (93) |
+| Now OR Nevr new | `recording:now AND recording:or AND recording:nevr~` | 2002 | Now or Never Now (100); Now or Never Now (100); Now or Never Now (100) |
+| Now OR Nevr uppercase fuzzy terms | `recording:NOW AND recording:or AND recording:NEVR~` | 2002 | Now or Never Now (100); Now or Never Now (100); Now or Never Now (100) |
+| NOT Afriad bare operators | `recording:NOT AND recording:Afriad~` | 7325620 | I'm Not Afriad (100); Dialective - Not Afriad (90); Afriad To Fly (68) |
+| NOT Afriad new | `recording:not AND recording:afriad~` | 1493 | I'm Not Afriad (100); Not Afraid (98); Not Afraid (98) |
+| NOT Afriad uppercase fuzzy terms | `recording:not AND recording:AFRIAD~` | 1493 | I'm Not Afriad (100); Not Afraid (97); Not Afraid (97) |
+| Rock and Roll correct mixed input | `recording:rock~ AND recording:and AND recording:roll~` | 11602 | Rock and Roll, Rock and Roll (100); Mr Rock And Roll Role (97); Rock & Roll Rock (94) |
+| Rock and Roll correct uppercase fuzzy terms | `recording:ROCK~ AND recording:and AND recording:ROLL~` | 11602 | Rock and Roll, Rock and Roll (100); Mr Rock And Roll Role (97); Rock & Roll Rock (94) |
+| Now or Never correct mixed input | `recording:now AND recording:or AND recording:never~` | 1993 | Now or Never Now (100); Now or Never Now (100); Now or Never Now (99) |
+| Now or Never correct uppercase fuzzy terms | `recording:NOW AND recording:or AND recording:NEVER~` | 1993 | Now or Never Now (100); Now or Never Now (100); Now or Never Now (99) |
+| Not Afraid correct mixed input | `recording:not AND recording:afraid~` | 1491 | Not Afraid (100); Not Afraid (100); Not Afraid (100) |
+| Not Afraid correct uppercase fuzzy terms | `recording:not AND recording:AFRAID~` | 1491 | Not Afraid (100); Not Afraid (100); Not Afraid (100) |
+| ความรัก without marks | `recording:ความร~ AND recording:ก` | 5 | ต้นเหตุ คือ...ความรัก (100); มีหัวใจ (แต่ไร้ความรู้สึก) (91); มีหัวใจ (แต่ไร้ความรู้สึก) (91) |
+| ความรัก with marks | `recording:ความรัก~` | 15 | ความรัก (100); ความรัก (100); ความรัก (99) |
+| Beyoncé without marks | `recording:beyonce~` | 30502 | Beyond Beyoncé (100); Renonce…Dénonce… (85); Beyond the Beyonda (79) |
+| Beyoncé with marks | `recording:beyoncé~` | 30502 | Beyond Beyoncé (100); Renonce…Dénonce… (85); Beyond the Beyonda (79) |
+| Karma Polise legacy | `recording:karma~ AND recording:polise~` | 412 | Karma Police (100); Karma Police (100); Karma Police (100) |
+| Karma Police legacy | `recording:karma~ AND recording:police~` | 413 | Karma Police (100); Karma Police (100); Karma Police (100) |
+| Paranojd legacy | `recording:paranojd~` | 8049 | Paranoid, Paranoia (100); Paranoid, Paranoia (99); Paranoid (Prelude to Paranoia) (78) |
+| Don't Stpo Me Now legacy | `recording:don't~ AND recording:stpo~ AND recording:me AND recording:now` | 509 | Don't Stop Me Now (100); Don't Stop Me Now (100); Don’t Stop Me Now (100) |
+| Love-Hate legacy | `recording:love~ AND recording:hate~` | 4440 | Love Hater (Hate for Love) (100); Love Hate Fear Fate (99); Love Hate Love Hate (93) |
+| Hotle Califonia new | `release:hotle~ AND release:califonia~` | 139 | Hotel California (100); Hotel California (100); Hotel California (100) |
+| Hotle Califonia exact-word clause | `release:hotle~ AND release:califonia~ AND (release:hotle OR release:califonia)` | 0 | ∅ |
+| Bohemain Rapsodie new | `release:bohemain~ AND release:rapsodie~` | 4 | Bohemian Rhapsodies (100); Bohemian Rhapsodies (100); Bohemian Rhapsodies (100) |
+| Bohemain Rapsodie exact-word clause | `release:bohemain~ AND release:rapsodie~ AND (release:bohemain OR release:rapsodie)` | 0 | ∅ |
+| Stiarway to Heavn new | `release:stiarway~ AND release:to AND release:heavn~` | 70 | Stairway to Heaven (100); Stairway to Heaven (100); Stairway to Heaven (100) |
+| Stiarway to Heavn exact-word clause | `release:stiarway~ AND release:to AND release:heavn~ AND (release:stiarway OR release:heavn)` | 0 | ∅ |
+| Wonderwal Oaisis new | `release:wonderwal~ AND release:oaisis~` | 4 | Wonderwall (OASIS) (100); A Wonderful Crisis (74); Cheap Wonderwall (Sia vs. Oasis) (70) |
+| Wonderwal Oaisis exact-word clause | `release:wonderwal~ AND release:oaisis~ AND (release:wonderwal OR release:oaisis)` | 0 | ∅ |
+| Rokc AND Roll bare operators | `release:Rokc~ AND release:AND AND release:Roll~` | 556819 | And And And And And And And And And And (100); %&%&%&%&%&%& (98); One and, and, and, and One and, and Three and, and (92) |
+| Rokc AND Roll current code | `release:Rokc~ AND release:AND AND release:Roll~ AND (release:Rokc OR release:Roll)` | 567295 | and/or (100); And/Or (100); Rock & Roll and Alcohol (89) |
+| Rokc AND Roll new | `release:rokc~ AND release:and AND release:roll~` | 2137 | Rock and Roll (100); Rock And Roll (100); Rock & Roll (100) |
+| Rokc AND Roll uppercase fuzzy terms | `release:ROKC~ AND release:and AND release:ROLL~` | 2137 | Rock and Roll (100); Rock And Roll (100); Rock & Roll (100) |
+| Now OR Nevr bare operators | `release:Now AND release:OR AND release:Nevr~` | 574251 | and/or (100); And/Or (100); And Now! (96) |
+| Now OR Nevr new | `release:now AND release:or AND release:nevr~` | 283 | Now or Never Now (100); Now or Never (98); Now or Never (98) |
+| Now OR Nevr uppercase fuzzy terms | `release:NOW AND release:or AND release:NEVR~` | 283 | Now or Never Now (100); Now or Never (98); Now or Never (98) |
+| NOT Afriad bare operators | `release:NOT AND release:Afriad~` | 568441 | I'm Not Afriad (100); And Not Or (57); And Why Not? (57) |
+| NOT Afriad new | `release:not AND release:afriad~` | 183 | Not Afraid, Not Afraid (100); Not Afraid (91); Not Afraid (91) |
+| NOT Afriad uppercase fuzzy terms | `release:not AND release:AFRIAD~` | 183 | Not Afraid, Not Afraid (100); Not Afraid (91); Not Afraid (91) |
+| Rock and Roll correct mixed input | `release:rock~ AND release:and AND release:roll~` | 2152 | Rock and Roll (100); Rock And Roll (100); Rock & Roll (100) |
+| Rock and Roll correct uppercase fuzzy terms | `release:ROCK~ AND release:and AND release:ROLL~` | 2152 | Rock and Roll (100); Rock And Roll (100); Rock & Roll (100) |
+| Now or Never correct mixed input | `release:now AND release:or AND release:never~` | 282 | Ever, Never or Now? (100); Now or Never Now (90); Now or Never (90) |
+| Now or Never correct uppercase fuzzy terms | `release:NOW AND release:or AND release:NEVER~` | 282 | Ever, Never or Now? (100); Now or Never Now (90); Now or Never (90) |
+| Not Afraid correct mixed input | `release:not AND release:afraid~` | 181 | Not Afraid, Not Afraid (100); Not Afraid (91); Not Afraid (91) |
+| Not Afraid correct uppercase fuzzy terms | `release:not AND release:AFRAID~` | 181 | Not Afraid, Not Afraid (100); Not Afraid (91); Not Afraid (91) |
+| ความรัก without marks | `release:ความร~ AND release:ก` | 0 | ∅ |
+| ความรัก with marks | `release:ความรัก~` | 0 | ∅ |
+| Beyoncé without marks | `release:beyonce~` | 7638 | BEYONCÉ (100); BEYONCÉ (100); BEYONCÉ (100) |
+| Beyoncé with marks | `release:beyoncé~` | 7638 | BEYONCÉ (100); BEYONCÉ (100); BEYONCÉ (100) |
+| Karma Polise legacy | `release:karma~ AND release:polise~` | 22 | Karma Police (100); Karma Police (100); Karma Police (100) |
+| Karma Police legacy | `release:karma~ AND release:police~` | 22 | Karma Police (100); Karma Police (100); Karma Police (100) |
+| Paranojd legacy | `release:paranojd~` | 1158 | Paranoid (100); Paranoid (100); Paranoid (100) |
+| Don't Stpo Me Now legacy | `release:don't~ AND release:stpo~ AND release:me AND release:now` | 46 | Don't Stop Me Now (100); Don't stop me NOW (100); Don't Stop Me Now (100) |
+| Love-Hate legacy | `release:love~ AND release:hate~` | 958 | Love Hate Fate (100); Love Hate Fear Fate (88); Love Hate Live (86) |
+| Satisfaction punctuation | `recording:i AND recording:can't~ AND recording:get AND recording:no AND recording:satisfacton~` | 1128 | (I Can’t Get No Satisfaction) Satisfaction (100); (I Can’t Get No) Satisfaction (Can’t Get No Satisfaction Dub) (99); (I Can’t Get No) Satisafction (96) |
+| Rumours punctuation | `release:rumours~ AND release:deluxe~` | 5 | Rumours (deluxe) (100); Rumours (super deluxe) (87); Rumours (super deluxe) (87) |
+
+### Current policy and limits
+
+Keep the four-code-point threshold. Extract letters, numbers and combining marks, retain
+internal apostrophes, normalize curly apostrophes, then lowercase words with `Locale.ROOT`.
+Require every word, with `~` only on long words; there is no exact-word requirement. A title
+whose long words are all misspelled can now be rescued. One approximate word can still satisfy
+several fuzzy clauses, as `Rolc` can for `Rokc Roll`; that is accepted rather than trading away
+double-typo recall. No title filtering is performed after the response. Short-only titles still
+receive no fuzzy request. These captures do not prove relevance of the complete pool, general
+multilingual recall, latency or live enrichment end to end.

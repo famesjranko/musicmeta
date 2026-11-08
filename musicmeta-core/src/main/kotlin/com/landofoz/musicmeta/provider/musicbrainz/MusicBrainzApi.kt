@@ -11,6 +11,7 @@ import com.landofoz.musicmeta.provider.encodePathSegment
 import com.landofoz.musicmeta.provider.encodeQueryValue
 import kotlinx.coroutines.currentCoroutineContext
 import org.json.JSONObject
+import java.util.Locale
 
 /**
  * MusicBrainz API client. Handles query building, rate limiting, and parsing.
@@ -476,27 +477,22 @@ internal class MusicBrainzApi(
             value.replace(LUCENE_SPECIAL_CHARS) { "\\${it.value}" }
 
         private const val MIN_FUZZY_WORD_LENGTH = 4
-        private val FUZZY_TITLE_WORDS = Regex("[\\p{L}\\p{N}]+(?:['’][\\p{L}\\p{N}]+)*")
+        private val FUZZY_TITLE_WORDS = Regex("[\\p{L}\\p{M}\\p{N}]+(?:['’][\\p{L}\\p{M}\\p{N}]+)*")
 
         private fun fuzzyTitleQuery(field: String, title: String, artist: String): String? {
             if (artist.isNotBlank()) {
                 return encodeQueryValue("$field:${escapeLucene(title)}~ AND artistname:${escapeLucene(artist)}~")
             }
             // Fuzzy terms bypass analysis; punctuation and short tokens can reach unrelated words.
-            val words = FUZZY_TITLE_WORDS.findAll(title).map { it.value.replace('’', '\'') }.toList()
+            // Lowercasing keeps Boolean title words out of Lucene's grammar.
+            val words = FUZZY_TITLE_WORDS.findAll(title)
+                .map { it.value.replace('’', '\'').lowercase(Locale.ROOT) }.toList()
             val fuzzyWords = words.filter { it.codePointCount(0, it.length) >= MIN_FUZZY_WORD_LENGTH }.distinct()
             if (fuzzyWords.isEmpty()) return null
             val terms = words.joinToString(" AND ") {
                 "$field:${escapeLucene(it)}" + if (it in fuzzyWords) "~" else ""
             }
-            // One approximate word can otherwise satisfy several fuzzy clauses, as Rolc does.
-            val query = if (fuzzyWords.size > 1) {
-                val exactWord = fuzzyWords.joinToString(" OR ") { "$field:${escapeLucene(it)}" }
-                "$terms AND ($exactWord)"
-            } else {
-                terms
-            }
-            return encodeQueryValue(query)
+            return encodeQueryValue(terms)
         }
 
         /** Build a Lucene query with two fields and URL-encode the ENTIRE thing. */

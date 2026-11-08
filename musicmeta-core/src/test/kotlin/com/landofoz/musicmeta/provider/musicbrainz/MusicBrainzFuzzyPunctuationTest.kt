@@ -22,6 +22,9 @@ class MusicBrainzFuzzyPunctuationTest {
         val query = "recording:I AND recording:Can't~ AND recording:Get AND recording:No " +
             "AND recording:Satisfacton~ AND (recording:Can't OR recording:Satisfacton)"
         givenCapture(query, "recording-revision-satisfaction-words")
+        val expectedQuery = "recording:i AND recording:can't~ AND recording:get AND recording:no " +
+            "AND recording:satisfacton~"
+        givenCapture(expectedQuery, "recording-round2-satisfaction")
         httpClient.givenJsonResponse("recording?query", capture("recording-revision-satisfaction-old"))
 
         // When - searching with straight and curly apostrophes inside the same title
@@ -29,7 +32,7 @@ class MusicBrainzFuzzyPunctuationTest {
         val curly = api.searchRecordingsFuzzy("(I Can’t Get No) Satisfacton", "")
 
         // Then - both spellings use the same words and return the captured related title
-        assertEquals(listOf(query, query), queries())
+        assertEquals(listOf(expectedQuery, expectedQuery), queries())
         assertEquals(3, straight.size)
         assertEquals("(I Can’t Get No Satisfaction) Satisfaction", straight.first().title)
         assertEquals(straight, curly)
@@ -40,13 +43,15 @@ class MusicBrainzFuzzyPunctuationTest {
         // Given - the word query finds Rumours editions while the punctuation query misses
         val query = "release:Rumours~ AND release:Deluxe~ AND (release:Rumours OR release:Deluxe)"
         givenCapture(query, "release-revision-rumours-words")
+        val expectedQuery = "release:rumours~ AND release:deluxe~"
+        givenCapture(expectedQuery, "release-round2-rumours")
         httpClient.givenJsonResponse("release?query", capture("release-revision-rumours-old"))
 
         // When - searching for the correctly spelled album title with a punctuation separator
         val releases = api.searchReleasesFuzzy("Rumours - Deluxe", "")
 
         // Then - the separator is absent from the query and the intended edition is offered
-        assertEquals(query, queries().single())
+        assertEquals(expectedQuery, queries().single())
         assertEquals(3, releases.size)
         assertEquals("Rumours (deluxe)", releases.first().title)
     }

@@ -107,19 +107,18 @@ it cannot establish a cacheable absence for the unavailable source.
 ## Title-only fuzzy suggestions
 
 When a strict candidate search misses and the artist is blank, fuzzy recording and release
-queries extract runs of Unicode letters and digits. Internal apostrophes are kept, with `’`
-normalized to ASCII apostrophe; other punctuation separates words. Every word is required in the
-title field. Words of at least four Unicode code points take `~`; shorter words are exact query
-terms. When several distinct long words exist, at least one must also match exactly. This keeps
-one approximate word from satisfying every fuzzy clause without any exact long-word evidence.
+queries extract runs of Unicode letters, digits and combining marks. Internal apostrophes are
+kept, with `’` normalized to ASCII apostrophe; other punctuation separates words. Extracted words
+are lowercased with `Locale.ROOT`, so uppercase title words such as `AND`, `OR` and `NOT` stay
+literal terms rather than Lucene operators. Every word is required in the title field. Words of
+at least four Unicode code points take `~`; shorter words are exact query terms.
 Lucene fuzzy terms are not analysed, so punctuation and short words cannot safely take the same
 fuzzy suffix as longer indexed words.
 
 With no qualifying long word, the fallback returns empty without an upstream request. Thus `U2`,
 `AC/DC`, `Hte` and short CJK titles get no typo rescue, even when a correctly spelled short title
-reaches this fallback. With several long words, misspelling all of them can also lose the intended
-title because none supplies the exact-word evidence. These are conservative suggestions, not an
-identity claim or a guarantee of relevance across the search index.
+reaches this fallback. One approximate word can still satisfy several fuzzy clauses. These are
+suggestions, not an identity claim or a guarantee of relevance across the search index.
 
 The queries omit the artist clause. Album enrichment uses the same fallback when its strict pool
 is empty, so short-only misses offer no fuzzy suggestions; track enrichment still refuses a blank

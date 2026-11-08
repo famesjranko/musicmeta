@@ -537,17 +537,22 @@ Three characters are still unsafe: `recording:Hte~` returned 56,690 hits led by 
 and correctly spelled `recording:千本桜~` returned 16,460 unrelated hits. The `Hte~1` probe did
 not improve the count or relevance.
 
-Extract letter/digit runs, retain internal apostrophes, normalize curly apostrophes, and require
-words shorter than four Unicode code points exactly. Only longer words take `~`. With several
-distinct long words, also require one exactly: without that clause `Rokc~ AND Roll~` was led by
-`Rolc`, because one approximate word satisfied both clauses. With it the displayed recording pool
-started with `Rock, Roll, Roll`. Dropping punctuation restored the previously empty Satisfaction
-and Rumours queries without filtering returned titles locally.
+Extract letter/digit runs including combining marks, retain internal apostrophes, normalize curly
+apostrophes, and require words shorter than four Unicode code points exactly. Only longer words
+take `~`. Lowercase the extracted words with `Locale.ROOT`: uppercase `AND`, `OR` and `NOT` are
+operators even after a field prefix. `recording:Now AND recording:OR AND recording:Nevr~` returned
+7,341,859 hits led by `&=&=&=&=OR; immense` (2026-11-08); lowercasing the title words returned
+2,002 hits led by `Now or Never Now`. Keep the query's own Boolean operators uppercase.
+
+Combining marks belong inside a word: omitting `\p{M}` split `ความรัก` into `ความร` and `ก`,
+losing the intended recording. The complete fuzzy word returned 15 hits led by `ความรัก`.
+One approximate word can still satisfy several fuzzy clauses, as `Rolc` can for `Rokc Roll`.
+Dropping punctuation restored the previously empty Satisfaction and Rumours queries without
+filtering returned titles locally.
 
 If no long word qualifies, skip the request: an exact-only fallback cannot rescue a typo and an
 exact short CJK term can itself broaden (`recording:東凉` returned 8,429 hits led by `凉凉`).
-The recall cost includes `U2`, `AC/DC`, short CJK titles and three-letter typos. With several long
-words, misspelling every one can also lose the answer to the exact-word requirement.
+The recall cost includes `U2`, `AC/DC`, short CJK titles and three-letter typos.
 
 The captures, timestamps and query comparisons are in `pools/musicbrainz-fuzzy-title-only/`
 under core's test resources; each capture predates the code change it pins. Only the first three

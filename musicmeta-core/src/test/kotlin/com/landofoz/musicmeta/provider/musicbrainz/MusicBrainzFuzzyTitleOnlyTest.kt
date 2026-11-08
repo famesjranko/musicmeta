@@ -10,6 +10,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.junit.runners.Parameterized
 import java.net.URLDecoder
+import java.util.Locale
 
 @RunWith(Parameterized::class)
 class MusicBrainzFuzzyTitleOnlyTest(private val entity: String) {
@@ -24,6 +25,7 @@ class MusicBrainzFuzzyTitleOnlyTest(private val entity: String) {
             "revision-karma-polise-anchored",
         )
         givenCapture("$entity:Karma~ AND $entity:Polise~", "karma-polise-and-terms")
+        givenCapture("$entity:karma~ AND $entity:polise~", "round2-karma-polise")
         givenCapture("$entity:Karma Polise~", "karma-polise-drop-artist")
         httpClient.givenJsonResponse("$entity?query", capture("karma-polise-original"))
 
@@ -32,13 +34,14 @@ class MusicBrainzFuzzyTitleOnlyTest(private val entity: String) {
 
         // Then - every candidate is the intended title and the search costs one request
         assertEquals(listOf("Karma Police", "Karma Police", "Karma Police"), titles)
-        assertEquals("$entity:Karma~ AND $entity:Polise~ AND ($entity:Karma OR $entity:Polise)", queries().single())
+        assertEquals("$entity:karma~ AND $entity:polise~", queries().single())
     }
 
     @Test
     fun `a one-word typo retains fuzzy title matching`() = runTest {
         // Given - a captured response to the one-word fuzzy query
         givenCapture("$entity:Paranojd~", "paranojd-and-terms")
+        givenCapture("$entity:paranojd~", "round2-paranojd")
 
         // When - searching for a one-word typo without an artist
         val titles = fuzzyTitles("Paranojd", "")
@@ -50,7 +53,7 @@ class MusicBrainzFuzzyTitleOnlyTest(private val entity: String) {
             listOf("Paranoid", "Paranoid", "Paranoid")
         }
         assertEquals(expected, titles)
-        assertEquals("$entity:Paranojd~", queries().single())
+        assertEquals("$entity:paranojd~", queries().single())
     }
 
     @Test
@@ -61,13 +64,14 @@ class MusicBrainzFuzzyTitleOnlyTest(private val entity: String) {
             "revision-karma-police-anchored",
         )
         givenCapture("$entity:Karma~ AND $entity:Police~", "karma-police-and-terms")
+        givenCapture("$entity:karma~ AND $entity:police~", "round2-karma-police")
 
         // When - searching for the correct spelling without an artist
         val titles = fuzzyTitles("Karma Police", "")
 
         // Then - all three captured candidates survive and every title term is required
         assertEquals(listOf("Karma Police", "Karma Police", "Karma Police"), titles)
-        assertEquals("$entity:Karma~ AND $entity:Police~ AND ($entity:Karma OR $entity:Police)", queries().single())
+        assertEquals("$entity:karma~ AND $entity:police~", queries().single())
     }
 
     @Test
@@ -94,7 +98,7 @@ class MusicBrainzFuzzyTitleOnlyTest(private val entity: String) {
 
         // Then - punctuation is dropped and each word stays in the title field at the requested limit
         assertEquals(
-            "$entity:Karma~ AND $entity:Polise~ AND ($entity:Karma OR $entity:Polise)",
+            "$entity:karma~ AND $entity:polise~",
             queries().single(),
         )
         assertEquals("fmt=json&limit=7", httpClient.requestedUrls.single().substringAfter("&"))
@@ -121,6 +125,7 @@ class MusicBrainzFuzzyTitleOnlyTest(private val entity: String) {
             "revision-karma-polise-anchored",
         )
         givenCapture("$entity:Karma~ AND $entity:Polise~", "karma-polise-and-terms")
+        givenCapture("$entity:karma~ AND $entity:polise~", "round2-karma-polise")
         httpClient.givenJsonResponse("%22", capture("karma-polise-quoted"))
         httpClient.givenJsonResponse("$entity?query", capture("karma-polise-original"))
         val provider = MusicBrainzProvider(httpClient, RateLimiter(0))
@@ -136,7 +141,7 @@ class MusicBrainzFuzzyTitleOnlyTest(private val entity: String) {
         // Then - the strict request and one fuzzy retry return only the related titles
         assertEquals(listOf("Karma Police", "Karma Police", "Karma Police"), candidates.map { it.title })
         assertEquals(2, httpClient.requestedUrls.size)
-        assertEquals("$entity:Karma~ AND $entity:Polise~ AND ($entity:Karma OR $entity:Polise)", queries().last())
+        assertEquals("$entity:karma~ AND $entity:polise~", queries().last())
     }
 
     @Test
@@ -201,9 +206,8 @@ class MusicBrainzFuzzyTitleOnlyTest(private val entity: String) {
     @Test
     fun `short words stay exact beside fuzzy words`() = runTest {
         // Given - a captured pool for a typo with two short context words
-        val query = "$entity:Don't~ AND $entity:Stpo~ AND $entity:Me AND $entity:Now " +
-            "AND ($entity:Don't OR $entity:Stpo)"
-        givenCapture(query, "revision-short-words")
+        val query = "$entity:don't~ AND $entity:stpo~ AND $entity:me AND $entity:now"
+        givenCapture(query, "round2-short-words")
 
         // When - searching for the title without an artist
         val titles = fuzzyTitles("Don't Stpo Me Now", "")
@@ -217,8 +221,8 @@ class MusicBrainzFuzzyTitleOnlyTest(private val entity: String) {
     @Test
     fun `hyphens and slashes separate title words`() = runTest {
         // Given - a captured pool for the words on either side of a title separator
-        val query = "$entity:Love~ AND $entity:Hate~ AND ($entity:Love OR $entity:Hate)"
-        givenCapture(query, "revision-joined-words")
+        val query = "$entity:love~ AND $entity:hate~"
+        givenCapture(query, "round2-joined-words")
 
         // When - searching the correctly spelled title with a hyphen and with a slash
         val hyphenated = fuzzyTitles("Love-Hate", "")
@@ -228,22 +232,92 @@ class MusicBrainzFuzzyTitleOnlyTest(private val entity: String) {
         assertEquals(listOf(query, query), queries())
         assertEquals(3, hyphenated.size)
         assertEquals(hyphenated, slashed)
-        assertEquals("Love Hate Love Hate", hyphenated.first())
+        assertEquals(if (entity == "recording") "Love Hater (Hate for Love)" else "Love Hate Fate", hyphenated.first())
     }
 
     @Test
-    fun `overlapping fuzzy words require an exact long word too`() = runTest {
-        // Given - a captured pool with an exact-word requirement in addition to fuzzy terms
-        val query = "$entity:Rokc~ AND $entity:Roll~ AND ($entity:Rokc OR $entity:Roll)"
-        givenCapture(query, "revision-overlapping-words")
+    fun `a title with two misspelled words still finds the intended title`() = runTest {
+        // Given - live pools for a double typo with and without the rejected exact-word clause
+        val query = "$entity:hotle~ AND $entity:califonia~"
+        givenCapture(query, "round2-double-typo")
+        givenCapture("$query AND ($entity:hotle OR $entity:califonia)", "round2-double-typo-exact")
 
-        // When - searching for a title whose fuzzy words can both match Rolc
-        val titles = fuzzyTitles("Rokc Roll", "")
+        // When - every long word in the title is misspelled
+        val titles = fuzzyTitles("hotle califonia", "")
 
-        // Then - the request requires a long word exactly and the displayed titles remain related
-        assertEquals(query, queries().single())
+        // Then - the intended title leads without any exact-word requirement
         assertEquals(3, titles.size)
-        assertEquals(if (entity == "recording") "Rock, Roll, Roll" else "Rock@Roll", titles.first())
+        assertTrue(titles.first().startsWith("Hotel California"))
+        assertEquals(query, queries().single())
+    }
+
+    @Test
+    fun `boolean title words remain lowercase terms`() = runTest {
+        // Given - captured corrected pools and the unrelated pools from uppercase operators
+        val inputs = listOf("Rokc AND Roll", "Now OR Nevr", "NOT Afriad")
+        val expectedQueries = listOf(
+            "$entity:rokc~ AND $entity:and AND $entity:roll~",
+            "$entity:now AND $entity:or AND $entity:nevr~",
+            "$entity:not AND $entity:afriad~",
+        )
+        listOf("and", "or", "not").zip(expectedQueries).forEach { (name, query) ->
+            givenCapture(query, "round2-$name")
+        }
+        givenCapture("$entity:Rokc~ AND $entity:AND AND $entity:Roll~", "round2-and-old")
+        givenCapture(
+            "$entity:Rokc~ AND $entity:AND AND $entity:Roll~ AND ($entity:Rokc OR $entity:Roll)",
+            "round2-and-current",
+        )
+        givenCapture("$entity:Now AND $entity:OR AND $entity:Nevr~", "round2-or-old")
+        givenCapture("$entity:NOT AND $entity:Afriad~", "round2-not-old")
+
+        // When - uppercase Boolean words arrive as part of the title
+        val titles = inputs.map { fuzzyTitles(it, "") }
+
+        // Then - all three are literal lowercase terms and the captured related rows survive
+        assertEquals(expectedQueries, queries())
+        assertEquals(listOf(3, 3, 3), titles.map { it.size })
+        val expectedFirst = if (entity == "recording") {
+            listOf("Rock and Roll, Rock and Roll", "Now or Never Now", "I'm Not Afriad")
+        } else {
+            listOf("Rock and Roll", "Now or Never Now", "Not Afraid, Not Afraid")
+        }
+        assertEquals(expectedFirst, titles.map { it.first() })
+    }
+
+    @Test
+    fun `Thai combining marks stay inside one fuzzy word`() = runTest {
+        // Given - captures for the complete Thai word and the query that split its vowel mark
+        val query = "$entity:ความรัก~"
+        givenCapture(query, "round2-thai")
+        givenCapture("$entity:ความร~ AND $entity:ก", "round2-thai-split")
+
+        // When - searching for the Thai title without an artist
+        val titles = fuzzyTitles("ความรัก", "")
+
+        // Then - one word is queried and the recording pool retains its three exact-title rows
+        assertEquals(query, queries().single())
+        assertEquals(if (entity == "recording") listOf("ความรัก", "ความรัก", "ความรัก") else emptyList(), titles)
+    }
+
+    @Test
+    fun `title lowercasing is independent of the default locale`() = runTest {
+        // Given - a Turkish default locale and a captured pool for the invariant lowercase query
+        val originalLocale = Locale.getDefault()
+        val query = "$entity:not AND $entity:afraid~"
+        givenCapture(query, "round2-locale")
+        try {
+            Locale.setDefault(Locale.forLanguageTag("tr-TR"))
+
+            // When - searching an all-caps title containing the letter I
+            val titles = fuzzyTitles("NOT AFRAID", "")
+
+            // Then - the query uses i rather than dotless I and retains the captured rows
+            assertEquals(query, queries().single())
+            assertEquals(3, titles.size)
+        } finally {
+            Locale.setDefault(originalLocale)
+        }
     }
 
     private suspend fun fuzzyTitles(title: String, artist: String, limit: Int = 3): List<String> =
