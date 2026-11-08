@@ -229,10 +229,10 @@ than it looks like, each learned the hard way.
   opposite, that `ignore` suppresses security updates too. So the behaviour is what the tool tests
   today, not what its documentation promises, and nothing here would notice if it changed: the
   failure is silent and looks exactly like having no vulnerabilities.
-- **`minSdk = 21` is untestable.** Robolectric 4.16 removed SDK 21 and 22 — `L` and `LMR1` are gone
-  from its `DefaultSdkProvider`, present at 4.13 — so no Robolectric test can pin the floor the
-  library declares. The three cache tests pin `sdk = [34]`, and `androidTest/` runs nowhere, so
-  nothing exercises API 21 and nothing reports that it does not.
+- **`minSdk = 24` is not tested as a floor.** Robolectric 4.17, the pinned version, includes SDK 24
+  (`7.0.0_r1`) in `org.robolectric.plugins.DefaultSdkProvider`, so it could run a test at API 24.
+  The cache tests pin `sdk = [34]`, `androidTest/` runs nowhere, and no check stops a call above
+  API 24. Nothing therefore runs core on API 24 or checks that the floor stays sufficient.
 - **A Robolectric bump moves the SQL engine under the cache tests.** `sqliteMode` defaults to
   `NATIVE`, so `MigrationTestHelper`, Room's schema validator and every DAO query run against
   Robolectric's bundled `nativeruntime-dist-compat` — 1.0.12 at 4.13, 1.0.18 at 4.16.1. With no

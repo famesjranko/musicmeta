@@ -12,6 +12,13 @@ Two kinds of break appear here and they cost you different things:
 
 The full per-release list, additions and fixes included, is [CHANGELOG.md](../../CHANGELOG.md).
 
+## Unreleased
+
+### Android `minSdk` is 24
+
+Raise your app's `minSdk` to 24. Versions 0.12.0 through 0.14.0 already needed API 24 at runtime
+on the `enrich()` path and could throw `NoSuchMethodError` on API 21–23.
+
 ## 0.14.0
 
 ### `ArtistProfile.similarAlbums` is removed

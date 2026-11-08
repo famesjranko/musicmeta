@@ -162,8 +162,11 @@ for changelog, guide in ((FIXED_ONLY, GUIDE_UNRELEASED), (BREAKING_ONLY, OLD_ONL
 with tempfile.TemporaryDirectory() as tmp:
     tree = Path(tmp)
     (tree / "docs").mkdir()
+    (tree / "docs" / "guides").mkdir()
     (tree / "CHANGELOG.md").write_text(BEFORE, encoding="utf-8")
     (tree / "docs" / "roadmap.md").write_text("# Roadmap\n\n## Where We Are (v0.10.1)\n", encoding="utf-8")
+    migration_path = tree / "docs" / "guides" / "migration.md"
+    migration_path.write_text("# Migration guide\n\n## Unreleased\n", encoding="utf-8")
     (tree / "README.md").write_text('implementation("io.github.famesjranko:musicmeta-core:0.10.1")\n', encoding="utf-8")
 
     # When the script pins a release with both files named by path
@@ -176,6 +179,8 @@ with tempfile.TemporaryDirectory() as tmp:
             str(tree / "CHANGELOG.md"),
             "--roadmap",
             str(tree / "docs" / "roadmap.md"),
+            "--migration-guide",
+            str(migration_path),
         ]
     )
 
@@ -183,6 +188,7 @@ with tempfile.TemporaryDirectory() as tmp:
     assert code == 0, f"main exited {code}"
     readme = (tree / "README.md").read_text(encoding="utf-8")
     assert "musicmeta-core:0.11.0" in readme, f"README coordinate was not pinned: {readme!r}"
+    assert "## 0.11.0" in migration_path.read_text(encoding="utf-8")
 
 # --- against the real files ---------------------------------------------------------------------
 # State-agnostic on purpose: this runs on every commit, including the release branch (target

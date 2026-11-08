@@ -1,8 +1,8 @@
 [versions]
 # SDK
 compileSdk = "35"
-# No API-level-specific code — 21 is the practical floor (Google Play Services minimum)
-minSdk = "21"
+# Core uses Java 8 library APIs that Android adds at API 24.
+minSdk = "24"
 
 # Core
 agp = "8.7.3"
