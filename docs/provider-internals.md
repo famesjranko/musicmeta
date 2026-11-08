@@ -109,8 +109,9 @@ disambiguations, an official album release on a recording, upstream score, and s
 ties. Artist evidence precedes disambiguation so a main artist's marked performance does not lose
 to an unmarked cover. Artist matching checks the whole display credit and the individually credited
 names from MusicBrainz's structured data, at same-name quality only; a tribute act containing the
-name does not inherit its rank. Search alone folds typographic apostrophes, U+2010/U+2011 hyphens,
-and the ellipsis before title comparison; enrichment's shared title matcher keeps its own policy.
+name does not inherit its rank. Search alone folds curly double quotes, typographic apostrophes
+(including U+2032/U+02BC), U+2010/U+2011 hyphens, and the ellipsis before title comparison;
+enrichment's shared title matcher keeps its own policy.
 
 After ranking, candidates with identical title, artist, year, country, type, thumbnail,
 disambiguation and score collapse to the first row before the limit. Distinct visible editions
@@ -120,8 +121,8 @@ the album-hinted broad query already answered. It reuses the broad fallback inst
 enrichment's shallow and variant queries. A fuzzy rescue does not repeat the empty strict query.
 Without an artist, the engine can supply iTunes title-search artist hints and add the existing
 canonical search ladder for the leading artist; an album needs an extra artist-specific pool unless
-an exact title by that artist is present. Extra-pool failures are logged and preserve the general
-pool. These queries never affect `enrich()`'s resolution.
+an unmarked exact title by that artist is present. Extra-pool failures are logged and preserve the
+general pool. These queries never affect `enrich()`'s resolution.
 
 The pool is searched **once per `enrich()`**, not once per type. That is a correctness rule before it
 is a cost one: MusicBrainz does not order identical searches identically, and the ranking keeps the

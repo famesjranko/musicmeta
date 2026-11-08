@@ -90,6 +90,25 @@ class MusicBrainzCandidateSelectionTest {
     }
 
     @Test
+    fun `marked exact preferred album still fetches an unmarked choice`() = runTest {
+        // Given - the preferred artist's exact title is present only as a marked pressing.
+        val marked = org.json.JSONObject(fixture("album-exact"))
+        marked.getJSONArray("releases").getJSONObject(0)
+            .put("id", "marked-pressing").put("disambiguation", "EMI UDEN, made in Italy")
+        http.givenJsonResponse("artistname%3A%22Radiohead%22", fixture("album-exact"))
+        http.givenJsonResponse("release?query", marked.toString())
+
+        // When - title-only discovery receives that artist hint.
+        val found = provider.searchCandidates(EnrichmentRequest.forAlbum("OK Computer", ""), 8, listOf("Radiohead"), logger)
+
+        // Then - an unmarked exact title leads and the marked pressing remains selectable.
+        assertEquals("Radiohead", found.first().artist)
+        assertTrue(found.first().disambiguation.isNullOrBlank())
+        assertTrue(found.any { it.disambiguation == "EMI UDEN, made in Italy" })
+        assertEquals(2, http.requestedUrls.size)
+    }
+
+    @Test
     fun `exact preferred album already present avoids another artist query`() = runTest {
         // Given - the general pool already contains an exact title by the preferred artist.
         http.givenJsonResponse("release?query", fixture("album-exact"))

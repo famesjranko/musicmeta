@@ -5,7 +5,8 @@ internal object SearchTitleMatcher {
     fun equivalent(a: String, b: String): Boolean = parse(a) == parse(b)
 
     fun parse(title: String): TitleMatcher.Parts = TitleMatcher.parse(
-        title.replace('‘', '\'').replace('’', '\'')
+        title.replace('‘', '\'').replace('’', '\'').replace('′', '\'').replace('ʼ', '\'')
+            .replace('“', '"').replace('”', '"')
             .replace('‐', '-').replace('‑', '-').replace("…", "..."),
     )
 }

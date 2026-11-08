@@ -651,7 +651,8 @@ internal class DefaultEnrichmentEngine(
             }
         }
 
-        return (primary + supplemental).distinctBy { it.displayKey() }.take(limit)
+        val unique = supplemental.filterNot { candidate -> primary.any { candidate.repeatsPrimary(it) } }
+        return (primary + unique).distinctBy { it.displayKey() }.take(limit)
     }
 
     override fun getProviders(): List<ProviderInfo> = registry.providerInfos()

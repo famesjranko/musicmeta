@@ -191,7 +191,7 @@ flowchart TD
     collapse --> enough{"limit already<br/>met?"}
     enough -->|yes| results
     enough -->|no| supplement["registry.searchProviders():<br/>every other provider,<br/>remaining slots each"]
-    supplement --> dedupe["collapse identical visible<br/>rows across providers,<br/>then apply limit"]
+    supplement --> dedupe["drop repeated primary choices,<br/>collapse identical visible rows,<br/>then apply limit"]
     dedupe --> results["List&lt;SearchCandidate&gt;"]
 ```
 
@@ -213,12 +213,15 @@ the engine first asks a registered iTunes provider for ordered artist hints. Thi
 signal uses the same iTunes limiter with a 5-second budget or a quarter of the remaining retry
 budget, whichever is smaller. That includes the normal 3-second rate-limit wait, and both socket
 timeouts and retries see this smaller budget. Failure or timeout is logged; MusicBrainz ranking
-still runs.
+still runs. An unavailable provider or a breaker that is not closed produces one debug skip log.
 MusicBrainz ranks a broad pool and can add one artist-specific pool before applying the limit.
 Track searches with an artist also add a canonical recording pool to keep main takes reachable,
 unless an album-hinted query already answered. Ranking collapses identical visible rows before the
 limit, retaining differences such as year, country and type. The engine also collapses primary
-rows before counting remaining slots, then collapses the combined provider contributions. Each
+rows before counting remaining slots. A supplement matching a primary row on normalized title
+and artist is dropped unless year, country, type or disambiguation establishes a different edition.
+Missing year, country or type is not evidence of a difference; catalog scores and artwork are ignored
+for this comparison. The combined list then collapses identical visible rows. Each
 secondary provider receives that same remaining count; there is no paging to replace rows that
 collapse, so a search can return fewer than `limit`. Default iTunes and Deezer candidate searches
 make network requests only for albums; a short track or artist list adds no requests to those

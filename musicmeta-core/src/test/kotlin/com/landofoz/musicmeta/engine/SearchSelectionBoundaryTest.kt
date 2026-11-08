@@ -16,9 +16,11 @@ import com.landofoz.musicmeta.testutil.FakeProvider
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.test.runTest
+import org.json.JSONArray
 import org.json.JSONObject
 import org.junit.Assert.*
 import org.junit.Test
+import java.net.URLEncoder
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class SearchSelectionBoundaryTest {
@@ -56,22 +58,52 @@ class SearchSelectionBoundaryTest {
     }
 
     @Test
-    fun `search hints fold typographic hyphens and ellipses without widening identity matching`() = runTest {
-        // Given - a modelled song result uses ASCII punctuation for an otherwise identical title.
-        http.givenJsonResponse("itunes.apple.com", """{"results":[{"trackName":"Rock-n-Roll...","artistName":"An Artist"}]}""")
+    fun `search hints fold typography without widening identity matching`() = runTest {
+        // Given - modelled song results use ASCII punctuation for otherwise identical titles.
+        val titles = listOf(
+            "Rock‐n‐Roll…" to "Rock-n-Roll...",
+            "Rock‑n‑Roll…" to "Rock-n-Roll...",
+            "Say “Hello”" to "Say \"Hello\"",
+            "Don′t Stop" to "Don't Stop",
+            "Donʼt Stop" to "Don't Stop",
+        )
         val api = ITunesApi(http, RateLimiter(0))
+        titles.forEach { (typographic, plain) ->
+            val row = JSONObject().put("trackName", plain).put("artistName", "An Artist")
+            val response = JSONObject().put("results", JSONArray().put(row)).toString()
+            http.givenJsonResponse("term=${URLEncoder.encode(typographic, "UTF-8")}", response)
+        }
 
-        // When - the artist hint is requested with a typographic hyphen and ellipsis.
-        val found = api.searchTitleArtists("Rock‐n‐Roll…", false)
+        // When - each artist hint is requested with typographic punctuation.
+        val found = titles.map { (typographic, _) -> api.searchTitleArtists(typographic, false) }
 
-        // Then - search retains the hint while the shared matcher still treats those strings differently.
-        assertEquals(listOf("An Artist"), found)
-        assertFalse(TitleMatcher.equivalent("Rock‐n‐Roll…", "Rock-n-Roll..."))
+        // Then - search retains every hint while identity matching still distinguishes each spelling.
+        assertEquals(titles.map { listOf("An Artist") }, found)
+        titles.forEach { (typographic, plain) -> assertFalse(TitleMatcher.equivalent(typographic, plain)) }
     }
 
     @Test
-    fun `engine supplements collapsed primary rows and preserves a different country`() = runTest {
-        // Given - the primary provider repeats a visible row and the secondary offers that row plus another country.
+    fun `album supplements do not repeat the captured MusicBrainz title and artist`() = runTest {
+        // Given - both catalogs contain Radiohead's OK Computer with different scores and artwork.
+        http.givenJsonResponse("release?query", requireNotNull(javaClass.getResource("/find-ranking/ok-pool.json")).readText())
+        http.givenJsonResponse("itunes.apple.com", requireNotNull(javaClass.getResource("/find-ranking/ok-itunes.json")).readText())
+        val engine = engine()
+
+        // When - title-only discovery leaves room for secondary album results.
+        val found = engine.search(EnrichmentRequest.forAlbum("OK Computer", ""), 8)
+
+        // Then - the MusicBrainz album remains and iTunes contributes only other title and artist pairs.
+        assertEquals("musicbrainz", found.first().provider)
+        assertEquals("Radiohead", found.first().artist)
+        assertTrue(http.requestedUrls.count { it.contains("itunes.apple.com") } >= 2)
+        assertTrue(found.any { it.provider == "itunes" })
+        assertFalse(found.any { it.provider == "itunes" && it.title == "OK Computer" && it.artist == "Radiohead" })
+        engine.close()
+    }
+
+    @Test
+    fun `engine supplements collapsed primary rows and preserves distinct editions`() = runTest {
+        // Given - the primary provider repeats a visible row and the secondary offers that row plus distinct editions.
         val base = SearchCandidate("Album", "primary", EnrichmentIdentifiers(musicBrainzId = "a"), 1f, artist = "Artist", year = 2000, country = "GB", releaseType = "Album")
         val requestedLimits = mutableListOf<Int>()
         val primary = object : FakeProvider(id = "primary", isIdentityProvider = true) {
@@ -80,18 +112,27 @@ class SearchSelectionBoundaryTest {
         val secondary = object : FakeProvider(id = "secondary") {
             override suspend fun searchCandidates(request: EnrichmentRequest, limit: Int): List<SearchCandidate> {
                 requestedLimits.add(limit)
-                return listOf(base.copy(provider = id), base.copy(provider = id, country = "US")).take(limit)
+                return listOf(
+                    base.copy(provider = id, title = " album ", artist = "ARTIST", matchScore = 0.7f, thumbnailUrl = "https://example.com/art.jpg"),
+                    base.copy(provider = id, country = "US"),
+                    base.copy(provider = id, year = 2001),
+                    base.copy(provider = id, releaseType = "Single"),
+                    base.copy(provider = id, disambiguation = "deluxe"),
+                ).take(limit)
             }
         }
         val engine = EnrichmentEngine.Builder().addProvider(primary).addProvider(secondary).build()
 
-        // When - the caller requests up to three visible choices.
-        val found = engine.search(EnrichmentRequest.forAlbum("Album", "Artist"), 3)
+        // When - the caller requests up to six visible choices.
+        val found = engine.search(EnrichmentRequest.forAlbum("Album", "Artist"), 6)
 
-        // Then - the secondary gets the two freed slots and its different country survives deduplication.
-        assertEquals(listOf(2), requestedLimits)
-        assertEquals(listOf("GB", "US"), found.map { it.country })
-        assertEquals(listOf("primary", "secondary"), found.map { it.provider })
+        // Then - the secondary gets five free slots and explicit edition differences survive deduplication.
+        assertEquals(listOf(5), requestedLimits)
+        assertEquals(listOf("GB", "US", "GB", "GB", "GB"), found.map { it.country })
+        assertEquals(listOf(2000, 2000, 2001, 2000, 2000), found.map { it.year })
+        assertEquals(listOf("Album", "Album", "Album", "Single", "Album"), found.map { it.releaseType })
+        assertEquals(listOf(null, null, null, null, "deluxe"), found.map { it.disambiguation })
+        assertEquals(listOf("primary", "secondary", "secondary", "secondary", "secondary"), found.map { it.provider })
         engine.close()
     }
 

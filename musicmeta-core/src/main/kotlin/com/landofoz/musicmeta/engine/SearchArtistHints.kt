@@ -28,7 +28,10 @@ internal class SearchArtistHints(private val registry: ProviderRegistry, private
             is EnrichmentRequest.ForAlbum -> request.title.takeIf { request.artist.isBlank() }
             is EnrichmentRequest.ForArtist -> null
         } ?: return emptyList()
-        if (!provider.isAvailable || !registry.allowsRequest(provider.id)) return emptyList()
+        if (!provider.isAvailable || !registry.allowsRequest(provider.id)) {
+            logger.debug("Search", "iTunes ranking signal skipped: provider unavailable or circuit breaker not closed")
+            return emptyList()
+        }
         // Leave the identity provider most of the retry budget, including on a throttled signal.
         val budget = minOf(5000L, (currentCoroutineContext()[EnrichDeadline]?.remainingMs ?: 20_000L) / 4)
         return try {

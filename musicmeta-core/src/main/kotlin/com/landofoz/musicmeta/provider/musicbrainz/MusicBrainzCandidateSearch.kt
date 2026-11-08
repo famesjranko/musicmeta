@@ -64,7 +64,9 @@ internal class MusicBrainzCandidateSearch(
             is EnrichmentRequest.ForTrack ->
                 api.searchCanonicalRecordings(request.title, artist, request.album).map { it.toCandidate() }
             is EnrichmentRequest.ForAlbum -> if (pool.any {
-                    artistRank(listOf(artist), it) == 0 && SearchTitleMatcher.equivalent(request.title, it.value.title)
+                    artistRank(listOf(artist), it) == 0 &&
+                        SearchTitleMatcher.equivalent(request.title, it.value.title) &&
+                        it.value.disambiguation.isNullOrBlank()
                 }) {
                 emptyList()
             } else searchAlbumCandidates(request.copy(artist = artist), limit)
