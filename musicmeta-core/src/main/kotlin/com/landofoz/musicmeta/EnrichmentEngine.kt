@@ -224,8 +224,11 @@ public interface EnrichmentEngine {
      * unmarked recordings first within an artist.
      * Artist matching includes individual collaboration credits at same-name quality. With a
      * registered iTunes provider, title-only album and track searches use its artist order as a
-     * popularity hint. This optional signal has a short timeout; failures warn, skips log at debug, and search
-     * continues with MusicBrainz ranking. Artist ranking and enrichment identity are unaffected.
+     * popularity hint. The hint gets one quarter of the remaining [EnrichmentConfig.enrichTimeoutMs]
+     * budget, capped at 5 s, and is skipped when that budget is 3 s or less, so an
+     * `enrichTimeoutMs` of about 12 s or less never uses it. MusicBrainz ranking still runs and
+     * search continues with it; failures warn, skips log at debug, and artist ranking and
+     * enrichment identity are unaffected.
      *
      * Asks the provider whose [EnrichmentProvider.isIdentityProvider] is true for up to
      * [limit] candidates. Identical visible rows collapse before counting the remainder. Only if

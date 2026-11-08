@@ -430,6 +430,13 @@ permanent blank is worse than a loud 60-second one — but a provider whose rout
 independent uptime pays for it, and nothing in the registry lets one route be isolated from its
 siblings.
 
+## 45. A rate limiter's wait is spent from the timeout around the call
+
+A `withTimeout` around a rate-limited call also times the limiter's wait. The iTunes search hint
+got `min(5000, remaining / 4)` ms against a 3 s interval, so with `enrichTimeoutMs` under about
+12 s it expired in the limiter before its request started (#422). An optional signal needs more
+budget than the limiter interval, or it must be skipped.
+
 
 ## Area — Provider data and matching
 
