@@ -19,7 +19,7 @@ class MusicBrainzFuzzyTitleOnlyTest(private val entity: String) {
 
     @Test
     fun `a title-only typo returns related candidates from the live capture`() = runTest {
-        // Given - captured responses for the corrected query and both faulty query shapes
+        // Given - captured responses for title-word, unfielded-word and empty-artist queries
         givenCapture(
             "$entity:Karma~ AND $entity:Polise~ AND ($entity:Karma OR $entity:Polise)",
             "revision-karma-polise-anchored",
@@ -118,8 +118,8 @@ class MusicBrainzFuzzyTitleOnlyTest(private val entity: String) {
     }
 
     @Test
-    fun `candidate search uses the corrected fuzzy pool after a strict miss`() = runTest {
-        // Given - a strict miss and the captured corrected fuzzy response
+    fun `candidate search uses the title-word fuzzy pool after a strict miss`() = runTest {
+        // Given - a strict miss and the captured title-word fuzzy response
         givenCapture(
             "$entity:Karma~ AND $entity:Polise~ AND ($entity:Karma OR $entity:Polise)",
             "revision-karma-polise-anchored",
@@ -237,7 +237,7 @@ class MusicBrainzFuzzyTitleOnlyTest(private val entity: String) {
 
     @Test
     fun `a title with two misspelled words still finds the intended title`() = runTest {
-        // Given - live pools for a double typo with and without the rejected exact-word clause
+        // Given - captured fuzzy-only and exact-word-constrained pools for a double typo
         val query = "$entity:hotle~ AND $entity:califonia~"
         givenCapture(query, "round2-double-typo")
         givenCapture("$query AND ($entity:hotle OR $entity:califonia)", "round2-double-typo-exact")
@@ -245,7 +245,7 @@ class MusicBrainzFuzzyTitleOnlyTest(private val entity: String) {
         // When - every long word in the title is misspelled
         val titles = fuzzyTitles("hotle califonia", "")
 
-        // Then - the intended title leads without any exact-word requirement
+        // Then - the intended title leads from the fuzzy-only query
         assertEquals(3, titles.size)
         assertTrue(titles.first().startsWith("Hotel California"))
         assertEquals(query, queries().single())
@@ -253,7 +253,7 @@ class MusicBrainzFuzzyTitleOnlyTest(private val entity: String) {
 
     @Test
     fun `boolean title words remain lowercase terms`() = runTest {
-        // Given - captured corrected pools and the unrelated pools from uppercase operators
+        // Given - captured lowercase-term pools and unrelated pools from uppercase operators
         val inputs = listOf("Rokc AND Roll", "Now OR Nevr", "NOT Afriad")
         val expectedQueries = listOf(
             "$entity:rokc~ AND $entity:and AND $entity:roll~",

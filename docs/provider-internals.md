@@ -117,12 +117,14 @@ fuzzy suffix as longer indexed words.
 
 With no qualifying long word, the fallback returns empty without an upstream request. Thus `U2`,
 `AC/DC`, `Hte` and short CJK titles get no typo rescue, even when a correctly spelled short title
-reaches this fallback. One approximate word can still satisfy several fuzzy clauses. These are
-suggestions, not an identity claim or a guarantee of relevance across the search index.
+reaches this fallback. One approximate word can satisfy several fuzzy clauses.
+A typo equally close to the intended title and another real title can be led by the other
+one because upstream ranks equally close spellings as ties (`Işıkk` → `isiki`).
+Suggestions are not an identity claim or a guarantee of relevance across the search index.
 
 The queries omit the artist clause. Album enrichment uses the same fallback when its strict pool
-is empty, so short-only misses offer no fuzzy suggestions; track enrichment still refuses a blank
-artist without searching. With an artist supplied, fuzzy queries and request counts are unchanged.
+is empty, so short-only misses offer no fuzzy suggestions; track enrichment refuses a blank artist
+without searching. With an artist supplied, fuzzy search sends one unquoted title-and-artist query.
 
 ## Resolving a track by name
 

@@ -546,18 +546,20 @@ operators even after a field prefix. `recording:Now AND recording:OR AND recordi
 
 Combining marks belong inside a word: omitting `\p{M}` split `ความรัก` into `ความร` and `ก`,
 losing the intended recording. The complete fuzzy word returned 15 hits led by `ความรัก`.
-One approximate word can still satisfy several fuzzy clauses, as `Rolc` can for `Rokc Roll`.
-Dropping punctuation restored the previously empty Satisfaction and Rumours queries without
-filtering returned titles locally.
+One approximate word can satisfy several fuzzy clauses, as `Rolc` can for `Rokc Roll`.
+A typo equally close to the intended title and another real title can be led by the other
+one because upstream ranks equally close spellings as ties (`Işıkk` → `isiki`).
+The captured word-only Satisfaction and Rumours queries return related titles where the
+punctuated forms return none, without client-side filtering.
 
 If no long word qualifies, skip the request: an exact-only fallback cannot rescue a typo and an
 exact short CJK term can itself broaden (`recording:東凉` returned 8,429 hits led by `凉凉`).
 The recall cost includes `U2`, `AC/DC`, short CJK titles and three-letter typos.
 
 The captures, timestamps and query comparisons are in `pools/musicbrainz-fuzzy-title-only/`
-under core's test resources; each capture predates the code change it pins. Only the first three
-hits were inspected. These queries constrain suggestions, not identity or semantic relevance for
-every title: a title without an artist still cannot identify which recording the caller means.
+under core's test resources. The scenario records capture timestamps and exact queries; only the
+first three hits were inspected. These queries constrain suggestions, not identity or semantic
+relevance for every title: a title without an artist cannot identify which recording the caller means.
 
 ## 3. `org.json` returns a default for a missing key — it does not fail
 
