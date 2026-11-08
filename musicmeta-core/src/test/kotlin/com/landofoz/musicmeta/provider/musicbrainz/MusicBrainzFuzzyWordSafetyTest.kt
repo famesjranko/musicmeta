@@ -44,7 +44,7 @@ class MusicBrainzFuzzyWordSafetyTest(private val entity: String) {
 
         // Then - the year remains exact and only the captured matching editions survive
         assertEquals(listOf(strict, fuzzy), queries())
-        val expected = if (recording) List(2) { "Starman (2012 remastered version)" } else emptyList()
+        val expected = if (recording) listOf("Starman (2012 remastered version)") else emptyList()
         assertEquals(expected, candidates.map { it.title })
     }
 
