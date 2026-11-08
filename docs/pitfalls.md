@@ -530,7 +530,8 @@ Removing only the empty artist clause still returned 74,629 recording hits led b
 and 43,933 release hits led by `Boråspolisen Blues`. The field prefix and fuzzy suffix do not
 make the intervening words one required title: each word needs its own field, joined with `AND`.
 That alone is insufficient. MusicBrainz normalises a fuzzy term's case and accents but does not
-split it into words. On 2026-11-08, `recording:işıkk~` and `recording:isikk~` each returned 605 hits
+split it into words. In a live probe on 2026-11-08 (limit=5), `recording:işıkk~` and
+`recording:isikk~` each returned 605 hits
 with the same top rows; their release equivalents each returned 148, also with the same top rows.
 Attached or standalone punctuation can become a required term that finds nothing, while two edits
 on a short token or CJK fragment can reach unrelated terms. `recording:東凉~` returned 5,743
@@ -540,12 +541,22 @@ Three characters are still unsafe: `recording:Hte~` returned 56,690 hits led by 
 and correctly spelled `recording:千本桜~` returned 16,460 unrelated hits. The `Hte~1` probe did
 not improve the count or relevance.
 
-Extract letter/digit runs including combining marks, retain internal apostrophes, normalize curly
-apostrophes, and require words shorter than four Unicode code points exactly. Only longer words
-take `~`. Lowercase the extracted words with `Locale.ROOT`: uppercase `AND`, `OR` and `NOT` are
+Normalize the title to NFC before extracting letter/digit runs including combining marks, retain
+internal apostrophes, and normalize curly apostrophes. Count code points before lowercasing: NFD
+Hangul can occupy more code points than NFC, and lowercasing `İyi` adds a combining dot. Two
+supplementary-plane letters occupy four UTF-16 units but only two code points. Require words
+shorter than four NFC code points exactly, and keep entirely Unicode-number words exact regardless
+of length. Only qualifying non-numeric words take `~`. Lowercase the extracted words with `Locale.ROOT`: uppercase `AND`, `OR` and `NOT` are
 operators even after a field prefix. `recording:Now AND recording:OR AND recording:Nevr~` returned
 7,341,859 hits led by `&=&=&=&=OR; immense` (2026-11-08); lowercasing the title words returned
 2,002 hits led by `Now or Never Now`. Keep the query's own Boolean operators uppercase.
+
+Numeric words distinguish editions: on 2026-11-08 (limit=3), the captured title-only strict
+queries for `Strman - 2012 Remaster` and `Live at Wembly 1986` both missed. Making the year exact
+in `recording:strman~ AND recording:2012~ AND recording:remaster~` narrowed 5 hits led by
+`Barman (2022 remaster)` to 2, both `Starman (2012 remastered version)`. Making the year exact
+in `release:live~ AND release:at AND release:wembly~ AND release:1986~` narrowed 14 hits led
+by `Live At Wembley 1988` to none. Mixed words such as `sum41` retain fuzzy matching.
 
 Combining marks belong inside a word: omitting `\p{M}` split `ความรัก` into `ความร` and `ก`,
 losing the intended recording. The complete fuzzy word returned 15 hits led by `ความรัก`.
@@ -557,7 +568,7 @@ punctuated forms return none, without client-side filtering.
 
 If no long word qualifies, skip the request: an exact-only fallback cannot rescue a typo and an
 exact short CJK term can itself broaden (`recording:東凉` returned 8,429 hits led by `凉凉`).
-The recall cost includes `U2`, `AC/DC`, short CJK titles and three-letter typos.
+The recall cost includes `U2`, `AC/DC`, short CJK titles, three-letter typos and number-only titles.
 
 The captures, timestamps and query comparisons are in `pools/musicbrainz-fuzzy-title-only/`
 under core's test resources. The scenario records capture timestamps and exact queries; only the

@@ -124,7 +124,7 @@ HTTP 200 responses; every URL and timestamp is recorded below.
   - `https://musicbrainz.org/ws/2/release?query=release%3ARumours~+AND+release%3ADeluxe~+AND+%28release%3ARumours+OR+release%3ADeluxe%29&fmt=json&limit=3`
 - `release-rumours-punctuated.json` — 2026-11-07T17:03:39.382561+00:00, count=0
   - `https://musicbrainz.org/ws/2/release?query=release%3ARumours~+AND+release%3A%5C-~+AND+release%3ADeluxe~&fmt=json&limit=3`
-- `recording-short-cjk-fuzzy.json` — 2026-11-07T17:00:13.724855+00:00, count=5743
+- `recording-short-cjk-fuzzy.json` — 2026-11-07T16:55:27.785Z, count=5743
   - `https://musicbrainz.org/ws/2/recording?query=recording%3A%E6%9D%B1%E5%87%89~&fmt=json&limit=3`
 - `recording-short-cjk-strict.json` — 2026-11-07T17:00:17.139146+00:00, count=0
   - `https://musicbrainz.org/ws/2/recording?query=recording%3A%22%E6%9D%B1%E5%87%89%22+AND+artistname%3A%22%22&fmt=json&limit=3`
@@ -138,7 +138,7 @@ HTTP 200 responses; every URL and timestamp is recorded below.
   - `https://musicbrainz.org/ws/2/release?query=release%3A%E6%9D%B1%E5%87%89~&fmt=json&limit=3`
 - `release-short-cjk-strict.json` — 2026-11-07T17:01:25.187489+00:00, count=0
   - `https://musicbrainz.org/ws/2/release?query=release%3A%22%E6%9D%B1%E5%87%89%22+AND+artistname%3A%22%22&fmt=json&limit=3`
-- `release-symbols-fuzzy.json` — 2026-11-07T17:01:31.806159+00:00, count=172
+- `release-symbols-fuzzy.json` — 2026-11-07T16:55:39.008Z, count=172
   - `https://musicbrainz.org/ws/2/release?query=release%3AF%E2%99%AF~+AND+release%3AB%E2%99%AF~+AND+release%3A%E2%88%9E~&fmt=json&limit=3`
 - `release-symbols-strict.json` — 2026-11-07T17:01:37.792662+00:00, count=0
   - `https://musicbrainz.org/ws/2/release?query=release%3A%22F%E2%99%AF+B%E2%99%AF+%E2%88%9E%22+AND+artistname%3A%22%22&fmt=json&limit=3`
@@ -419,3 +419,48 @@ can produce candidates. One approximate word can satisfy several fuzzy clauses, 
 can for `Rokc Roll`. Responses are not filtered by title. Short-only titles receive no fuzzy
 request. These captures do not prove relevance of the complete pool, general multilingual
 recall, latency or live enrichment end to end.
+
+## Numeric terms and Unicode word lengths
+
+Captured live on 2026-11-08, with the same
+User-Agent and limit=3 as above. Requests were sequential with at least 1.1 seconds after
+each response, including unsuccessful attempts. HTTP 503 responses were retried at most
+three times; only complete unmodified HTTP 200 bodies are fixtures. Each entry records
+the response's `created` time, local receipt time, count, URL and SHA-256.
+
+- `recording-strman-2012-remaster-strict.json` — 2026-11-08T04:17:56.761Z, received=2026-11-08T04:17:56.892081+00:00, count=0
+  - `https://musicbrainz.org/ws/2/recording?query=recording%3A%22Strman+%5C-+2012+Remaster%22+AND+artistname%3A%22%22&fmt=json&limit=3`
+  - SHA-256: `7c5dfbe3451d133eaccedf93aa3fde71d8694c2a8c22e91bcf49b9a0c808f030`
+- `recording-strman-2012-remaster-fuzzy-number.json` — 2026-11-08T04:17:59.312Z, received=2026-11-08T04:17:59.452523+00:00, count=5
+  - `https://musicbrainz.org/ws/2/recording?query=recording%3Astrman~+AND+recording%3A2012~+AND+recording%3Aremaster~&fmt=json&limit=3`
+  - SHA-256: `d4cbb022f1b0f166e4cb315e93ae9c12487555aad86975a11a40e35fd93ee62f`
+- `recording-strman-2012-remaster-exact-number.json` — 2026-11-08T04:18:05.567Z, received=2026-11-08T04:18:05.697051+00:00, count=2
+  - `https://musicbrainz.org/ws/2/recording?query=recording%3Astrman~+AND+recording%3A2012+AND+recording%3Aremaster~&fmt=json&limit=3`
+  - SHA-256: `8ddb6474697e0fcbcd72d96869dbdd70d4cc0a592c521e955b0e2f2626157194`
+- `release-live-at-wembly-1986-strict.json` — 2026-11-08T04:18:11.410Z, received=2026-11-08T04:18:11.537651+00:00, count=0
+  - `https://musicbrainz.org/ws/2/release?query=release%3A%22Live+at+Wembly+1986%22+AND+artistname%3A%22%22&fmt=json&limit=3`
+  - SHA-256: `4a9de2f46d88c2e357608f6c01cfa19396be5f2502f7f421e997b4858f14b8ec`
+- `release-live-at-wembly-1986-fuzzy-number.json` — 2026-11-08T04:18:13.872Z, received=2026-11-08T04:18:14.003203+00:00, count=14
+  - `https://musicbrainz.org/ws/2/release?query=release%3Alive~+AND+release%3Aat+AND+release%3Awembly~+AND+release%3A1986~&fmt=json&limit=3`
+  - SHA-256: `eeccd52f662ad8e20009174a92531a46e0887714e422ea57f16d9da35f7a3c89`
+- `release-live-at-wembly-1986-exact-number.json` — 2026-11-08T04:18:17.900Z, received=2026-11-08T04:18:18.027359+00:00, count=0
+  - `https://musicbrainz.org/ws/2/release?query=release%3Alive~+AND+release%3Aat+AND+release%3Awembly~+AND+release%3A1986&fmt=json&limit=3`
+  - SHA-256: `bd0cb7978f9a37495700b69fea99bb9ca112b9a4390d2961284942e75c5546bc`
+- `recording-karma-polise-quoted-empty-artist.json` — 2026-11-08T04:18:20.461Z, received=2026-11-08T04:18:20.592010+00:00, count=0
+  - `https://musicbrainz.org/ws/2/recording?query=recording%3A%22Karma+Polise%22+AND+artistname%3A%22%22&fmt=json&limit=3`
+  - SHA-256: `c754fd4ef33865f880df7c0bcc9782cb05598fbf2c4ad3e73f98a77be31e281d`
+- `recording-sum41.json` — 2026-11-08T04:18:23.027Z, received=2026-11-08T04:18:23.155309+00:00, count=1353
+  - `https://musicbrainz.org/ws/2/recording?query=recording%3Asum41~&fmt=json&limit=3`
+  - SHA-256: `48145ba63797c4887d154990508419b0dd071d3c10c8883d034911dd1819081c`
+- `release-karma-polise-quoted-empty-artist.json` — 2026-11-08T04:18:25.435Z, received=2026-11-08T04:18:25.562775+00:00, count=0
+  - `https://musicbrainz.org/ws/2/release?query=release%3A%22Karma+Polise%22+AND+artistname%3A%22%22&fmt=json&limit=3`
+  - SHA-256: `2b54c77a2518f09b650f19695c0978696caf3944071a2a7909a2f9e7a775c29a`
+- `release-sum41.json` — 2026-11-08T04:18:27.878Z, received=2026-11-08T04:18:28.351371+00:00, count=340
+  - `https://musicbrainz.org/ws/2/release?query=release%3Asum41~&fmt=json&limit=3`
+  - SHA-256: `7d1a576c0704339d0b2744da568ac47e9da772d6de6b797494dc9b4d56c797eb`
+
+The numeric comparisons change only the fuzzy suffix on the year. Both strict title queries
+miss. The exact-number recording query retains the two 2012 editions; the exact-number release
+query returns no rows. The `sum41~` captures document the mixed letter-and-number query shape,
+not a guarantee of related results. The quoted empty-artist captures are the exact strict queries
+sent by candidate search, including `AND artistname:""`.

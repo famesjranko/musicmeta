@@ -126,7 +126,7 @@ class MusicBrainzFuzzyTitleOnlyTest(private val entity: String) {
         )
         givenCapture("$entity:Karma~ AND $entity:Polise~", "karma-polise-title-case")
         givenCapture("$entity:karma~ AND $entity:polise~", "karma-polise")
-        httpClient.givenJsonResponse("%22", capture("karma-polise-quoted"))
+        givenCapture("$entity:\"Karma Polise\" AND artistname:\"\"", "karma-polise-quoted-empty-artist")
         httpClient.givenJsonResponse("$entity?query", capture("karma-polise-empty-artist"))
         val provider = MusicBrainzProvider(httpClient, RateLimiter(0))
         val request = if (entity == "recording") {
@@ -141,6 +141,7 @@ class MusicBrainzFuzzyTitleOnlyTest(private val entity: String) {
         // Then - the strict request and one fuzzy retry return only the related titles
         assertEquals(listOf("Karma Police", "Karma Police", "Karma Police"), candidates.map { it.title })
         assertEquals(2, httpClient.requestedUrls.size)
+        assertEquals("$entity:\"Karma Polise\" AND artistname:\"\"", queries().first())
         assertEquals("$entity:karma~ AND $entity:polise~", queries().last())
     }
 

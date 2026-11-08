@@ -107,26 +107,27 @@ it cannot establish a cacheable absence for the unavailable source.
 ## Title-only fuzzy suggestions
 
 When a strict candidate search misses and the artist is blank, fuzzy recording and release
-queries extract runs of Unicode letters, digits and combining marks. Internal apostrophes are
-kept, with `’` normalized to ASCII apostrophe; other punctuation separates words. Extracted words
+queries normalize the title to NFC, then extract runs of Unicode letters, digits and combining
+marks. Internal apostrophes are kept, with `’` normalized to ASCII apostrophe; other punctuation
+separates words. Extracted words
 are lowercased with `Locale.ROOT`, so uppercase title words such as `AND`, `OR` and `NOT` stay
 literal terms rather than Lucene operators. Every word is required in the title field. Words of
-at least four Unicode code points take `~`; shorter words are exact query terms.
-MusicBrainz normalises a fuzzy term's case and accents but does not split it into words.
-On 2026-11-08, `recording:işıkk~` and `recording:isikk~` each returned 605 hits with the same top
-rows; their release equivalents each returned 148, also with the same top rows. Attached punctuation
-can become a required term that finds nothing, while short tokens and CJK fragments can match
-unrelated terms.
+at least four NFC code points before lowercasing take `~`, unless the word is entirely Unicode
+numbers; numeric words and shorter words are exact query terms.
+MusicBrainz normalises fuzzy case and accents without splitting words, and equally close spellings
+can tie; [pitfall 44](pitfalls.md#44-a-fuzzy-title-term-must-resemble-an-indexed-word) holds the live
+evidence and limits.
 
 With no qualifying long word, the fallback returns empty without an upstream request. Thus `U2`,
-`AC/DC`, `Hte` and short CJK titles get no typo rescue, even when a correctly spelled short title
+`AC/DC`, `Hte`, `2012` and short CJK titles get no typo rescue, even when a correctly spelled short title
 reaches this fallback. One approximate word can satisfy several fuzzy clauses.
-A typo equally close to the intended title and another real title can be led by the other
-one because upstream ranks equally close spellings as ties (`Işıkk` → `isiki`).
+Edition words remain required: `Abbey Raod (Remastered)` can lead with
+`Bijelo Dugme (Abbey Road Remastered 2014)`, and blank-artist album enrichment skips qualifier stripping.
 Suggestions are not an identity claim or a guarantee of relevance across the search index.
 
 The queries omit the artist clause. Album enrichment uses the same fallback when its strict pool
-is empty, so short-only misses offer no fuzzy suggestions; track enrichment refuses a blank artist
+is empty, so short-only or number-only misses offer no fuzzy suggestions; track enrichment refuses
+a blank artist
 without searching. With an artist supplied, fuzzy search sends one unquoted title-and-artist query.
 
 ## Resolving a track by name

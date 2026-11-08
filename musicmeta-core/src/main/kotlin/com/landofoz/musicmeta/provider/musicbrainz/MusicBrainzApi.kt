@@ -11,6 +11,7 @@ import com.landofoz.musicmeta.provider.encodePathSegment
 import com.landofoz.musicmeta.provider.encodeQueryValue
 import kotlinx.coroutines.currentCoroutineContext
 import org.json.JSONObject
+import java.text.Normalizer
 import java.util.Locale
 
 /**
@@ -56,7 +57,7 @@ internal class MusicBrainzApi(
         return MusicBrainzParser.parseArtistDisambiguations(json)
     }
 
-    /** Near-miss suggestions; title-only queries require a word of at least four code points. */
+    /** Near-miss suggestions; title-only queries need a non-numeric word of at least four NFC code points. */
     suspend fun searchReleasesFuzzy(
         title: String,
         artist: String,
@@ -269,7 +270,7 @@ internal class MusicBrainzApi(
         }
 
     /**
-     * Near-miss suggestions; title-only queries require a word of at least four code points.
+     * Near-miss suggestions; title-only queries need a non-numeric word of at least four NFC code points.
      * [searchRecordings]'s own hint-less retry only drops the `release:"…"` album term. It re-sends
      * [title] quoted, so this loosened match is needed to rescue a typo. Like the release/artist
      * variants, this takes no album hint — a release term would narrow a near-miss query.
@@ -478,6 +479,7 @@ internal class MusicBrainzApi(
 
         private const val MIN_FUZZY_WORD_LENGTH = 4
         private val FUZZY_TITLE_WORDS = Regex("[\\p{L}\\p{M}\\p{N}]+(?:['’][\\p{L}\\p{M}\\p{N}]+)*")
+        private val NUMERIC_TITLE_WORD = Regex("\\p{N}+")
 
         private fun fuzzyTitleQuery(field: String, title: String, artist: String): String? {
             if (artist.isNotBlank()) {
@@ -485,12 +487,14 @@ internal class MusicBrainzApi(
             }
             // MusicBrainz folds fuzzy terms' case and accents but does not split them into words.
             // Lowercasing keeps Boolean title words out of Lucene's grammar.
-            val words = FUZZY_TITLE_WORDS.findAll(title)
-                .map { it.value.replace('’', '\'').lowercase(Locale.ROOT) }.toList()
-            val fuzzyWords = words.filter { it.codePointCount(0, it.length) >= MIN_FUZZY_WORD_LENGTH }.distinct()
+            val words = FUZZY_TITLE_WORDS.findAll(Normalizer.normalize(title, Normalizer.Form.NFC))
+                .map { it.value.replace('’', '\'') }.toList()
+            val fuzzyWords = words.filter {
+                it.codePointCount(0, it.length) >= MIN_FUZZY_WORD_LENGTH && !NUMERIC_TITLE_WORD.matches(it)
+            }.distinct()
             if (fuzzyWords.isEmpty()) return null
             val terms = words.joinToString(" AND ") {
-                "$field:${escapeLucene(it)}" + if (it in fuzzyWords) "~" else ""
+                "$field:${escapeLucene(it.lowercase(Locale.ROOT))}" + if (it in fuzzyWords) "~" else ""
             }
             return encodeQueryValue(terms)
         }
