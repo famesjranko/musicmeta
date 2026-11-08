@@ -12,6 +12,7 @@ import org.junit.runner.RunWith
 import org.junit.runners.Parameterized
 import java.net.URLDecoder
 import java.net.URLEncoder
+import java.util.Locale
 
 @RunWith(Parameterized::class)
 class MusicBrainzFuzzyArtistWordsTest(private val entity: String) {
@@ -60,14 +61,14 @@ class MusicBrainzFuzzyArtistWordsTest(private val entity: String) {
     @Test
     fun `first artist word typo returns captured intended rows`() = runTest {
         // Given - the captured words response is routed by its complete query
-        route("billie", "words")
+        route("micheal", "words")
 
         // When - searching for the misspelled first artist word
         val actual = displayedRows("Bilie Jean", "Micheal Jackson")
 
         // Then - the word query returns its three captured rows in order
-        assertEquals(listOf(entry("billie", "words").getString("query")), queries())
-        assertEquals(expectedRows("billie"), actual)
+        assertEquals(listOf(entry("micheal", "words").getString("query")), queries())
+        assertEquals(expectedRows("micheal"), actual)
     }
 
     @Test
@@ -159,12 +160,20 @@ class MusicBrainzFuzzyArtistWordsTest(private val entity: String) {
         // When - searching with decomposed accents, curly apostrophes and supplementary letters
         search("Bilie Jean", "$decomposed D’Angelo")
         search("Bilie Jean", "사랑 İyi 𐐀𐐁")
+        val originalLocale = Locale.getDefault()
+        try {
+            Locale.setDefault(Locale.forLanguageTag("tr-TR"))
+            search("Bilie Jean", "FIRE")
+        } finally {
+            Locale.setDefault(originalLocale)
+        }
 
         // Then - NFC extraction and code point classification match the shared title rules
         assertEquals(
             listOf(
                 "$entity:bilie~ AND $entity:jean~ AND artistname:björk~ AND artistname:d'angelo~",
                 "$entity:bilie~ AND $entity:jean~ AND artistname:사랑 AND artistname:i̇yi AND artistname:𐐨𐐩",
+                "$entity:bilie~ AND $entity:jean~ AND artistname:fire~",
             ),
             queries(),
         )

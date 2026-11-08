@@ -50,20 +50,23 @@ class MusicBrainzFuzzyArtistWordsPathsTest(private val entity: String, private v
 
     @Test
     fun `enrichment miss offers artist word suggestions without extra requests`() = runTest {
-        // Given - canonical recording, strict and words captures for the fallback path
+        // Given - canonical recording and strict captures; release artist lookup stays unrouted
         if (entity == "recording") route("canonical")
         route("strict"); route("words")
         val expected = buildList {
             if (entity == "recording") add(entry("canonical").getString("query"))
-            add(entry("strict").getString("query")); add(entry("words").getString("query"))
+            add(entry("strict").getString("query"))
+            if (entity == "release" && case != "featured") add("artist:\"$artist\" OR alias:\"$artist\"")
+            add(entry("words").getString("query"))
         }
 
         // When - enrichment misses and returns suggestions
         val result = withContext(ProviderCallScope()) { provider.enrich(request, EnrichmentType.GENRE) }
 
-        // Then - suggestions use the captured words rows after the existing strict path
+        // Then - the existing ladder is unchanged and sends only one fuzzy request
         assertTrue(result is EnrichmentResult.NotFound)
         assertEquals(expected, queries())
+        assertEquals(1, queries().count { it == entry("words").getString("query") })
         val suggestions = (result as EnrichmentResult.NotFound).suggestions.orEmpty()
         assertEquals(case == "micheal", suggestions.isNotEmpty())
     }
