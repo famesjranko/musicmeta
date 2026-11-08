@@ -62,9 +62,12 @@ two response shapes under one cache key. `MusicBrainzQualifierFallback.kt` strip
 
 `TRACK_PREVIEW` tries Deezer first, then iTunes. The preview-only song search is separate from
 album search. Preview text folds typographic apostrophes before title and album-hint comparisons.
-An exact title match outranks a match that omits a featured credit. Only credits in parentheses
-or brackets (`feat.`, `ft.`, `featuring`) may be omitted, and stripping must leave a nonempty title.
-If both titles carry credits, the credited artists must match under the existing same-name rules.
+An exact title match outranks a credited variant for a plain request. Only credits in parentheses
+or brackets (`feat.`, `ft.`, `featuring`) are recognized, and stripping must leave a nonempty title.
+A credited request requires compatible candidate credits under the existing same-name rules.
+A plain request may accept a credited variant only when the eligible artist-matched rows at that
+title preference have one compatible credit group. Competing guest versions return no match;
+reordered or differently separated guest lists are not treated as equivalent.
 Other qualifiers still pass unchanged to `TitleMatcher`; a credit group containing a version marker
 is kept intact. The primary artist must still be the same normalized name or a name in the resolved
 alias pool, and the album must agree with a supplied hint. A supplied
@@ -73,9 +76,10 @@ by iTunes. The US store is explicit on both routes.
 
 Only HTTPS preview URLs are returned; a malformed URL disqualifies its row alone. Clip duration is
 null because the song result states the full track duration, not the clip duration. No audio is downloaded or proxied. Cached preview
-results contain the URL and provider identifiers, not media. The demo logs live iTunes preview
-successes, including after an empty Deezer search, and warns when a Deezer refusal reaches the chain.
-Cache hits do not log a new lookup. A failed chain retains its last error; an empty fallback does
+results contain the URL and provider identifiers, not media. The library logs live preview
+successes at debug level with the runtime provider id. The chain warns on any provider's auth
+refusal on every route, including when fallback succeeds. Cache hits add neither log.
+The demo prints engine warnings to stderr. A failed chain retains its last error; an empty fallback does
 not hide a Deezer block.
 
 ## Deezer host refusals

@@ -24,21 +24,21 @@ class DeezerBlockedTest {
     private val fallback = FakeProvider("fallback", capabilities = listOf(ProviderCapability(type, 50)))
 
     @Test
-    fun `an iTunes preview lookup is logged once while a cache hit is silent`() = runTest {
-        // Given - Deezer has no track and iTunes can supply a cacheable preview.
+    fun `a preview lookup names its runtime provider while a cache hit is silent`() = runTest {
+        // Given - Deezer has no track and a custom provider can supply a cacheable preview.
         http.givenJsonResponse("search/track", """{"data":[]}""")
-        val itunes = FakeProvider("itunes", capabilities = listOf(ProviderCapability(type, 40)))
-        itunes.givenResult(type, EnrichmentResult.Success(
-            type, EnrichmentData.TrackPreview("https://example.com/clip", "itunes"), "itunes", 0.9f,
+        val custom = FakeProvider("custom-preview", capabilities = listOf(ProviderCapability(type, 40)))
+        custom.givenResult(type, EnrichmentResult.Success(
+            type, EnrichmentData.TrackPreview("https://example.com/clip", "custom-preview"), "custom-preview", 0.9f,
         ))
         val lookups = mutableListOf<String>()
         val logger = object : EnrichmentLogger {
             override fun debug(tag: String, message: String) {
-                if (message.startsWith("Preview lookup:")) lookups.add(message)
+                if (tag == "ProviderChain") lookups.add(message)
             }
             override fun warn(tag: String, message: String, throwable: Throwable?) = Unit
         }
-        val engine = EnrichmentEngine.Builder().addProvider(deezer).addProvider(itunes)
+        val engine = EnrichmentEngine.Builder().addProvider(deezer).addProvider(custom)
             .cache(FakeEnrichmentCache()).logger(logger)
             .config(EnrichmentConfig(enableIdentityResolution = false)).build()
 
@@ -50,8 +50,10 @@ class DeezerBlockedTest {
             // Then - one successful lookup is logged without claiming that Deezer was blocked.
             assertTrue(first is EnrichmentResult.Success)
             assertTrue(second is EnrichmentResult.Success)
-            assertEquals(1, itunes.enrichCalls.size)
-            assertEquals(listOf("Preview lookup: iTunes supplied TRACK_PREVIEW."), lookups)
+            assertEquals(1, custom.enrichCalls.size)
+            assertEquals(1, lookups.size)
+            assertTrue(lookups.single().contains("custom-preview"))
+            assertTrue(lookups.single().contains("TRACK_PREVIEW"))
         } finally {
             engine.close()
         }
@@ -69,13 +71,24 @@ class DeezerBlockedTest {
             override fun debug(tag: String, message: String) = Unit
             override fun warn(tag: String, message: String, throwable: Throwable?) { warnings.add(message) }
         }
-        val chain = ProviderChain(type, listOf(deezer, fallback), logger = logger)
+        val engine = EnrichmentEngine.Builder().addProvider(deezer).addProvider(fallback)
+            .cache(FakeEnrichmentCache()).logger(logger)
+            .config(EnrichmentConfig(enableIdentityResolution = false)).build()
 
         // When - a successful fallback hides the refusal from the returned result.
-        val result = chain.resolve(request)
+        val result: EnrichmentResult?
+        val cached: EnrichmentResult?
+        try {
+            result = engine.enrich(request, setOf(type)).raw[type]
+            cached = engine.enrich(request, setOf(type)).raw[type]
+        } finally {
+            engine.close()
+        }
 
-        // Then - exactly one warning retains the provider, HTTP status and host refusal.
+        // Then - one live warning retains the refusal and a cache hit adds no warning.
         assertTrue(result is EnrichmentResult.Success)
+        assertTrue(cached is EnrichmentResult.Success)
+        assertEquals(1, http.requestedUrls.size)
         assertEquals(1, warnings.size)
         assertTrue(warnings.single().contains("deezer", ignoreCase = true))
         assertTrue(warnings.single().contains("403"))

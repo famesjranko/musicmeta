@@ -30,14 +30,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
-- iTunes supplies `TRACK_PREVIEW` after Deezer, with strict title, artist and album checks; consumers must show an approved linked store badge and courtesy attribution and stream without storing media
+- iTunes supplies `TRACK_PREVIEW` after Deezer with strict recording checks; exact titles win, requested guests must match, competing guest versions are refused and malformed URLs skip only their row
+- A provider auth refusal is logged as a warning on every route, even after fallback success; live preview successes name their provider in debug logs; cache hits add neither log
 - The demo web UI marks a provider that refused this host at startup with a warning and explains it on hover (demo only)
 
 ### Fixed
-- iTunes previews prefer exact titles, reject conflicting featured artists and preserve ordinary title words; a malformed preview URL skips only its row
-- Deezer host refusals remain visible as warnings after fallback success; demo iTunes lookup logs exclude cache hits
-- Deezer HTTP 403 now reports `ErrorKind.AUTH` on all routes, including similar albums, and counts as a provider breaker failure; blocked previews and preview cooldown remain uncached errors
-- The web demo preview endpoint distinguishes upstream blocks and failures (HTTP 502) from missing previews (404); the play button reports the failure
+- Deezer HTTP 403 now reports `ErrorKind.AUTH` on all routes, including similar albums, and counts as a provider breaker failure; blocked previews and preview cooldown produce uncached errors
+- The web demo preview endpoint distinguishes upstream blocks and failures (HTTP 502) from missing previews (404); the play button reports the failure (demo only)
 
 ### Changed
 - iTunes preview clips use `.m4a` URLs with `durationMs = null`; players must accept both these and Deezer's 30-second MP3 clips

@@ -65,9 +65,7 @@ fun main() {
         )
         val engine = EnrichmentEngine.Builder()
             .logger(object : EnrichmentLogger {
-                override fun debug(tag: String, message: String) {
-                    if (message.startsWith("Preview lookup:")) println(message)
-                }
+                override fun debug(tag: String, message: String) = Unit
                 override fun warn(tag: String, message: String, throwable: Throwable?) {
                     System.err.println("WARN $tag: $message")
                 }

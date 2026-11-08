@@ -504,8 +504,10 @@ siblings.
 Preview title matching must retain featured-artist evidence when ranking. Stripping both credits
 and accepting the first title match can choose the plain recording ahead of a credited one in the
 same response. A bare `ft`, `feat` or `featuring` can also be ordinary title text. Remove only
-bracketed credits, preserve a title that would become empty, prefer exact titles, and compare
-credits when both are present. Keep these tolerances private to previews.
+bracketed credits, preserve a title that would become empty, and prefer exact titles. A credited
+request must not fall back to a plain recording. A plain request can accept one compatible guest
+group, but competing guest versions need more evidence than upstream order. Keep these tolerances
+private to previews.
 
 ## 3. `org.json` returns a default for a missing key — it does not fail
 

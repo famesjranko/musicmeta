@@ -7,6 +7,7 @@ import com.landofoz.musicmeta.EnrichmentResult
 import com.landofoz.musicmeta.EnrichmentType
 import com.landofoz.musicmeta.IdentifierNamespace
 import com.landofoz.musicmeta.LookupProvenance
+import com.landofoz.musicmeta.engine.AlternativeName
 import com.landofoz.musicmeta.engine.ArtistNameMatch
 import com.landofoz.musicmeta.engine.ConfidenceCalculator
 import com.landofoz.musicmeta.engine.TitleMatcher
@@ -85,13 +86,14 @@ private class PreviewConstraints(
 }
 
 private suspend fun List<ITunesPreviewTrack>.selectArtist(artist: String): ArtistNameMatch<ITunesPreviewTrack>? {
-    firstOrNull { sameNameTier(artist, it.artist, emptyList()) != null }?.let {
-        return ArtistNameMatch(it, checkNotNull(sameNameTier(artist, it.artist, emptyList())))
-    }
-    val aliases = resolvedAliasPool()
-    return mapNotNull { track ->
+    fun matches(aliases: List<AlternativeName>) = mapNotNull { track ->
         sameNameTier(artist, track.artist, aliases)?.let { ArtistNameMatch(track, it) }
-    }.maxByOrNull { it.tier.confidenceFactor }
+    }
+    val matches = matches(emptyList()).ifEmpty { matches(resolvedAliasPool()) }
+    val selected = matches.maxByOrNull { it.tier.confidenceFactor } ?: return null
+    val title = parsePreviewTitle(selected.value.title)
+    if (matches.any { !title.sameCredits(parsePreviewTitle(it.value.title)) }) return null
+    return selected
 }
 
 private fun String.foldPreviewApostrophes(): String = replace('‘', '\'').replace('’', '\'')
@@ -99,16 +101,18 @@ private fun String.foldPreviewApostrophes(): String = replace('‘', '\'').repla
 private data class PreviewTitle(val base: String, val credits: List<String>) {
     fun matches(other: PreviewTitle): Boolean {
         if (!TitleMatcher.equivalent(base, other.base)) return false
-        if (credits.isEmpty() || other.credits.isEmpty()) return true
-        return credits.size == other.credits.size && credits.zip(other.credits).all { (a, b) ->
+        return credits.isEmpty() || sameCredits(other)
+    }
+
+    fun sameCredits(other: PreviewTitle): Boolean =
+        credits.size == other.credits.size && credits.zip(other.credits).all { (a, b) ->
             sameNameTier(a, b, emptyList()) != null
         }
-    }
 }
 
 private fun previewTitle(title: String): String = parsePreviewTitle(title).base
 
-// Bracketed credits may be omitted by a catalogue, but never erase the whole title.
+// Parse bracketed credits separately so requested guests remain recording constraints.
 private fun parsePreviewTitle(title: String): PreviewTitle {
     val folded = title.foldPreviewApostrophes()
     val credits = mutableListOf<String>()

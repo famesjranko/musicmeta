@@ -189,12 +189,11 @@ internal class ProviderChain(
             // consumer's provider that swallows the cancellation and returns an Error, which
             // no rethrow of ours could intercept. (#53)
             currentCoroutineContext().ensureActive()
-            if (provider.id in DEEZER_PROVIDER_IDS && result is EnrichmentResult.Error &&
-                result.errorKind == ErrorKind.AUTH) {
+            if (result is EnrichmentResult.Error && result.errorKind == ErrorKind.AUTH) {
                 logger.warn(TAG, "${type.name}: ${provider.id}: ${result.message}", result.cause)
             }
-            if (type == EnrichmentType.TRACK_PREVIEW && provider.id == "itunes" && result is EnrichmentResult.Success) {
-                logger.debug(TAG, "Preview lookup: iTunes supplied TRACK_PREVIEW.")
+            if (type == EnrichmentType.TRACK_PREVIEW && result is EnrichmentResult.Success) {
+                logger.debug(TAG, "${type.name}: ${provider.id} supplied preview.")
             }
             // A `RateLimited` is a failure, not a no-op: a throttled provider that records neither
             // is a breaker that never opens under load, which is the collapse
@@ -397,7 +396,6 @@ internal class ProviderChain(
     fun providers(): List<EnrichmentProvider> = providers
 
     private companion object {
-        val DEEZER_PROVIDER_IDS = setOf("deezer", "deezer-similar-albums")
         private const val TAG = "ProviderChain"
     }
 }

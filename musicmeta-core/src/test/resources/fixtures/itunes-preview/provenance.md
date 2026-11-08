@@ -26,6 +26,6 @@ Full US song-search pools captured 2026-11-07 with HTTP 200, before the credit-r
 
 These files preserve complete response bytes and upstream order. Each pool contains plain and
 credited recordings. Plain-request tests reverse a two-row subset to prove that title preference
-beats upstream order in both directions. Boundary tests explicitly replace a captured title or URL
+beats upstream order in both directions. Boundary and credit-selection tests explicitly replace a captured title or URL
 to exercise malformed data and ordinary title words; these replacements are not upstream claims.
 The schema-pin test removes `previewUrl` to simulate drift. No preview media was requested or saved.
