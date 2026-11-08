@@ -13,6 +13,7 @@ import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 import org.junit.After
@@ -23,7 +24,6 @@ import org.junit.Test
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
-import kotlin.system.measureTimeMillis
 
 /**
  * What `ResolvedEntityNames.aliasLock` costs when the source under it is a network call that does
@@ -32,16 +32,19 @@ import kotlin.system.measureTimeMillis
  * deadline, run on a dispatcher the source needs, and stay independent of another call's hung
  * source.
  *
- * Real threads, not `runTest`'s virtual clock: the question is whether a waiter is parked on a
- * thread or merely suspended, and a virtual clock cannot tell those apart. Every reader carries an
- * [EnrichDeadline], as one under `enrich()` does, so a source that never answers is bounded here
- * exactly as it is in production rather than left running for the rest of the JVM.
+ * The blocking-source tests use real threads, not `runTest`'s virtual clock: the question is
+ * whether a waiter is parked on a thread or merely suspended, and a virtual clock cannot tell
+ * those apart. The production-shaped budget test carries an [EnrichDeadline], as one under
+ * `enrich()` does, so a source that never answers is bounded as it is in production.
+ *
+ * The two tests that compare caller and lookup deadlines use `runTest`'s virtual clock. They pass
+ * the lookup budget explicitly and do not install an [EnrichDeadline], so the deadlines are
+ * separate scheduled events on one clock.
  *
  * No property here is a measurement of elapsed time, because none of them is one: a parked waiter
  * is a run that never returns, not a run that returns late, and a shared lookup that outlives its
- * budget is a cancellation that never arrives. Wall clock appears only as [GUARD_MS], a bound wide
- * enough that a loaded machine cannot reach it and only a hang can — see [DEADLINE_MS] for the one
- * duration that is a subject rather than a guard.
+ * budget is a cancellation that never arrives. Wall clock appears only as [GUARD_MS], a bound
+ * wide enough that a loaded machine cannot reach it and only a hang can.
  */
 // InjectDispatcher/SleepInsteadOfDelay: both are the subject. A real pool is what makes thread
 // starvation possible at all, and a blocking sleep is what a consumer client that is not
@@ -58,38 +61,125 @@ class AliasLockConcurrencyTest {
     }
 
     @Test
-    fun `a source that never answers still lets every waiter settle on the call's deadline`() {
-        // Given - five readers behind one source that suspends until something cancels it
-        val names = ResolvedEntityNames(lookupScope)
-        val entered = AtomicInteger()
-        val cancelledReaders = AtomicInteger()
-        val cancelledSource = CountDownLatch(1)
-        names.offerAliases {
-            entered.incrementAndGet()
-            suspendCancellableCoroutine<List<AlternativeName>> { c ->
-                c.invokeOnCancellation { cancelledSource.countDown() }
-            }
-        }
-
-        // When - the fan-out's deadline expires while the lookup is still in flight
-        var settled: List<List<AlternativeName>>? = null
-        val elapsed = measureTimeMillis {
-            runBlocking(Dispatchers.Default) {
-                settled = withTimeoutOrNull(DEADLINE_MS) {
-                    readAll(names, DEADLINE_MS) { cancelledReaders.incrementAndGet() }
+    fun `a source that never answers lets every reader settle on the caller deadline`() = runTest {
+        // Given - five readers behind one source that suspends until the call cleans it up
+        val lookupScope = CoroutineScope(coroutineContext + SupervisorJob(coroutineContext[Job]))
+        try {
+            val names = ResolvedEntityNames(lookupScope, LONG_LOOKUP_BUDGET_MS)
+            val entered = AtomicInteger()
+            val readerBodies = AtomicInteger()
+            val cancelledReaders = AtomicInteger()
+            val sourceSuspended = CompletableDeferred<Unit>()
+            val sourceCancelled = CompletableDeferred<Unit>()
+            names.offerAliases {
+                entered.incrementAndGet()
+                suspendCancellableCoroutine<List<AlternativeName>> { c ->
+                    sourceSuspended.complete(Unit)
+                    c.invokeOnCancellation { sourceCancelled.complete(Unit) }
                 }
             }
-        }
 
-        // Then - the deadline reached every waiter and the source they were all waiting on
-        assertNull("expected the deadline to expire, not the readers to answer", settled)
-        assertEquals("the lookup should be opened once, not per reader", 1, entered.get())
-        assertEquals("a reader settled on something other than the deadline", READERS, cancelledReaders.get())
-        assertTrue(
-            "the source was never cancelled",
-            cancelledSource.await(DEADLINE_MS * 10, TimeUnit.MILLISECONDS),
-        )
-        assertTrue("sanity bound, not the deadline: the whole run took ${elapsed}ms", elapsed < GUARD_MS)
+            // When - the caller deadline expires while the lookup is still in flight
+            val call = async {
+                withTimeoutOrNull(CALLER_DEADLINE_MS) {
+                    withContext(names) {
+                        List(READERS) {
+                            async {
+                                readerBodies.incrementAndGet()
+                                try {
+                                    names.aliases()
+                                } catch (cancelled: CancellationException) {
+                                    cancelledReaders.incrementAndGet()
+                                    throw cancelled
+                                }
+                            }
+                        }.awaitAll()
+                    }
+                }
+            }
+            testScheduler.runCurrent()
+            assertEquals(READERS, readerBodies.get())
+            assertTrue(sourceSuspended.isCompleted)
+
+            testScheduler.advanceTimeBy(CALLER_DEADLINE_MS)
+            testScheduler.runCurrent()
+            assertTrue("a reader outlived the caller deadline", call.isCompleted)
+            val settled = call.await()
+            names.cancelPendingLookup()
+            testScheduler.runCurrent()
+
+            // Then - the caller deadline cancelled every reader and the source they were waiting on
+            assertNull("expected the deadline to expire, not the readers to answer", settled)
+            assertEquals("the lookup should be opened once, not per reader", 1, entered.get())
+            assertEquals("a reader settled on something other than the deadline", READERS, cancelledReaders.get())
+            assertTrue("the source was never cancelled", sourceCancelled.isCompleted)
+        } finally {
+            lookupScope.cancel()
+        }
+    }
+
+    @Test
+    fun `a lookup budget expiry serves empty aliases and cancels a waiting reader`() = runTest {
+        // Given - four readers waiting on a lookup with a shorter budget and one reader held back
+        val lookupScope = CoroutineScope(coroutineContext + SupervisorJob(coroutineContext[Job]))
+        try {
+            val names = ResolvedEntityNames(lookupScope, LOOKUP_BUDGET_MS)
+            val readerBodies = AtomicInteger()
+            val cancelledReaders = AtomicInteger()
+            val emptyReaders = AtomicInteger()
+            val holdReader = CompletableDeferred<Unit>()
+            val sourceEntered = CompletableDeferred<Unit>()
+            val sourceCancelled = CompletableDeferred<Unit>()
+            names.offerAliases {
+                sourceEntered.complete(Unit)
+                suspendCancellableCoroutine<List<AlternativeName>> { c ->
+                    c.invokeOnCancellation { sourceCancelled.complete(Unit) }
+                }
+            }
+
+            // When - the lookup budget expires before the caller deadline
+            val call = async {
+                withTimeoutOrNull(CALLER_DEADLINE_MS) {
+                    withContext(names) {
+                        List(READERS) { index ->
+                            async {
+                                readerBodies.incrementAndGet()
+                                try {
+                                    if (index == 0) holdReader.await()
+                                    val aliases = names.aliases()
+                                    if (aliases.isEmpty()) emptyReaders.incrementAndGet()
+                                    aliases
+                                } catch (cancelled: CancellationException) {
+                                    cancelledReaders.incrementAndGet()
+                                    throw cancelled
+                                }
+                            }
+                        }.awaitAll()
+                    }
+                }
+            }
+            testScheduler.runCurrent()
+            assertEquals(READERS, readerBodies.get())
+            assertTrue(sourceEntered.isCompleted)
+
+            testScheduler.advanceTimeBy(LOOKUP_BUDGET_MS)
+            testScheduler.runCurrent()
+            assertTrue(sourceCancelled.isCompleted)
+            assertEquals(READERS - 1, emptyReaders.get())
+            assertTrue(!call.isCompleted)
+
+            testScheduler.advanceTimeBy(CALLER_DEADLINE_MS - LOOKUP_BUDGET_MS)
+            testScheduler.runCurrent()
+            val settled = call.await()
+
+            // Then - lookup expiry served empty aliases, and the caller deadline cancelled the held reader
+            assertNull(settled)
+            assertEquals(READERS - 1, emptyReaders.get())
+            assertEquals(1, cancelledReaders.get())
+            assertTrue(sourceCancelled.isCompleted)
+        } finally {
+            lookupScope.cancel()
+        }
     }
 
     @Test
@@ -242,7 +332,7 @@ class AliasLockConcurrencyTest {
     private companion object {
         const val READERS = 5
 
-        /** The one duration that is a subject: the call deadline the waiters must settle on. */
+        /** A call's real-clock deadline: the budget that a shared lookup opened under it is abandoned on. */
         const val DEADLINE_MS = 500L
 
         /**
@@ -253,6 +343,9 @@ class AliasLockConcurrencyTest {
 
         /** A provider's own read timeout, fired while the shared lookup is still held. */
         const val PROVIDER_MS = 250L
+        const val LOOKUP_BUDGET_MS = 100L
+        const val CALLER_DEADLINE_MS = 200L
+        const val LONG_LOOKUP_BUDGET_MS = CALLER_DEADLINE_MS * 2
         const val BLOCK_MS = 50L
         val POOL = listOf(AlternativeName("Tokyo Jihen", official = true))
     }

@@ -270,6 +270,11 @@ coroutine with its own. `CatalogProvider` was the live case because its call was
 consumer-implementable one the engine made unguarded; it now reaches `ensureActive()` like the
 cache, merge strategies and providers (§2), degrading that type to unfiltered results.
 
+Two real-clock deadlines started a moment apart race, even when one is derived from the other:
+truncated remaining time and scheduler latency can let the nested timeout fire first. A test that
+asserts which deadline wins must control both clocks, such as by putting the lookup scope on
+`runTest`'s scheduler and passing its budget explicitly.
+
 **A timed-out `results` map is a mix, not a prefix.** `applyCatalogFilteringToType()` settles entries
 one type at a time inside the deadline, so an expiry mid-run leaves some types filtered and some raw,
 and the timeout backfill only fills types that are *missing* — a half-filtered `Success` carries no
