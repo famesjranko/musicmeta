@@ -23,6 +23,16 @@ subprojects {
     apply(plugin = "org.jlleitschuh.gradle.ktlint")
     apply(plugin = "io.gitlab.arturbosch.detekt")
 
+    // Verification rebuilds bytecode but can reuse analysis and Android task results.
+    if (providers.gradleProperty("musicmeta.uncachedCompilation").isPresent) {
+        tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile>().configureEach {
+            outputs.cacheIf { false }
+        }
+        tasks.withType<JavaCompile>().configureEach {
+            outputs.cacheIf { false }
+        }
+    }
+
     // Pinned, not the plugin's default. Left implicit, a ktlint-gradle bump silently swaps the
     // rule set underneath the gate — and the write-time hook has no number to match against, so it
     // formats to a style the gate never asked for. See `ktlint-cli` in libs.versions.toml.

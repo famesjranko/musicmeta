@@ -6,13 +6,13 @@
 # custom linter for the rules no off-the-shelf tool checks. Ordered fastest-first so a style slip
 # fails in a second rather than after a full Gradle build.
 #
-#   ./check              everything
+#   ./check              everything, from clean outputs with uncached compilation
 #   ./check --fast       skip detekt, the build, the core dependency baseline, the demo canary and
 #                        doc samples — edit loop, not a push
 #   ./check --skip-demo  CI only: the demo canary is a separate required check there
 #   ./check --commit     --fast without the commit attribution check, plus a Kotlin compile of the
 #                        main, test and test-fixture sources (Android: debug only), so type errors
-#                        fail too — what scripts/hooks/pre-commit runs against the staged snapshot
+#                        fail too — uncached and incremental, against the hook's staged snapshot
 set -euo pipefail
 cd "$(dirname "$0")"
 
@@ -218,11 +218,18 @@ if ! ./gradlew ktlintCheck --quiet; then
 fi
 rm -f "$ktlint_marker"
 
+# Clean removes warm stale bytecode; bypassing the build cache keeps it from returning.
+# Both are needed even when the stale class names a source file that still exists.
+if [ "$FAST" = 0 ] && [ "$COMMIT" = 0 ]; then
+    step "clean verification outputs"
+    ./gradlew clean --quiet
+fi
+
 if [ "$COMMIT" = 1 ]; then
     step "kotlin types (compile)"
     # Main, test and test-fixture sources, so a type error anywhere fails the commit that made it.
     # The Android module compiles its debug variant only: release differs in minification, not types.
-    ./gradlew --quiet \
+    ./gradlew --no-build-cache --quiet \
         :musicmeta-core:compileKotlin :musicmeta-core:compileTestKotlin \
         :musicmeta-core:compileTestFixturesKotlin \
         :musicmeta-okhttp:compileKotlin :musicmeta-okhttp:compileTestKotlin \
@@ -245,12 +252,12 @@ step "kotlin static analysis (detekt, type-resolved)"
 #
 # `./gradlew build` below runs these again through Gradle's `check`. They are up-to-date by then;
 # running them here buys a named failure before a full compile-and-test cycle.
-./gradlew detektMain detektTest detektTestFixtures --quiet
+./gradlew detektMain detektTest detektTestFixtures -Pmusicmeta.uncachedCompilation --quiet
 
 step "build (compile, test, apiCheck)"
-# -Pmusicmeta.rerunTests forces every Test task to execute instead of being served up-to-date or
-# from the shared build cache. Without it this line can report green having run no test at all.
-./gradlew build -Pmusicmeta.rerunTests
+# Keep test execution explicit in addition to rebuilding bytecode: the property prevents both
+# up-to-date reuse and build-cache reuse of Test results.
+./gradlew build -Pmusicmeta.rerunTests -Pmusicmeta.uncachedCompilation
 
 step "core dependency baseline (published POM)"
 # Beside apiCheck because it is the same shape of gate on the same artifact, and below --fast
@@ -258,7 +265,7 @@ step "core dependency baseline (published POM)"
 # to core moves no api/*.api line and reaches every consumer at the next release, where removing it
 # is a break. Generating the POM here rather than trusting build/ means a stale or absent build
 # directory fails the diff's input instead of the diff.
-./gradlew :musicmeta-core:generatePomFileForMavenPublication --quiet
+./gradlew :musicmeta-core:generatePomFileForMavenPublication -Pmusicmeta.uncachedCompilation --quiet
 python3 scripts/checks/check_pom_dependencies.py
 
 # consumers/demo-cli/ and consumers/demo-web/ are separate composite builds that `./gradlew build` never compiles, so
@@ -271,14 +278,14 @@ if [ "$SKIP_DEMO" = 1 ]; then
     printf '\n\033[1m--skip-demo: demo canary left to its own CI job\033[0m\n'
 else
     step "demo canary"
-    scripts/demo-canary.sh --quiet
+    scripts/demo-canary.sh --quiet -Pmusicmeta.uncachedCompilation clean
 fi
 
 # consumers/docs-samples/ is the same composite-build shape as the demos, not a consumer canary: it
 # compiles scripts/checks/check_doc_samples.py's extraction of every docs/guides/*.md Kotlin fence,
 # so a sample that drifts from the real API fails here instead of only in a reader's own build.
 step "doc samples"
-(cd consumers/docs-samples && ../../gradlew compileKotlin --quiet)
+(cd consumers/docs-samples && ../../gradlew clean compileKotlin -Pmusicmeta.uncachedCompilation --quiet)
 
 # consumers/docs-samples-android/ is the same extractor's Android-toolchain target: android.md's fences use
 # Room/Hilt/WorkManager types a plain JVM module cannot see, so they compile here instead, against
@@ -286,7 +293,7 @@ step "doc samples"
 # android variants above already do, and fails the same way — loudly, not a silent skip — if it is
 # absent.
 step "doc samples (android)"
-(cd consumers/docs-samples-android && ../../gradlew compileDebugKotlin --quiet)
+(cd consumers/docs-samples-android && ../../gradlew clean compileDebugKotlin -Pmusicmeta.uncachedCompilation --quiet)
 
 step "test results are from this run"
 # The forcing above is a build-file property, and a property that stops being passed — or a

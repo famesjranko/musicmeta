@@ -1610,6 +1610,14 @@ revert rather than around it.** `rm -rf` the module's `test-results` directory f
 run's tree differed at all — a stale file that is never overwritten is served forever, because
 `UP-TO-DATE` skips the writer, not just the tests.
 
+Forcing the `Test` task to run does not repair stale compiled classes. A build-cache entry can
+restore an orphan suite, or an old helper whose source file still exists. The latter defeats a
+source-file provenance check. Clean output and bypass the build cache together before using a
+run as evidence. That gives a fresh run but does not remove the bad cache entry: a later cached
+build can restore it again. Quarantine the identified entry before returning to cached builds;
+clearing only the XML leaves the bytecode available to the next test run. `docs/verification.md`'s
+"Known gaps" records the verification guard, its limits and recovery.
+
 One related hazard in the same procedure: **`git apply --3way` writes to the index**, so a
 `git checkout -- <paths>` restore afterwards restores *from the staged patch* and reverts nothing.
 Unstage first (`git reset -q HEAD -- .`, which leaves the worktree alone), then check out the tracked
