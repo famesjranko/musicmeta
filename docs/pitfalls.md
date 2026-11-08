@@ -529,9 +529,12 @@ led by `Polise II` (2026-11-07). The release equivalent returned 552,522, led by
 Removing only the empty artist clause still returned 74,629 recording hits led by `Kängpolisen`
 and 43,933 release hits led by `Boråspolisen Blues`. The field prefix and fuzzy suffix do not
 make the intervening words one required title: each word needs its own field, joined with `AND`.
-That alone is insufficient. Lucene fuzzy terms are not analysed: attached or standalone punctuation
-can become a required term that finds nothing, while two edits on a short term reach unrelated
-tokens. `recording:東凉~` returned 5,743 unrelated score-zero hits and the release equivalent 809.
+That alone is insufficient. MusicBrainz normalises a fuzzy term's case and accents but does not
+split it into words. On 2026-11-08, `recording:işıkk~` and `recording:isikk~` each returned 605 hits
+with the same top rows; their release equivalents each returned 148, also with the same top rows.
+Attached or standalone punctuation can become a required term that finds nothing, while two edits
+on a short token or CJK fragment can reach unrelated terms. `recording:東凉~` returned 5,743
+unrelated score-zero hits and the release equivalent 809.
 `release:F♯~ AND release:B♯~ AND release:∞~` returned 172 hits, led by `BV I Fk E`.
 Three characters are still unsafe: `recording:Hte~` returned 56,690 hits led by `Hoe komt het`,
 and correctly spelled `recording:千本桜~` returned 16,460 unrelated hits. The `Hte~1` probe did

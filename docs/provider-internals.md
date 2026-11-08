@@ -112,8 +112,11 @@ kept, with `’` normalized to ASCII apostrophe; other punctuation separates wor
 are lowercased with `Locale.ROOT`, so uppercase title words such as `AND`, `OR` and `NOT` stay
 literal terms rather than Lucene operators. Every word is required in the title field. Words of
 at least four Unicode code points take `~`; shorter words are exact query terms.
-Lucene fuzzy terms are not analysed, so punctuation and short words cannot safely take the same
-fuzzy suffix as longer indexed words.
+MusicBrainz normalises a fuzzy term's case and accents but does not split it into words.
+On 2026-11-08, `recording:işıkk~` and `recording:isikk~` each returned 605 hits with the same top
+rows; their release equivalents each returned 148, also with the same top rows. Attached punctuation
+can become a required term that finds nothing, while short tokens and CJK fragments can match
+unrelated terms.
 
 With no qualifying long word, the fallback returns empty without an upstream request. Thus `U2`,
 `AC/DC`, `Hte` and short CJK titles get no typo rescue, even when a correctly spelled short title

@@ -483,7 +483,7 @@ internal class MusicBrainzApi(
             if (artist.isNotBlank()) {
                 return encodeQueryValue("$field:${escapeLucene(title)}~ AND artistname:${escapeLucene(artist)}~")
             }
-            // Fuzzy terms bypass analysis; punctuation and short tokens can reach unrelated words.
+            // MusicBrainz folds fuzzy terms' case and accents but does not split them into words.
             // Lowercasing keeps Boolean title words out of Lucene's grammar.
             val words = FUZZY_TITLE_WORDS.findAll(title)
                 .map { it.value.replace('’', '\'').lowercase(Locale.ROOT) }.toList()
