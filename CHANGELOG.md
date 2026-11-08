@@ -46,6 +46,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Apple's policy snapshot now records verified preview restrictions: store promotion, a linked approved badge, courtesy attribution, and streaming without saving or caching media
 
 ### Fixed
+- MusicBrainz supplied-artist typo suggestions require lowercase title words; titles without a qualifying word of 4+ code points send no fuzzy request (#417)
 - Deezer HTTP 403 now reports `ErrorKind.AUTH` on all routes, including similar albums, and counts as a provider breaker failure; blocked previews and preview cooldown produce uncached errors
 - The web demo preview endpoint distinguishes upstream blocks and failures (HTTP 502) from missing previews (404); the play button reports the failure (demo only)
 - Album search favours an artist's complete official albums and earlier editions over singles and reissues; missing date, status or type ranks lower; other editions stay selectable (#413)
