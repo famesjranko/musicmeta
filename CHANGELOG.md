@@ -36,6 +36,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - iTunes supplies `TRACK_PREVIEW` after Deezer: exact titles win, guests must match, and competing guests give no preview; album hints prefer compatible editions but allow other albums
 - Any provider's auth refusal now logs a warning, including a rejected Last.fm, Discogs or Fanart.tv key and a Deezer host block that iTunes covered; cache hits stay silent
 - The demo web UI marks a provider that refused this host at startup with a warning and explains it on hover (demo only)
+- The web demo shows each search result's release country (demo only)
 
 ### Changed
 - iTunes preview clips use `.m4a` URLs with `durationMs = null`; players must accept both these and Deezer's 30-second MP3 clips
@@ -46,16 +47,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Apple's policy snapshot now records verified preview restrictions: store promotion, a linked approved badge, courtesy attribution, and streaming without saving or caching media
 
 ### Fixed
-- MusicBrainz supplied-artist typo suggestions require lowercase title words; titles without a qualifying word of 4+ code points send no fuzzy request (#417)
-- MusicBrainz typo suggestions with an artist tolerate a misspelled artist word and require every artist word to match; featured credits can still miss (#430)
 - Deezer HTTP 403 now reports `ErrorKind.AUTH` on all routes, including similar albums, and counts as a provider breaker failure; blocked previews and preview cooldown produce uncached errors
 - The web demo preview endpoint distinguishes upstream blocks and failures (HTTP 502) from missing previews (404); the play button reports the failure (demo only)
 - Album search favours an artist's complete official albums and earlier editions over singles and reissues; missing date, status or type ranks lower; other editions stay selectable (#413)
-- Search prefers exact titles, requested artists and main recordings; title-only discovery uses iTunes artist hints, falling back to MusicBrainz ranking on signal failure.
-- Search collapses identical visible rows and drops cross-provider title/artist duplicates unless edition details differ; distinct editions remain selectable, and the demo shows release country.
-- Search folds typographic quotes, apostrophes, hyphens and ellipses without changing enrichment matching; fuzzy results keep relevance ahead of edition evidence.
-- Search keeps a popular artist's marked recordings ahead of covers, fetches missing unmarked exact albums, and avoids repeated supplied-artist recording queries.
-- MusicBrainz title-only typo suggestions require title words; words containing digits stay exact, and titles without a qualifying word of 4+ characters get no suggestions (#414)
+- Search ranks a supplied artist's exact or punctuation-only title variants first, then other exact titles; a popular artist's recordings lead covers, unmarked ones first (#420)
+- Title-only album and track search uses iTunes artist order as a popularity hint, falling back to MusicBrainz ranking; an `enrichTimeoutMs` of about 12 s or less skips the hint (#422)
+- Title-only album search adds the hinted artist's unmarked exact album when MusicBrainz's results lack it, so a marked edition does not hide it
+- Search collapses identical visible rows and drops cross-provider title/artist duplicates unless edition details differ, so fewer than `limit` rows may return
+- Search folds typographic quotes, apostrophes, hyphens and ellipses without changing enrichment matching; fuzzy results keep relevance ahead of edition evidence
+- MusicBrainz typo suggestions require the title's words, with or without an artist; words with digits stay exact, and a title with no digit-free word of 4+ code points gets none (#414, #417)
+- MusicBrainz typo suggestions with an artist tolerate a misspelled artist word and require every artist word to match; featured credits can still miss (#430)
 
 ## [0.14.0] - 2026-10-08
 
