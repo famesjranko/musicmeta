@@ -99,7 +99,7 @@ class MusicBrainzCandidateSelectionTest {
     fun `fuzzy title score outranks disambiguation and official album evidence`() = runTest {
         // Given - the strict typo search misses and a low-score official album hit competes with the score-100 near match.
         http.givenJsonResponse("recording%3A%22Enter+Sandmann%22", """{"recordings":[]}""")
-        http.givenJsonResponse("recording%3AEnter+Sandmann%7E", fixture("fuzzy"))
+        http.givenJsonResponse("recording%3Aenter%7E+AND+recording%3Asandmann%7E", fixture("fuzzy"))
 
         // When - the caller searches for the misspelled title with its artist.
         val found = provider.searchCandidates(EnrichmentRequest.forTrack("Enter Sandmann", "Metallica"), 8)
