@@ -103,6 +103,7 @@ class AliasLockConcurrencyTest {
 
             testScheduler.advanceTimeBy(CALLER_DEADLINE_MS)
             testScheduler.runCurrent()
+            assertTrue("a reader outlived the caller deadline", call.isCompleted)
             val settled = call.await()
             names.cancelPendingLookup()
             testScheduler.runCurrent()
@@ -331,7 +332,7 @@ class AliasLockConcurrencyTest {
     private companion object {
         const val READERS = 5
 
-        /** The one duration that is a subject: the call deadline the waiters must settle on. */
+        /** A call's real-clock deadline: the budget that a shared lookup opened under it is abandoned on. */
         const val DEADLINE_MS = 500L
 
         /**
