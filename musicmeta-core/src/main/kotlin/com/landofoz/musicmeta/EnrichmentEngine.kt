@@ -217,8 +217,10 @@ public interface EnrichmentEngine {
      * merging entirely. Every call re-asks providers over the network; nothing here reads or
      * writes [cache].
      *
-     * MusicBrainz searches rank exact titles first, then the supplied artist; non-exact titles
-     * keep upstream relevance ahead of edition evidence. Popular artists precede covers, with
+     * MusicBrainz searches rank the supplied artist's exact or punctuation-equivalent titles first
+     * when an artist is supplied. Its exact titles precede its punctuation variants. Other exact
+     * titles then precede the supplied artist's non-exact matches; non-exact titles keep upstream
+     * relevance ahead of edition evidence. Popular artists precede covers, with
      * unmarked recordings first within an artist.
      * Artist matching includes individual collaboration credits at same-name quality. With a
      * registered iTunes provider, title-only album and track searches use its artist order as a

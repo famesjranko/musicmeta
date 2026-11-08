@@ -785,6 +785,8 @@ apostrophes and iTunes's straight ones can describe the same search choice, but 
 punctuation forms only for candidate ranking and artist-hint filtering. Collapse duplicate choices
 after ranking and before the limit, using every visible field: collapsing by title and artist alone
 deletes distinct pressings, while collapsing only by identifier leaves an unusable list of equal rows.
+Title equivalence must not decide ranking before a supplied artist. Otherwise another artist's exact
+title can outrank a punctuation variant of the supplied artist's own title.
 
 **Within a rank, though, popularity is not a tiebreak between two spellings — it is a guess between
 two acts.** The ghost case (one act listed twice) and the homonym case (two different acts of the

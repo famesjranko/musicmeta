@@ -42,7 +42,13 @@ internal class MusicBrainzCandidateSearch(
                 )
             }
             .sortedWith(
-                compareByDescending<Candidate> { SearchTitleMatcher.equivalent(title, it.value.title) }
+                compareByDescending<Candidate> {
+                    suppliedArtist.isNotBlank() &&
+                        it.artistTier.suppliedArtistMatch &&
+                        (SearchTitleMatcher.equivalent(title, it.value.title) ||
+                            SearchTitleMatcher.punctuationEquivalent(title, it.value.title))
+                }
+                    .thenByDescending { SearchTitleMatcher.equivalent(title, it.value.title) }
                     .thenByDescending { it.artistTier.suppliedArtistMatch }
                     .thenByDescending {
                         if (SearchTitleMatcher.equivalent(title, it.value.title)) 0f else it.value.matchScore
