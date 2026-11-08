@@ -9,29 +9,29 @@ the value the demo web client sends. Requests were sequential, with at least 1.1
 between each response and the next request. HTTP 503 attempts were retried at most three times;
 only successful responses are fixtures.
 
-- `recording-karma-polise-original.json` — 2026-11-07T15:49:52.208675+00:00, count=7216213
+- `recording-karma-polise-empty-artist.json` — 2026-11-07T15:49:52.208675+00:00, count=7216213
   - `https://musicbrainz.org/ws/2/recording?query=recording%3AKarma+Polise~+AND+artistname%3A~&fmt=json&limit=3`
-- `recording-karma-polise-drop-artist.json` — 2026-11-07T15:48:25.482846+00:00, count=74629
+- `recording-karma-polise-unfielded-word.json` — 2026-11-07T15:48:25.482846+00:00, count=74629
   - `https://musicbrainz.org/ws/2/recording?query=recording%3AKarma+Polise~&fmt=json&limit=3`
-- `recording-karma-polise-and-terms.json` — 2026-11-07T15:48:29.707494+00:00, count=412
+- `recording-karma-polise-title-case.json` — 2026-11-07T15:48:29.707494+00:00, count=412
   - `https://musicbrainz.org/ws/2/recording?query=recording%3AKarma~+AND+recording%3APolise~&fmt=json&limit=3`
 - `recording-karma-polise-quoted.json` — 2026-11-07T15:49:57.818583+00:00, count=0
   - `https://musicbrainz.org/ws/2/recording?query=recording%3A%22Karma+Polise%22&fmt=json&limit=3`
-- `recording-paranojd-and-terms.json` — 2026-11-07T15:48:42.613642+00:00, count=8048
+- `recording-paranojd-title-case.json` — 2026-11-07T15:48:42.613642+00:00, count=8048
   - `https://musicbrainz.org/ws/2/recording?query=recording%3AParanojd~&fmt=json&limit=3`
-- `recording-karma-police-and-terms.json` — 2026-11-07T15:48:52.634084+00:00, count=413
+- `recording-karma-police-title-case.json` — 2026-11-07T15:48:52.634084+00:00, count=413
   - `https://musicbrainz.org/ws/2/recording?query=recording%3AKarma~+AND+recording%3APolice~&fmt=json&limit=3`
-- `release-karma-polise-original.json` — 2026-11-07T15:48:57.936838+00:00, count=552522
+- `release-karma-polise-empty-artist.json` — 2026-11-07T15:48:57.936838+00:00, count=552522
   - `https://musicbrainz.org/ws/2/release?query=release%3AKarma+Polise~+AND+artistname%3A~&fmt=json&limit=3`
-- `release-karma-polise-drop-artist.json` — 2026-11-07T15:49:00.635931+00:00, count=43933
+- `release-karma-polise-unfielded-word.json` — 2026-11-07T15:49:00.635931+00:00, count=43933
   - `https://musicbrainz.org/ws/2/release?query=release%3AKarma+Polise~&fmt=json&limit=3`
-- `release-karma-polise-and-terms.json` — 2026-11-07T15:50:06.852298+00:00, count=22
+- `release-karma-polise-title-case.json` — 2026-11-07T15:50:06.852298+00:00, count=22
   - `https://musicbrainz.org/ws/2/release?query=release%3AKarma~+AND+release%3APolise~&fmt=json&limit=3`
 - `release-karma-polise-quoted.json` — 2026-11-07T15:49:05.837482+00:00, count=0
   - `https://musicbrainz.org/ws/2/release?query=release%3A%22Karma+Polise%22&fmt=json&limit=3`
-- `release-paranojd-and-terms.json` — 2026-11-07T15:49:14.777665+00:00, count=1158
+- `release-paranojd-title-case.json` — 2026-11-07T15:49:14.777665+00:00, count=1158
   - `https://musicbrainz.org/ws/2/release?query=release%3AParanojd~&fmt=json&limit=3`
-- `release-karma-police-and-terms.json` — 2026-11-07T15:49:24.926242+00:00, count=22
+- `release-karma-police-title-case.json` — 2026-11-07T15:49:24.926242+00:00, count=22
   - `https://musicbrainz.org/ws/2/release?query=release%3AKarma~+AND+release%3APolice~&fmt=json&limit=3`
 - `recording-karma-polise-with-artist.json` — 2026-11-07T15:50:30.132567+00:00, count=386
   - `https://musicbrainz.org/ws/2/recording?query=recording%3AKarma+Polise~+AND+artistname%3ARadiohead~&fmt=json&limit=3`
@@ -96,53 +96,53 @@ Captured on 2026-11-07, with the same User-Agent,
 limit=3, sequential pacing and retry bound as above. These are complete unmodified
 HTTP 200 responses; every URL and timestamp is recorded below.
 
-- `recording-revision-karma-polise-anchored.json` — 2026-11-07T17:04:30.362061+00:00, count=412
+- `recording-karma-polise-title-case-exact-word.json` — 2026-11-07T17:04:30.362061+00:00, count=412
   - `https://musicbrainz.org/ws/2/recording?query=recording%3AKarma~+AND+recording%3APolise~+AND+%28recording%3AKarma+OR+recording%3APolise%29&fmt=json&limit=3`
-- `recording-revision-karma-police-anchored.json` — 2026-11-07T17:04:34.103293+00:00, count=413
+- `recording-karma-police-title-case-exact-word.json` — 2026-11-07T17:04:34.103293+00:00, count=413
   - `https://musicbrainz.org/ws/2/recording?query=recording%3AKarma~+AND+recording%3APolice~+AND+%28recording%3AKarma+OR+recording%3APolice%29&fmt=json&limit=3`
-- `recording-revision-short-words.json` — 2026-11-07T17:04:55.646441+00:00, count=402
+- `recording-dont-stpo-me-now-title-case-exact-word.json` — 2026-11-07T17:04:55.646441+00:00, count=402
   - `https://musicbrainz.org/ws/2/recording?query=recording%3ADon%27t~+AND+recording%3AStpo~+AND+recording%3AMe+AND+recording%3ANow+AND+%28recording%3ADon%27t+OR+recording%3AStpo%29&fmt=json&limit=3`
-- `recording-revision-joined-words.json` — 2026-11-07T17:04:38.716542+00:00, count=4107
+- `recording-love-hate-title-case-exact-word.json` — 2026-11-07T17:04:38.716542+00:00, count=4107
   - `https://musicbrainz.org/ws/2/recording?query=recording%3ALove~+AND+recording%3AHate~+AND+%28recording%3ALove+OR+recording%3AHate%29&fmt=json&limit=3`
-- `recording-revision-overlapping-words.json` — 2026-11-07T17:04:48.423572+00:00, count=23821
+- `recording-rokc-roll-title-case-exact-word.json` — 2026-11-07T17:04:48.423572+00:00, count=23821
   - `https://musicbrainz.org/ws/2/recording?query=recording%3ARokc~+AND+recording%3ARoll~+AND+%28recording%3ARokc+OR+recording%3ARoll%29&fmt=json&limit=3`
-- `release-revision-karma-polise-anchored.json` — 2026-11-07T17:05:03.290519+00:00, count=22
+- `release-karma-polise-title-case-exact-word.json` — 2026-11-07T17:05:03.290519+00:00, count=22
   - `https://musicbrainz.org/ws/2/release?query=release%3AKarma~+AND+release%3APolise~+AND+%28release%3AKarma+OR+release%3APolise%29&fmt=json&limit=3`
-- `release-revision-karma-police-anchored.json` — 2026-11-07T17:05:08.100717+00:00, count=22
+- `release-karma-police-title-case-exact-word.json` — 2026-11-07T17:05:08.100717+00:00, count=22
   - `https://musicbrainz.org/ws/2/release?query=release%3AKarma~+AND+release%3APolice~+AND+%28release%3AKarma+OR+release%3APolice%29&fmt=json&limit=3`
-- `release-revision-short-words.json` — 2026-11-07T17:05:31.352150+00:00, count=36
+- `release-dont-stpo-me-now-title-case-exact-word.json` — 2026-11-07T17:05:31.352150+00:00, count=36
   - `https://musicbrainz.org/ws/2/release?query=release%3ADon%27t~+AND+release%3AStpo~+AND+release%3AMe+AND+release%3ANow+AND+%28release%3ADon%27t+OR+release%3AStpo%29&fmt=json&limit=3`
-- `release-revision-joined-words.json` — 2026-11-07T17:05:11.828802+00:00, count=852
+- `release-love-hate-title-case-exact-word.json` — 2026-11-07T17:05:11.828802+00:00, count=852
   - `https://musicbrainz.org/ws/2/release?query=release%3ALove~+AND+release%3AHate~+AND+%28release%3ALove+OR+release%3AHate%29&fmt=json&limit=3`
-- `release-revision-overlapping-words.json` — 2026-11-07T17:05:16.742071+00:00, count=5419
+- `release-rokc-roll-title-case-exact-word.json` — 2026-11-07T17:05:16.742071+00:00, count=5419
   - `https://musicbrainz.org/ws/2/release?query=release%3ARokc~+AND+release%3ARoll~+AND+%28release%3ARokc+OR+release%3ARoll%29&fmt=json&limit=3`
-- `recording-revision-satisfaction-words.json` — 2026-11-07T17:05:39.420926+00:00, count=1123
+- `recording-satisfaction-title-case-exact-word.json` — 2026-11-07T17:05:39.420926+00:00, count=1123
   - `https://musicbrainz.org/ws/2/recording?query=recording%3AI+AND+recording%3ACan%27t~+AND+recording%3AGet+AND+recording%3ANo+AND+recording%3ASatisfacton~+AND+%28recording%3ACan%27t+OR+recording%3ASatisfacton%29&fmt=json&limit=3`
-- `recording-revision-satisfaction-old.json` — 2026-11-07T17:06:02.628775+00:00, count=0
+- `recording-satisfaction-punctuated.json` — 2026-11-07T17:06:02.628775+00:00, count=0
   - `https://musicbrainz.org/ws/2/recording?query=recording%3A%5C%28I~+AND+recording%3ACan%27t~+AND+recording%3AGet~+AND+recording%3ANo%5C%29~+AND+recording%3ASatisfacton~&fmt=json&limit=3`
-- `release-revision-rumours-words.json` — 2026-11-07T17:05:59.787886+00:00, count=5
+- `release-rumours-title-case-exact-word.json` — 2026-11-07T17:05:59.787886+00:00, count=5
   - `https://musicbrainz.org/ws/2/release?query=release%3ARumours~+AND+release%3ADeluxe~+AND+%28release%3ARumours+OR+release%3ADeluxe%29&fmt=json&limit=3`
-- `release-revision-rumours-old.json` — 2026-11-07T17:03:39.382561+00:00, count=0
+- `release-rumours-punctuated.json` — 2026-11-07T17:03:39.382561+00:00, count=0
   - `https://musicbrainz.org/ws/2/release?query=release%3ARumours~+AND+release%3A%5C-~+AND+release%3ADeluxe~&fmt=json&limit=3`
-- `recording-revision-short-cjk-old.json` — 2026-11-07T17:00:13.724855+00:00, count=5743
+- `recording-short-cjk-fuzzy.json` — 2026-11-07T17:00:13.724855+00:00, count=5743
   - `https://musicbrainz.org/ws/2/recording?query=recording%3A%E6%9D%B1%E5%87%89~&fmt=json&limit=3`
-- `recording-revision-short-cjk-strict.json` — 2026-11-07T17:00:17.139146+00:00, count=0
+- `recording-short-cjk-strict.json` — 2026-11-07T17:00:17.139146+00:00, count=0
   - `https://musicbrainz.org/ws/2/recording?query=recording%3A%22%E6%9D%B1%E5%87%89%22+AND+artistname%3A%22%22&fmt=json&limit=3`
-- `recording-revision-symbols-old.json` — 2026-11-07T17:00:19.595211+00:00, count=498
+- `recording-symbols-fuzzy.json` — 2026-11-07T17:00:19.595211+00:00, count=498
   - `https://musicbrainz.org/ws/2/recording?query=recording%3AF%E2%99%AF~+AND+recording%3AB%E2%99%AF~+AND+recording%3A%E2%88%9E~&fmt=json&limit=3`
-- `recording-revision-symbols-strict.json` — 2026-11-07T17:00:22.495586+00:00, count=0
+- `recording-symbols-strict.json` — 2026-11-07T17:00:22.495586+00:00, count=0
   - `https://musicbrainz.org/ws/2/recording?query=recording%3A%22F%E2%99%AF+B%E2%99%AF+%E2%88%9E%22+AND+artistname%3A%22%22&fmt=json&limit=3`
-- `recording-revision-three-letter-old.json` — 2026-11-07T17:00:32.457494+00:00, count=56690
+- `recording-hte-fuzzy.json` — 2026-11-07T17:00:32.457494+00:00, count=56690
   - `https://musicbrainz.org/ws/2/recording?query=recording%3AHte~&fmt=json&limit=3`
-- `release-revision-short-cjk-old.json` — 2026-11-07T17:01:22.658501+00:00, count=809
+- `release-short-cjk-fuzzy.json` — 2026-11-07T17:01:22.658501+00:00, count=809
   - `https://musicbrainz.org/ws/2/release?query=release%3A%E6%9D%B1%E5%87%89~&fmt=json&limit=3`
-- `release-revision-short-cjk-strict.json` — 2026-11-07T17:01:25.187489+00:00, count=0
+- `release-short-cjk-strict.json` — 2026-11-07T17:01:25.187489+00:00, count=0
   - `https://musicbrainz.org/ws/2/release?query=release%3A%22%E6%9D%B1%E5%87%89%22+AND+artistname%3A%22%22&fmt=json&limit=3`
-- `release-revision-symbols-old.json` — 2026-11-07T17:01:31.806159+00:00, count=172
+- `release-symbols-fuzzy.json` — 2026-11-07T17:01:31.806159+00:00, count=172
   - `https://musicbrainz.org/ws/2/release?query=release%3AF%E2%99%AF~+AND+release%3AB%E2%99%AF~+AND+release%3A%E2%88%9E~&fmt=json&limit=3`
-- `release-revision-symbols-strict.json` — 2026-11-07T17:01:37.792662+00:00, count=0
+- `release-symbols-strict.json` — 2026-11-07T17:01:37.792662+00:00, count=0
   - `https://musicbrainz.org/ws/2/release?query=release%3A%22F%E2%99%AF+B%E2%99%AF+%E2%88%9E%22+AND+artistname%3A%22%22&fmt=json&limit=3`
-- `release-revision-three-letter-old.json` — 2026-11-07T17:01:44.442672+00:00, count=8826
+- `release-hte-fuzzy.json` — 2026-11-07T17:01:44.442672+00:00, count=8826
   - `https://musicbrainz.org/ws/2/release?query=release%3AHte~&fmt=json&limit=3`
 
 ### Probe results
@@ -256,77 +256,77 @@ Same User-Agent as above, limit=3, sequential requests with 1.1 seconds after ea
 Each fixture is the complete unmodified HTTP 200 response. Errors were retried at most
 three times; all measurements below completed successfully.
 
-- `recording-round2-karma-polise.json` — 2026-11-08T00:32:20.903919+00:00, count=412
+- `recording-karma-polise.json` — 2026-11-08T00:32:20.903919+00:00, count=412
   - `https://musicbrainz.org/ws/2/recording?query=recording%3Akarma~+AND+recording%3Apolise~&fmt=json&limit=3`
-- `recording-round2-karma-police.json` — 2026-11-08T00:32:25.946046+00:00, count=413
+- `recording-karma-police.json` — 2026-11-08T00:32:25.946046+00:00, count=413
   - `https://musicbrainz.org/ws/2/recording?query=recording%3Akarma~+AND+recording%3Apolice~&fmt=json&limit=3`
-- `recording-round2-paranojd.json` — 2026-11-08T00:32:29.768145+00:00, count=8049
+- `recording-paranojd.json` — 2026-11-08T00:32:29.768145+00:00, count=8049
   - `https://musicbrainz.org/ws/2/recording?query=recording%3Aparanojd~&fmt=json&limit=3`
-- `recording-round2-short-words.json` — 2026-11-08T00:32:35.340518+00:00, count=509
+- `recording-dont-stpo-me-now.json` — 2026-11-08T00:32:35.340518+00:00, count=509
   - `https://musicbrainz.org/ws/2/recording?query=recording%3Adon%27t~+AND+recording%3Astpo~+AND+recording%3Ame+AND+recording%3Anow&fmt=json&limit=3`
-- `recording-round2-joined-words.json` — 2026-11-08T00:32:37.957123+00:00, count=4440
+- `recording-love-hate.json` — 2026-11-08T00:32:37.957123+00:00, count=4440
   - `https://musicbrainz.org/ws/2/recording?query=recording%3Alove~+AND+recording%3Ahate~&fmt=json&limit=3`
-- `recording-round2-double-typo.json` — 2026-11-08T00:30:17.189987+00:00, count=676
+- `recording-double-typo.json` — 2026-11-08T00:30:17.189987+00:00, count=676
   - `https://musicbrainz.org/ws/2/recording?query=recording%3Ahotle~+AND+recording%3Acalifonia~&fmt=json&limit=3`
-- `recording-round2-double-typo-exact.json` — 2026-11-08T00:30:20.773518+00:00, count=0
+- `recording-double-typo-exact-word.json` — 2026-11-08T00:30:20.773518+00:00, count=0
   - `https://musicbrainz.org/ws/2/recording?query=recording%3Ahotle~+AND+recording%3Acalifonia~+AND+%28recording%3Ahotle+OR+recording%3Acalifonia%29&fmt=json&limit=3`
-- `recording-round2-thai.json` — 2026-11-08T00:32:01.103770+00:00, count=15
+- `recording-thai.json` — 2026-11-08T00:32:01.103770+00:00, count=15
   - `https://musicbrainz.org/ws/2/recording?query=recording%3A%E0%B8%84%E0%B8%A7%E0%B8%B2%E0%B8%A1%E0%B8%A3%E0%B8%B1%E0%B8%81~&fmt=json&limit=3`
-- `recording-round2-thai-split.json` — 2026-11-08T00:31:58.620070+00:00, count=5
+- `recording-thai-split.json` — 2026-11-08T00:31:58.620070+00:00, count=5
   - `https://musicbrainz.org/ws/2/recording?query=recording%3A%E0%B8%84%E0%B8%A7%E0%B8%B2%E0%B8%A1%E0%B8%A3~+AND+recording%3A%E0%B8%81&fmt=json&limit=3`
-- `recording-round2-locale.json` — 2026-11-08T00:31:52.783022+00:00, count=1491
+- `recording-not-afraid-lowercase.json` — 2026-11-08T00:31:52.783022+00:00, count=1491
   - `https://musicbrainz.org/ws/2/recording?query=recording%3Anot+AND+recording%3Aafraid~&fmt=json&limit=3`
-- `recording-round2-and.json` — 2026-11-08T00:31:06.156302+00:00, count=11572
+- `recording-and-lowercase.json` — 2026-11-08T00:31:06.156302+00:00, count=11572
   - `https://musicbrainz.org/ws/2/recording?query=recording%3Arokc~+AND+recording%3Aand+AND+recording%3Aroll~&fmt=json&limit=3`
-- `recording-round2-and-old.json` — 2026-11-08T00:30:56.901512+00:00, count=7241512
+- `recording-and-uppercase.json` — 2026-11-08T00:30:56.901512+00:00, count=7241512
   - `https://musicbrainz.org/ws/2/recording?query=recording%3ARokc~+AND+recording%3AAND+AND+recording%3ARoll~&fmt=json&limit=3`
-- `recording-round2-or.json` — 2026-11-08T00:31:14.197731+00:00, count=2002
+- `recording-or-lowercase.json` — 2026-11-08T00:31:14.197731+00:00, count=2002
   - `https://musicbrainz.org/ws/2/recording?query=recording%3Anow+AND+recording%3Aor+AND+recording%3Anevr~&fmt=json&limit=3`
-- `recording-round2-or-old.json` — 2026-11-08T00:31:11.239090+00:00, count=7341859
+- `recording-or-uppercase.json` — 2026-11-08T00:31:11.239090+00:00, count=7341859
   - `https://musicbrainz.org/ws/2/recording?query=recording%3ANow+AND+recording%3AOR+AND+recording%3ANevr~&fmt=json&limit=3`
-- `recording-round2-not.json` — 2026-11-08T00:31:31.951345+00:00, count=1493
+- `recording-not-lowercase.json` — 2026-11-08T00:31:31.951345+00:00, count=1493
   - `https://musicbrainz.org/ws/2/recording?query=recording%3Anot+AND+recording%3Aafriad~&fmt=json&limit=3`
-- `recording-round2-not-old.json` — 2026-11-08T00:31:25.915385+00:00, count=7325620
+- `recording-not-uppercase.json` — 2026-11-08T00:31:25.915385+00:00, count=7325620
   - `https://musicbrainz.org/ws/2/recording?query=recording%3ANOT+AND+recording%3AAfriad~&fmt=json&limit=3`
-- `recording-round2-and-current.json` — 2026-11-08T00:31:01.554695+00:00, count=7345687
+- `recording-and-uppercase-exact-word.json` — 2026-11-08T00:31:01.554695+00:00, count=7345687
   - `https://musicbrainz.org/ws/2/recording?query=recording%3ARokc~+AND+recording%3AAND+AND+recording%3ARoll~+AND+%28recording%3ARokc+OR+recording%3ARoll%29&fmt=json&limit=3`
-- `release-round2-karma-polise.json` — 2026-11-08T00:34:31.687489+00:00, count=22
+- `release-karma-polise.json` — 2026-11-08T00:34:31.687489+00:00, count=22
   - `https://musicbrainz.org/ws/2/release?query=release%3Akarma~+AND+release%3Apolise~&fmt=json&limit=3`
-- `release-round2-karma-police.json` — 2026-11-08T00:34:35.283022+00:00, count=22
+- `release-karma-police.json` — 2026-11-08T00:34:35.283022+00:00, count=22
   - `https://musicbrainz.org/ws/2/release?query=release%3Akarma~+AND+release%3Apolice~&fmt=json&limit=3`
-- `release-round2-paranojd.json` — 2026-11-08T00:34:37.830036+00:00, count=1158
+- `release-paranojd.json` — 2026-11-08T00:34:37.830036+00:00, count=1158
   - `https://musicbrainz.org/ws/2/release?query=release%3Aparanojd~&fmt=json&limit=3`
-- `release-round2-short-words.json` — 2026-11-08T00:34:40.284521+00:00, count=46
+- `release-dont-stpo-me-now.json` — 2026-11-08T00:34:40.284521+00:00, count=46
   - `https://musicbrainz.org/ws/2/release?query=release%3Adon%27t~+AND+release%3Astpo~+AND+release%3Ame+AND+release%3Anow&fmt=json&limit=3`
-- `release-round2-joined-words.json` — 2026-11-08T00:34:42.861190+00:00, count=958
+- `release-love-hate.json` — 2026-11-08T00:34:42.861190+00:00, count=958
   - `https://musicbrainz.org/ws/2/release?query=release%3Alove~+AND+release%3Ahate~&fmt=json&limit=3`
-- `release-round2-double-typo.json` — 2026-11-08T00:32:42.843558+00:00, count=139
+- `release-double-typo.json` — 2026-11-08T00:32:42.843558+00:00, count=139
   - `https://musicbrainz.org/ws/2/release?query=release%3Ahotle~+AND+release%3Acalifonia~&fmt=json&limit=3`
-- `release-round2-double-typo-exact.json` — 2026-11-08T00:32:45.405589+00:00, count=0
+- `release-double-typo-exact-word.json` — 2026-11-08T00:32:45.405589+00:00, count=0
   - `https://musicbrainz.org/ws/2/release?query=release%3Ahotle~+AND+release%3Acalifonia~+AND+%28release%3Ahotle+OR+release%3Acalifonia%29&fmt=json&limit=3`
-- `release-round2-thai.json` — 2026-11-08T00:34:24.202575+00:00, count=0
+- `release-thai.json` — 2026-11-08T00:34:24.202575+00:00, count=0
   - `https://musicbrainz.org/ws/2/release?query=release%3A%E0%B8%84%E0%B8%A7%E0%B8%B2%E0%B8%A1%E0%B8%A3%E0%B8%B1%E0%B8%81~&fmt=json&limit=3`
-- `release-round2-thai-split.json` — 2026-11-08T00:34:20.698191+00:00, count=0
+- `release-thai-split.json` — 2026-11-08T00:34:20.698191+00:00, count=0
   - `https://musicbrainz.org/ws/2/release?query=release%3A%E0%B8%84%E0%B8%A7%E0%B8%B2%E0%B8%A1%E0%B8%A3~+AND+release%3A%E0%B8%81&fmt=json&limit=3`
-- `release-round2-locale.json` — 2026-11-08T00:34:14.927722+00:00, count=181
+- `release-not-afraid-lowercase.json` — 2026-11-08T00:34:14.927722+00:00, count=181
   - `https://musicbrainz.org/ws/2/release?query=release%3Anot+AND+release%3Aafraid~&fmt=json&limit=3`
-- `release-round2-and.json` — 2026-11-08T00:33:14.026981+00:00, count=2137
+- `release-and-lowercase.json` — 2026-11-08T00:33:14.026981+00:00, count=2137
   - `https://musicbrainz.org/ws/2/release?query=release%3Arokc~+AND+release%3Aand+AND+release%3Aroll~&fmt=json&limit=3`
-- `release-round2-and-old.json` — 2026-11-08T00:33:07.922949+00:00, count=556819
+- `release-and-uppercase.json` — 2026-11-08T00:33:07.922949+00:00, count=556819
   - `https://musicbrainz.org/ws/2/release?query=release%3ARokc~+AND+release%3AAND+AND+release%3ARoll~&fmt=json&limit=3`
-- `release-round2-or.json` — 2026-11-08T00:33:35.201212+00:00, count=283
+- `release-or-lowercase.json` — 2026-11-08T00:33:35.201212+00:00, count=283
   - `https://musicbrainz.org/ws/2/release?query=release%3Anow+AND+release%3Aor+AND+release%3Anevr~&fmt=json&limit=3`
-- `release-round2-or-old.json` — 2026-11-08T00:33:28.873461+00:00, count=574251
+- `release-or-uppercase.json` — 2026-11-08T00:33:28.873461+00:00, count=574251
   - `https://musicbrainz.org/ws/2/release?query=release%3ANow+AND+release%3AOR+AND+release%3ANevr~&fmt=json&limit=3`
-- `release-round2-not.json` — 2026-11-08T00:33:51.285725+00:00, count=183
+- `release-not-lowercase.json` — 2026-11-08T00:33:51.285725+00:00, count=183
   - `https://musicbrainz.org/ws/2/release?query=release%3Anot+AND+release%3Aafriad~&fmt=json&limit=3`
-- `release-round2-not-old.json` — 2026-11-08T00:33:40.975184+00:00, count=568441
+- `release-not-uppercase.json` — 2026-11-08T00:33:40.975184+00:00, count=568441
   - `https://musicbrainz.org/ws/2/release?query=release%3ANOT+AND+release%3AAfriad~&fmt=json&limit=3`
-- `release-round2-and-current.json` — 2026-11-08T00:33:10.488671+00:00, count=567295
+- `release-and-uppercase-exact-word.json` — 2026-11-08T00:33:10.488671+00:00, count=567295
   - `https://musicbrainz.org/ws/2/release?query=release%3ARokc~+AND+release%3AAND+AND+release%3ARoll~+AND+%28release%3ARokc+OR+release%3ARoll%29&fmt=json&limit=3`
-- `recording-round2-satisfaction.json` — 2026-11-08T00:34:45.784113+00:00, count=1128
+- `recording-satisfaction.json` — 2026-11-08T00:34:45.784113+00:00, count=1128
   - `https://musicbrainz.org/ws/2/recording?query=recording%3Ai+AND+recording%3Acan%27t~+AND+recording%3Aget+AND+recording%3Ano+AND+recording%3Asatisfacton~&fmt=json&limit=3`
-- `release-round2-rumours.json` — 2026-11-08T00:34:48.365196+00:00, count=5
+- `release-rumours.json` — 2026-11-08T00:34:48.365196+00:00, count=5
   - `https://musicbrainz.org/ws/2/release?query=release%3Arumours~+AND+release%3Adeluxe~&fmt=json&limit=3`
 
 ### Probe table

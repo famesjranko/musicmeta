@@ -21,11 +21,11 @@ class MusicBrainzFuzzyPunctuationTest {
         // Given - captured responses for the word query and the punctuated query that misses
         val query = "recording:I AND recording:Can't~ AND recording:Get AND recording:No " +
             "AND recording:Satisfacton~ AND (recording:Can't OR recording:Satisfacton)"
-        givenCapture(query, "recording-revision-satisfaction-words")
+        givenCapture(query, "recording-satisfaction-title-case-exact-word")
         val expectedQuery = "recording:i AND recording:can't~ AND recording:get AND recording:no " +
             "AND recording:satisfacton~"
-        givenCapture(expectedQuery, "recording-round2-satisfaction")
-        httpClient.givenJsonResponse("recording?query", capture("recording-revision-satisfaction-old"))
+        givenCapture(expectedQuery, "recording-satisfaction")
+        httpClient.givenJsonResponse("recording?query", capture("recording-satisfaction-punctuated"))
 
         // When - searching with straight and curly apostrophes inside the same title
         val straight = api.searchRecordingsFuzzy("(I Can't Get No) Satisfacton", "")
@@ -42,10 +42,10 @@ class MusicBrainzFuzzyPunctuationTest {
     fun `an album punctuation miss can offer the findable title`() = runTest {
         // Given - the word query finds Rumours editions while the punctuation query misses
         val query = "release:Rumours~ AND release:Deluxe~ AND (release:Rumours OR release:Deluxe)"
-        givenCapture(query, "release-revision-rumours-words")
+        givenCapture(query, "release-rumours-title-case-exact-word")
         val expectedQuery = "release:rumours~ AND release:deluxe~"
-        givenCapture(expectedQuery, "release-round2-rumours")
-        httpClient.givenJsonResponse("release?query", capture("release-revision-rumours-old"))
+        givenCapture(expectedQuery, "release-rumours")
+        httpClient.givenJsonResponse("release?query", capture("release-rumours-punctuated"))
 
         // When - searching for the correctly spelled album title with a punctuation separator
         val releases = api.searchReleasesFuzzy("Rumours - Deluxe", "")
@@ -61,8 +61,8 @@ class MusicBrainzFuzzyPunctuationTest {
         // Given - captured strict misses and the unrelated fuzzy rows for both unsafe title shapes
         val subjects = listOf("東凉" to "short-cjk", "F♯ B♯ ∞" to "symbols").map { (title, name) ->
             val client = FakeHttpClient().apply {
-                givenJsonResponse("%22", capture("release-revision-$name-strict"))
-                givenJsonResponse("release?query", capture("release-revision-$name-old"))
+                givenJsonResponse("%22", capture("release-$name-strict"))
+                givenJsonResponse("release?query", capture("release-$name-fuzzy"))
             }
             Triple(title, client, MusicBrainzProvider(client, RateLimiter(0)))
         }
