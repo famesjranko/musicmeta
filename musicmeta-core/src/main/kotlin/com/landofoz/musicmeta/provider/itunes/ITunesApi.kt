@@ -3,6 +3,8 @@ package com.landofoz.musicmeta.provider.itunes
 import com.landofoz.musicmeta.drift.SchemaTarget
 import com.landofoz.musicmeta.engine.ArtistMatcher
 import com.landofoz.musicmeta.engine.ArtistNameMatch
+import com.landofoz.musicmeta.engine.SearchTitleMatcher
+import com.landofoz.musicmeta.engine.TitleMatcher
 import com.landofoz.musicmeta.engine.bestArtistMatchOrAlias
 import com.landofoz.musicmeta.http.HttpClient
 import com.landofoz.musicmeta.http.HttpResult
@@ -30,6 +32,22 @@ internal class ITunesApi(
             val album = results.getJSONObject(i)
             parseAlbumResult(album)
         }
+    }
+
+    /** Ordered artist hints for title-only discovery; an unreadable response is not an empty search. */
+    suspend fun searchTitleArtists(title: String, album: Boolean): List<String> {
+        val json = fetchJson(titleArtistSearchUrl(title, album))
+            ?: throw IOException("iTunes title search returned no readable response")
+        val results = json.getJSONArray("results")
+        val titleField = if (album) "collectionName" else "trackName"
+        return (0 until results.length()).map { results.getJSONObject(it) }
+            .filter { item ->
+                val requested = SearchTitleMatcher.parse(title)
+                val found = SearchTitleMatcher.parse(item.getString(titleField))
+                requested == found || (requested.qualifier == null && requested.base == found.base &&
+                    (!album || found.qualifier?.let(TitleMatcher::isEditionDecoration) == true))
+            }
+            .map { it.getString("artistName") }.filter { it.isNotBlank() }.distinct()
     }
 
     suspend fun lookupAlbumTracks(collectionId: Long): List<ITunesTrackResult> {
@@ -175,12 +193,18 @@ internal class ITunesApi(
         fun albumSearchUrl(term: String, limit: Int): String =
             "$BASE_URL/search?media=music&entity=album&term=${encodeQueryValue(term)}&limit=$limit"
 
-        /**
-         * Schema-pin target, mirroring [parseAlbumResult]. `collectionId` is the key every
-         * follow-up lookup is built from, and `artworkUrl100` is the artwork this provider exists
-         * to contribute.
-         */
+        fun titleArtistSearchUrl(title: String, album: Boolean): String =
+            "$BASE_URL/search?media=music&entity=${if (album) "album" else "song"}" +
+                "&term=${encodeQueryValue(title)}&limit=25"
+
+        /** Pins the song title/artist hints and the album artwork fields parsed above. */
         val SCHEMA_PIN_TARGETS: List<SchemaTarget> = listOf(
+            SchemaTarget(
+                provider = "itunes",
+                route = "title artist search",
+                url = titleArtistSearchUrl("Karma Police", album = false),
+                requiredPaths = listOf("results[0].trackName", "results[0].artistName"),
+            ),
             SchemaTarget(
                 provider = "itunes",
                 route = "album search",

@@ -32,6 +32,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - The demo web UI marks a provider that refused this host at startup with a warning and explains it on hover (demo only)
 
+### Fixed
+- Search prefers exact titles, requested artists and main recordings; title-only discovery uses iTunes artist hints, falling back to MusicBrainz ranking on signal failure.
+- Search collapses identical visible rows and drops cross-provider title/artist duplicates unless edition details differ; distinct editions remain selectable, and the demo shows release country.
+- Search folds typographic quotes, apostrophes, hyphens and ellipses without changing enrichment matching; fuzzy results keep relevance ahead of edition evidence.
+- Search keeps a popular artist's marked recordings ahead of covers, fetches missing unmarked exact albums, and avoids repeated supplied-artist recording queries.
+
 ## [0.14.0] - 2026-10-08
 
 ### Breaking Changes

@@ -1124,6 +1124,7 @@ private fun handleSearch(exchange: HttpExchange, engine: EnrichmentEngine) {
                         thumbnailUrl = candidate.thumbnailUrl,
                         disambiguation = candidate.disambiguation,
                         mbid = candidate.identifiers.musicBrainzId,
+                        country = candidate.country,
                     )
                 },
             ),

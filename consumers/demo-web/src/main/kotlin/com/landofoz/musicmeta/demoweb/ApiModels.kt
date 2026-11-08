@@ -301,6 +301,7 @@ data class CandidateHit(
     val thumbnailUrl: String? = null,
     val disambiguation: String? = null,
     val mbid: String? = null,
+    val country: String? = null,
 )
 
 @Serializable

@@ -130,9 +130,30 @@ internal class MusicBrainzApi(
             ?: plainRecordingPool(title, artist, limit, albumHint)
     }
 
+    /** Broad discovery pool with enough provenance to avoid repeating a successful album query. */
+    suspend fun searchCandidateRecordingPool(
+        title: String,
+        artist: String,
+        album: String?,
+    ): MusicBrainzCandidatePool {
+        val hint = album?.takeIf { it.isNotBlank() }
+        if (hint != null) {
+            val hinted = fetchRecordings(recordingQuery(title, artist, hint), CANONICAL_SEARCH_LIMIT, hint)
+            if (hinted.isNotEmpty()) return MusicBrainzCandidatePool(hinted, albumMatched = true)
+        }
+        return MusicBrainzCandidatePool(plainRecordingPool(title, artist, CANONICAL_SEARCH_LIMIT, hint), false)
+    }
+
+    /** Discovery already has the unfiltered pool; it needs no shallow or bracket fallback here. */
+    suspend fun searchCandidateCanonicalRecordings(title: String, artist: String, albumHint: String?) =
+        fetchRecordings(
+            recordingQuery(title, artist, null, canonicalOnly = true), CANONICAL_SEARCH_LIMIT, albumHint,
+        )
+
     /**
-     * The pool a track request is *resolved* out of, as opposed to the one
-     * [MusicBrainzProvider.searchCandidates] offers a consumer to choose from.
+     * Focused pools for enrichment identity and title-only discovery's preferred artist.
+     * Supplied-artist discovery already has that artist's broad pool, so it adds only
+     * [searchCandidateCanonicalRecordings] instead of repeating this fallback ladder.
      *
      * `-comment:*` moves [MusicBrainzTrackEnrichment.pickBestRecording]'s tier-4 "prefer a blank
      * disambiguation" rule upstream of the result limit, in MusicBrainz's own query language, so a

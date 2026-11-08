@@ -250,3 +250,9 @@ internal sealed interface MusicBrainzLookup<out T> {
  * same way.
  */
 internal fun <T> MusicBrainzLookup<T>.valueOrNull(): T? = (this as? MusicBrainzLookup.Found)?.value
+
+/** Whether the broad discovery pool answered the supplied album query or its hintless fallback. */
+internal data class MusicBrainzCandidatePool(
+    val recordings: List<MusicBrainzRecording>,
+    val albumMatched: Boolean,
+)

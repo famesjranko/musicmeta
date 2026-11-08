@@ -187,10 +187,11 @@ flowchart TD
     req["EnrichmentRequest,<br/>limit"] --> identity{"identity provider<br/>registered?"}
     identity -->|yes| primary["identity.searchCandidates"]
     identity -->|no| supplement
-    primary --> enough{"limit already<br/>met?"}
+    primary --> collapse["collapse identical<br/>visible rows"]
+    collapse --> enough{"limit already<br/>met?"}
     enough -->|yes| results
     enough -->|no| supplement["registry.searchProviders():<br/>every other provider,<br/>remaining slots each"]
-    supplement --> dedupe["drop what duplicates<br/>the identity provider,<br/>on lowercased title:artist"]
+    supplement --> dedupe["drop repeated primary choices,<br/>collapse identical visible rows,<br/>then apply limit"]
     dedupe --> results["List&lt;SearchCandidate&gt;"]
 ```
 
@@ -206,10 +207,28 @@ bounded imposes the bound itself.
 Everything `enrich()` does between a request and a result, `search()` skips: no cache read or
 write, no identity resolution as `enrich()` runs it (the identity provider is asked directly, as
 one candidate source among others, not to backfill the request), no merging, no gating. The
-identity provider goes first and the rest fill in only what it left short of `limit`, so a
-well-known entity costs one call, not one per provider. A provider that throws is logged and
-treated as an empty contribution, because one upstream's outage should shrink the candidate list,
-not fail the search. `ensureActive()` is what stops that from swallowing a cancellation: the
+identity provider supplies the primary pool and the rest fill in only the remainder of `limit`, so an
+artist search normally costs one call. For MusicBrainz title-only album and track searches,
+the engine first asks a registered iTunes provider for ordered artist hints. This best-effort
+signal uses the same iTunes limiter with a 5-second budget or a quarter of the remaining retry
+budget, whichever is smaller. That includes the normal 3-second rate-limit wait, and both socket
+timeouts and retries see this smaller budget. Failure or timeout is logged; MusicBrainz ranking
+still runs. An unavailable provider or a breaker that is not closed produces one debug skip log.
+MusicBrainz ranks a broad pool and can add one artist-specific pool before applying the limit.
+Track searches with an artist also add a canonical recording pool to keep main takes reachable,
+unless an album-hinted query already answered. Ranking collapses identical visible rows before the
+limit, retaining differences such as year, country and type. The engine also collapses primary
+rows before counting remaining slots. A supplement matching a primary row on search-normalized title
+and typography-folded, trimmed, case-insensitive artist is dropped unless year, country, type or
+disambiguation establishes a different edition.
+Missing year, country or type is not evidence of a difference; catalog scores and artwork are ignored
+for this comparison. The combined list then collapses identical visible rows. Each
+secondary provider receives that same remaining count; there is no paging to replace rows that
+collapse, so a search can return fewer than `limit`. Default iTunes and Deezer candidate searches
+make network requests only for albums; a short track or artist list adds no requests to those
+providers. A short album list can add one request to each.
+A provider that throws is logged and treated as an empty contribution, because one upstream's
+outage should shrink the candidate list, not fail the search. `ensureActive()` is what stops that from swallowing a cancellation: the
 caller cancelling, or our own deadline firing, must still fail the call rather than read as a
 provider that returned nothing.
 

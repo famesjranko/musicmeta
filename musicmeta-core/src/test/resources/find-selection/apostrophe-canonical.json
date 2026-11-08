@@ -1,0 +1,77 @@
+{
+  "recordings": [
+    {
+      "id": "d4b485be-f2be-4c97-9315-c57ab013c537",
+      "score": 100,
+      "artist-credit-id": "8691a5c8-6536-3fd7-9adf-7b08e090c819",
+      "title": "Don’t Stop Believin’",
+      "video": null,
+      "artist-credit": [
+        {
+          "name": "Journey",
+          "artist": {
+            "id": "abd506e1-6f2b-4d6f-b937-92c267f6f88b",
+            "name": "Journey",
+            "sort-name": "Journey",
+            "disambiguation": "American rock band"
+          }
+        }
+      ],
+      "first-release-date": "1988-08-26",
+      "releases": [
+        {
+          "id": "bfc3f641-39c6-4f2a-982b-b3d570b48ce3",
+          "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
+          "count": 1,
+          "title": "Star Box",
+          "status": "Official",
+          "release-group": {
+            "id": "fff96b81-8339-4455-b533-30d96257a877",
+            "type-id": "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1",
+            "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+            "title": "Star Box",
+            "primary-type": "Album",
+            "secondary-types": [
+              "Compilation"
+            ],
+            "secondary-type-ids": [
+              "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1"
+            ]
+          },
+          "date": "1988-08-26",
+          "country": "JP",
+          "release-events": [
+            {
+              "date": "1988-08-26",
+              "area": {
+                "id": "2db42837-c832-3c27-b4a3-08198f75693c",
+                "name": "Japan",
+                "sort-name": "Japan",
+                "iso-3166-1-codes": [
+                  "JP"
+                ]
+              }
+            }
+          ],
+          "track-count": 18,
+          "media": [
+            {
+              "id": "bee3cbb8-0c19-3813-8b47-6276af0d70f3",
+              "position": 1,
+              "format": "CD",
+              "track": [
+                {
+                  "id": "ad6606d6-c90a-4680-a715-6705f07c2f3b",
+                  "number": "9",
+                  "title": "Don’t Stop Believin’"
+                }
+              ],
+              "track-count": 18,
+              "track-offset": 8
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

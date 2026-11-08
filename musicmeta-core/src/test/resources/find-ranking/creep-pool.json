@@ -1,0 +1,1064 @@
+{
+  "recordings": [
+    {
+      "id": "f3f032af-a693-40e8-af93-878ad0d00397",
+      "score": 100,
+      "artist-credit-id": "c0de9edb-70f9-3dcc-8e97-9b9818a11fd5",
+      "title": "Creep Creep",
+      "length": 205000,
+      "video": null,
+      "artist-credit": [
+        {
+          "name": "Flexx G",
+          "artist": {
+            "id": "c287090e-9005-4d07-b538-e5ac1fc8abbe",
+            "name": "Flexx G",
+            "sort-name": "Flexx G",
+            "disambiguation": "US rapper"
+          }
+        }
+      ],
+      "first-release-date": "1999",
+      "releases": [
+        {
+          "id": "f72276b5-15ee-4118-8e36-0ca42ceecb23",
+          "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
+          "count": 1,
+          "title": "When Reality Strikes",
+          "status": "Official",
+          "release-group": {
+            "id": "f578641e-0abd-49fc-b3d9-4219f8708079",
+            "type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+            "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+            "title": "When Reality Strikes",
+            "primary-type": "Album"
+          },
+          "date": "1999",
+          "country": "US",
+          "release-events": [
+            {
+              "date": "1999",
+              "area": {
+                "id": "489ce91b-6658-3307-9877-795b68554c98",
+                "name": "United States",
+                "sort-name": "United States",
+                "iso-3166-1-codes": [
+                  "US"
+                ]
+              }
+            }
+          ],
+          "track-count": 15,
+          "media": [
+            {
+              "id": "652fde7d-1f37-3967-aa8e-e1e0ea2cd1e7",
+              "position": 1,
+              "format": "CD",
+              "track": [
+                {
+                  "id": "becf0bff-ce60-4ac7-a87c-6c1cf495f80a",
+                  "number": "5",
+                  "title": "Creep Creep",
+                  "length": 205000
+                }
+              ],
+              "track-count": 15,
+              "track-offset": 4
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "4cab581a-d85b-4cda-9530-5a22a4c8923c",
+      "score": 100,
+      "artist-credit-id": "5ac3e02c-9cf5-4ee3-8ec8-f16e19526985",
+      "title": "Creep Creep",
+      "length": 136944,
+      "video": null,
+      "artist-credit": [
+        {
+          "name": "Heavy Lids",
+          "artist": {
+            "id": "90a3b049-aa91-4661-b168-7b15f34b32b3",
+            "name": "Heavy Lids",
+            "sort-name": "Heavy Lids",
+            "disambiguation": "US garage/punk band from New Orleans, Louisiana"
+          }
+        }
+      ],
+      "first-release-date": "2018-01-12",
+      "releases": [
+        {
+          "id": "58182d42-8f03-48d1-97f8-b774a43a1f43",
+          "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
+          "count": 1,
+          "title": "Final Days",
+          "status": "Official",
+          "release-group": {
+            "id": "d2adf190-faca-4b92-a8a5-89abee5bc604",
+            "type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+            "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+            "title": "Final Days",
+            "primary-type": "Album"
+          },
+          "date": "2018-01-12",
+          "country": "US",
+          "release-events": [
+            {
+              "date": "2018-01-12",
+              "area": {
+                "id": "489ce91b-6658-3307-9877-795b68554c98",
+                "name": "United States",
+                "sort-name": "United States",
+                "iso-3166-1-codes": [
+                  "US"
+                ]
+              }
+            }
+          ],
+          "track-count": 9,
+          "media": [
+            {
+              "id": "d46122e2-5517-3593-b53e-0f57ab485c96",
+              "position": 1,
+              "format": "12\" Vinyl",
+              "track": [
+                {
+                  "id": "e13fdb00-3a33-41c7-b8b2-7d98a0c943a2",
+                  "number": "B1",
+                  "title": "Creep Creep",
+                  "length": 136944
+                }
+              ],
+              "track-count": 9,
+              "track-offset": 5
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "d4997ccf-3c36-498c-b4f8-abf9548b0462",
+      "score": 97,
+      "artist-credit-id": "2cf20e50-7e6f-3232-86ec-0eb47b610061",
+      "title": "Creep, creep, softly creep",
+      "length": 249000,
+      "video": null,
+      "artist-credit": [
+        {
+          "name": "Catherine Bott",
+          "artist": {
+            "id": "954d1c83-259f-4a25-8878-10c19bb097af",
+            "name": "Catherine Bott",
+            "sort-name": "Bott, Catherine",
+            "disambiguation": "soprano"
+          }
+        }
+      ],
+      "first-release-date": "1994",
+      "releases": [
+        {
+          "id": "b70b86c4-b40c-4509-a2e3-375a80668fa1",
+          "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
+          "count": 1,
+          "title": "Sweeter than Roses",
+          "status": "Official",
+          "release-group": {
+            "id": "47481366-c975-4f56-a72e-270628a90b5d",
+            "title": "Sweeter than Roses"
+          },
+          "date": "1994",
+          "country": "XW",
+          "release-events": [
+            {
+              "date": "1994",
+              "area": {
+                "id": "525d4e18-3d00-31b9-a58b-a146a916de8f",
+                "name": "[Worldwide]",
+                "sort-name": "[Worldwide]",
+                "iso-3166-1-codes": [
+                  "XW"
+                ]
+              }
+            }
+          ],
+          "track-count": 21,
+          "media": [
+            {
+              "id": "09e4fd21-e782-4455-b2f9-19f654d2292d",
+              "position": 1,
+              "format": "CD",
+              "track": [
+                {
+                  "id": "189ece1e-691f-4401-8479-dc40e3fae841",
+                  "number": "9",
+                  "title": "Creep, creep, softly creep",
+                  "length": 249000
+                }
+              ],
+              "track-count": 21,
+              "track-offset": 8
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "4e4a49f3-a436-4d8d-bde6-a262d3e5598f",
+      "score": 90,
+      "artist-credit-id": "5845f033-9fa7-38f9-8812-99682844af4c",
+      "title": "Creep",
+      "length": 249000,
+      "video": null,
+      "artist-credit": [
+        {
+          "name": "SKAndalous All-Stars",
+          "artist": {
+            "id": "bd9a7562-ee6f-41c0-a01b-da7119ef8f17",
+            "name": "SKAndalous All-Stars",
+            "sort-name": "SKAndalous All-Stars",
+            "aliases": [
+              {
+                "sort-name": "The Skandalous All Stars",
+                "name": "The Skandalous All Stars",
+                "locale": null,
+                "type": null,
+                "primary": null,
+                "begin-date": null,
+                "end-date": null
+              },
+              {
+                "sort-name": "Skandalous Allstars",
+                "name": "Skandalous Allstars",
+                "locale": null,
+                "type": null,
+                "primary": null,
+                "begin-date": null,
+                "end-date": null
+              },
+              {
+                "sort-name": "SKAandalous All-Stars",
+                "name": "SKAandalous All-Stars",
+                "locale": null,
+                "type": null,
+                "primary": null,
+                "begin-date": null,
+                "end-date": null
+              }
+            ]
+          }
+        }
+      ],
+      "first-release-date": "1997",
+      "releases": [
+        {
+          "id": "359e9589-b1f3-4bb2-8919-d427c96d8d88",
+          "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
+          "artist-credit-id": "5845f033-9fa7-38f9-8812-99682844af4c",
+          "count": 1,
+          "title": "Hit Me",
+          "status": "Official",
+          "artist-credit": [
+            {
+              "name": "SKAndalous All-Stars",
+              "artist": {
+                "id": "bd9a7562-ee6f-41c0-a01b-da7119ef8f17",
+                "name": "SKAndalous All-Stars",
+                "sort-name": "SKAndalous All-Stars"
+              }
+            }
+          ],
+          "release-group": {
+            "id": "7bbc42cb-4376-3f34-9675-832a6ae7d2fc",
+            "type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+            "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+            "title": "Hit Me",
+            "primary-type": "Album"
+          },
+          "date": "",
+          "country": "XW",
+          "release-events": [
+            {
+              "date": "",
+              "area": {
+                "id": "525d4e18-3d00-31b9-a58b-a146a916de8f",
+                "name": "[Worldwide]",
+                "sort-name": "[Worldwide]",
+                "iso-3166-1-codes": [
+                  "XW"
+                ]
+              }
+            }
+          ],
+          "track-count": 10,
+          "media": [
+            {
+              "id": "4bf3e123-0bad-3067-a679-92f36e5dcd87",
+              "position": 1,
+              "format": "Digital Media",
+              "track": [
+                {
+                  "id": "bc8b4edb-83d4-4512-b216-1d2974879a9e",
+                  "number": "4",
+                  "title": "Creep",
+                  "length": 249000
+                }
+              ],
+              "track-count": 10,
+              "track-offset": 3
+            }
+          ]
+        },
+        {
+          "id": "eb1251c5-8c00-47f0-88ca-7755b993c8da",
+          "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
+          "artist-credit-id": "5845f033-9fa7-38f9-8812-99682844af4c",
+          "count": 1,
+          "title": "Hit Me",
+          "status": "Official",
+          "artist-credit": [
+            {
+              "name": "SKAndalous All-Stars",
+              "artist": {
+                "id": "bd9a7562-ee6f-41c0-a01b-da7119ef8f17",
+                "name": "SKAndalous All-Stars",
+                "sort-name": "SKAndalous All-Stars"
+              }
+            }
+          ],
+          "release-group": {
+            "id": "7bbc42cb-4376-3f34-9675-832a6ae7d2fc",
+            "type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+            "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+            "title": "Hit Me",
+            "primary-type": "Album"
+          },
+          "date": "1997",
+          "country": "US",
+          "release-events": [
+            {
+              "date": "1997",
+              "area": {
+                "id": "489ce91b-6658-3307-9877-795b68554c98",
+                "name": "United States",
+                "sort-name": "United States",
+                "iso-3166-1-codes": [
+                  "US"
+                ]
+              }
+            }
+          ],
+          "track-count": 10,
+          "media": [
+            {
+              "id": "d37ff2df-ef34-37a0-96a3-e23cafa92f32",
+              "position": 1,
+              "format": "CD",
+              "track": [
+                {
+                  "id": "d2da5b14-09c9-307e-a57a-cb6a935b071b",
+                  "number": "4",
+                  "title": "Creep",
+                  "length": 249000
+                }
+              ],
+              "track-count": 10,
+              "track-offset": 3
+            }
+          ]
+        }
+      ],
+      "isrcs": [
+        "US7SF1353023"
+      ]
+    },
+    {
+      "id": "711cb85c-0b75-47c1-a2fa-04092db1f7ac",
+      "score": 90,
+      "artist-credit-id": "bd83ac95-52a7-3b74-b93b-d2b1b718f337",
+      "title": "Creep",
+      "length": 121107,
+      "video": null,
+      "artist-credit": [
+        {
+          "name": "The Damned",
+          "artist": {
+            "id": "77d21c13-846f-4f48-9546-873949eff6ae",
+            "name": "The Damned",
+            "sort-name": "Damned, The",
+            "disambiguation": "UK punk band",
+            "aliases": [
+              {
+                "sort-name": "Dammed, The",
+                "name": "The Dammed",
+                "locale": null,
+                "type": null,
+                "primary": null,
+                "begin-date": null,
+                "end-date": null
+              },
+              {
+                "sort-name": "Damned",
+                "name": "Damned",
+                "locale": null,
+                "type": null,
+                "primary": null,
+                "begin-date": null,
+                "end-date": null
+              },
+              {
+                "sort-name": "The Doomed",
+                "name": "The Doomed",
+                "locale": null,
+                "type": null,
+                "primary": null,
+                "begin-date": null,
+                "end-date": null
+              },
+              {
+                "sort-name": "Damned Night, The",
+                "name": "The Damned Night",
+                "locale": null,
+                "type": null,
+                "primary": null,
+                "begin-date": null,
+                "end-date": null
+              }
+            ]
+          }
+        }
+      ],
+      "first-release-date": "1986-10-17",
+      "releases": [
+        {
+          "id": "68d05cbc-9847-4ac1-ac07-80e29f20ee0e",
+          "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
+          "artist-credit-id": "bd83ac95-52a7-3b74-b93b-d2b1b718f337",
+          "count": 5,
+          "title": "Noise Noise Noise: The Live Box",
+          "status": "Official",
+          "artist-credit": [
+            {
+              "name": "The Damned",
+              "artist": {
+                "id": "77d21c13-846f-4f48-9546-873949eff6ae",
+                "name": "The Damned",
+                "sort-name": "Damned, The",
+                "disambiguation": "UK punk band"
+              }
+            }
+          ],
+          "release-group": {
+            "id": "e8ab288c-3439-4d3e-a938-8573d0476f27",
+            "type-id": "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1",
+            "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+            "title": "Noise Noise Noise: The Live Box",
+            "primary-type": "Album",
+            "secondary-types": [
+              "Compilation",
+              "Live"
+            ],
+            "secondary-type-ids": [
+              "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1",
+              "6fd474e2-6b58-3102-9d17-d6f7eb7da0a0"
+            ]
+          },
+          "date": "2006",
+          "country": "XE",
+          "release-events": [
+            {
+              "date": "2006",
+              "area": {
+                "id": "89a675c2-3e37-3518-b83c-418bad59a85a",
+                "name": "Europe",
+                "sort-name": "Europe",
+                "iso-3166-1-codes": [
+                  "XE"
+                ]
+              }
+            }
+          ],
+          "track-count": 59,
+          "media": [
+            {
+              "id": "124709da-c60d-3c2a-88e0-2579991bd46a",
+              "position": 1,
+              "format": "CD",
+              "track": [
+                {
+                  "id": "00ac5a9b-1204-4bc0-a1a8-9c9c2635c0c7",
+                  "number": "2",
+                  "title": "Creep (You Can’t Fool Me)",
+                  "length": 121106
+                }
+              ],
+              "track-count": 8,
+              "track-offset": 1
+            }
+          ]
+        },
+        {
+          "id": "c77dfb45-c44e-41a2-88cf-a62d1e364cb2",
+          "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
+          "artist-credit-id": "bd83ac95-52a7-3b74-b93b-d2b1b718f337",
+          "count": 5,
+          "title": "Noise Noise Noise",
+          "status": "Official",
+          "artist-credit": [
+            {
+              "name": "The Damned",
+              "artist": {
+                "id": "77d21c13-846f-4f48-9546-873949eff6ae",
+                "name": "The Damned",
+                "sort-name": "Damned, The",
+                "disambiguation": "UK punk band"
+              }
+            }
+          ],
+          "release-group": {
+            "id": "e8ab288c-3439-4d3e-a938-8573d0476f27",
+            "type-id": "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1",
+            "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+            "title": "Noise Noise Noise: The Live Box",
+            "primary-type": "Album",
+            "secondary-types": [
+              "Compilation",
+              "Live"
+            ],
+            "secondary-type-ids": [
+              "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1",
+              "6fd474e2-6b58-3102-9d17-d6f7eb7da0a0"
+            ]
+          },
+          "date": "2006-09-04",
+          "country": "VE",
+          "release-events": [
+            {
+              "date": "2006-09-04",
+              "area": {
+                "id": "2ac90d6b-04fa-3006-8a91-89da01032365",
+                "name": "Venezuela",
+                "sort-name": "Venezuela",
+                "iso-3166-1-codes": [
+                  "VE"
+                ]
+              }
+            }
+          ],
+          "track-count": 59,
+          "media": [
+            {
+              "id": "2d9a92cd-8709-38b7-82de-0d25fe76dc44",
+              "position": 1,
+              "format": "Digital Media",
+              "track": [
+                {
+                  "id": "7b9ccd13-1e5e-4de3-bf65-abb5b5ad9229",
+                  "number": "2",
+                  "title": "Creep (You Can’t Fool Me) (from “[Not] The Captain’s Birthday Party”, recorded at the Roundhouse, 27 November 1977)",
+                  "length": 121107
+                }
+              ],
+              "track-count": 8,
+              "track-offset": 1
+            }
+          ]
+        },
+        {
+          "id": "2ed57ff8-addc-49f6-91c7-3f387e6740d4",
+          "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
+          "artist-credit-id": "bd83ac95-52a7-3b74-b93b-d2b1b718f337",
+          "count": 1,
+          "title": "Not the Captains Birthday Party?",
+          "status": "Official",
+          "artist-credit": [
+            {
+              "name": "The Damned",
+              "artist": {
+                "id": "77d21c13-846f-4f48-9546-873949eff6ae",
+                "name": "The Damned",
+                "sort-name": "Damned, The",
+                "disambiguation": "UK punk band"
+              }
+            }
+          ],
+          "release-group": {
+            "id": "d5fa6fe6-50b2-30eb-9da4-c614a53b385e",
+            "type-id": "6fd474e2-6b58-3102-9d17-d6f7eb7da0a0",
+            "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+            "title": "Not the Captains Birthday Party?",
+            "primary-type": "Album",
+            "secondary-types": [
+              "Live"
+            ],
+            "secondary-type-ids": [
+              "6fd474e2-6b58-3102-9d17-d6f7eb7da0a0"
+            ]
+          },
+          "date": "1986-10-17",
+          "country": "GB",
+          "release-events": [
+            {
+              "date": "1986-10-17",
+              "area": {
+                "id": "8a754a16-0027-3a29-b6d7-2b40ea0481ed",
+                "name": "United Kingdom",
+                "sort-name": "United Kingdom",
+                "iso-3166-1-codes": [
+                  "GB"
+                ]
+              }
+            }
+          ],
+          "track-count": 9,
+          "media": [
+            {
+              "id": "e095943b-10b7-33c3-a2e1-9ab3919969fc",
+              "position": 1,
+              "format": "12\" Vinyl",
+              "track": [
+                {
+                  "id": "b51adace-d185-31b1-90d3-7cc3665e3fec",
+                  "number": "A2",
+                  "title": "Creep",
+                  "length": 130733
+                }
+              ],
+              "track-count": 9,
+              "track-offset": 1
+            }
+          ]
+        },
+        {
+          "id": "ae219d69-bd6c-4916-9d77-60486528831c",
+          "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
+          "artist-credit-id": "bd83ac95-52a7-3b74-b93b-d2b1b718f337",
+          "count": 1,
+          "title": "Not the Captains Birthday Party?",
+          "status": "Official",
+          "artist-credit": [
+            {
+              "name": "The Damned",
+              "artist": {
+                "id": "77d21c13-846f-4f48-9546-873949eff6ae",
+                "name": "The Damned",
+                "sort-name": "Damned, The",
+                "disambiguation": "UK punk band"
+              }
+            }
+          ],
+          "release-group": {
+            "id": "d5fa6fe6-50b2-30eb-9da4-c614a53b385e",
+            "type-id": "6fd474e2-6b58-3102-9d17-d6f7eb7da0a0",
+            "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+            "title": "Not the Captains Birthday Party?",
+            "primary-type": "Album",
+            "secondary-types": [
+              "Live"
+            ],
+            "secondary-type-ids": [
+              "6fd474e2-6b58-3102-9d17-d6f7eb7da0a0"
+            ]
+          },
+          "date": "1986",
+          "country": "GB",
+          "release-events": [
+            {
+              "date": "1986",
+              "area": {
+                "id": "8a754a16-0027-3a29-b6d7-2b40ea0481ed",
+                "name": "United Kingdom",
+                "sort-name": "United Kingdom",
+                "iso-3166-1-codes": [
+                  "GB"
+                ]
+              }
+            }
+          ],
+          "track-count": 9,
+          "media": [
+            {
+              "id": "250c40c6-66f8-3fc8-a213-3d06fb47a802",
+              "position": 1,
+              "format": "CD",
+              "track": [
+                {
+                  "id": "cbc9854d-96d2-30a2-bdb9-2f7a49761f5a",
+                  "number": "2",
+                  "title": "Creep (You Can’t Fool Me)",
+                  "length": 130826
+                }
+              ],
+              "track-count": 9,
+              "track-offset": 1
+            }
+          ]
+        }
+      ],
+      "tags": [
+        {
+          "count": 1,
+          "name": "rock"
+        },
+        {
+          "count": 1,
+          "name": "punk"
+        }
+      ]
+    },
+    {
+      "id": "5facd34b-46b6-494e-a04f-a493c15166cc",
+      "score": 90,
+      "artist-credit-id": "34467c5a-98a8-3ecb-bdee-a907c5c47d04",
+      "title": "Creep",
+      "length": 349026,
+      "video": null,
+      "artist-credit": [
+        {
+          "name": "Stone Temple Pilots",
+          "artist": {
+            "id": "8c32bb01-58a3-453b-8050-8c0620edb0e5",
+            "name": "Stone Temple Pilots",
+            "sort-name": "Stone Temple Pilots",
+            "aliases": [
+              {
+                "sort-name": "STP",
+                "name": "STP",
+                "locale": null,
+                "type": null,
+                "primary": null,
+                "begin-date": null,
+                "end-date": null
+              }
+            ]
+          }
+        }
+      ],
+      "releases": [
+        {
+          "id": "8f987d32-954b-4787-a845-67ab5cbfa193",
+          "status-id": "1156806e-d06a-38bd-83f0-cf2284a808b9",
+          "artist-credit-id": "34467c5a-98a8-3ecb-bdee-a907c5c47d04",
+          "count": 1,
+          "title": "Acoustic Type Thing",
+          "status": "Bootleg",
+          "artist-credit": [
+            {
+              "name": "Stone Temple Pilots",
+              "artist": {
+                "id": "8c32bb01-58a3-453b-8050-8c0620edb0e5",
+                "name": "Stone Temple Pilots",
+                "sort-name": "Stone Temple Pilots"
+              }
+            }
+          ],
+          "release-group": {
+            "id": "3cdfc633-098e-3baa-9aa0-8eeed4889d7f",
+            "type-id": "6fd474e2-6b58-3102-9d17-d6f7eb7da0a0",
+            "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+            "title": "Acoustic Type Thing",
+            "primary-type": "Album",
+            "secondary-types": [
+              "Live"
+            ],
+            "secondary-type-ids": [
+              "6fd474e2-6b58-3102-9d17-d6f7eb7da0a0"
+            ]
+          },
+          "track-count": 16,
+          "media": [
+            {
+              "id": "0b3c8cb6-ec09-376a-aa6e-b9c4dd2cbe51",
+              "position": 1,
+              "track": [
+                {
+                  "id": "249e1ab9-f759-3b2e-89d7-70a8d3ff6437",
+                  "number": "2",
+                  "title": "Creep",
+                  "length": 349026
+                }
+              ],
+              "track-count": 16,
+              "track-offset": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "a2b36363-7a11-4fad-ad8d-273c1710490a",
+      "score": 90,
+      "artist-credit-id": "796cf027-2003-36fe-a20e-3c706a3150c2",
+      "title": "Creep",
+      "length": 46933,
+      "video": null,
+      "artist-credit": [
+        {
+          "name": "Bill Frisell",
+          "artist": {
+            "id": "a21318db-f228-4a4d-8bce-6947a62985a5",
+            "name": "Bill Frisell",
+            "sort-name": "Frisell, Bill",
+            "aliases": [
+              {
+                "sort-name": "Bill Frissell",
+                "name": "Bill Frissell",
+                "locale": null,
+                "type": null,
+                "primary": null,
+                "begin-date": null,
+                "end-date": null
+              },
+              {
+                "sort-name": "Frisell, William Richard",
+                "type-id": "d4dcd0c0-b341-3612-a332-c0ce797b25cf",
+                "name": "William Richard Frisell",
+                "locale": null,
+                "type": "Legal name",
+                "primary": null,
+                "begin-date": null,
+                "end-date": null
+              }
+            ]
+          }
+        }
+      ],
+      "first-release-date": "2000",
+      "releases": [
+        {
+          "id": "71fcf85e-3975-4e38-8d97-4755faa71f13",
+          "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
+          "artist-credit-id": "796cf027-2003-36fe-a20e-3c706a3150c2",
+          "count": 1,
+          "title": "Ghost Town",
+          "status": "Official",
+          "artist-credit": [
+            {
+              "name": "Bill Frisell",
+              "artist": {
+                "id": "a21318db-f228-4a4d-8bce-6947a62985a5",
+                "name": "Bill Frisell",
+                "sort-name": "Frisell, Bill"
+              }
+            }
+          ],
+          "release-group": {
+            "id": "773d6e5b-5316-3489-9a42-6e9fc7044711",
+            "type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+            "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+            "title": "Ghost Town",
+            "primary-type": "Album"
+          },
+          "date": "2000",
+          "country": "XE",
+          "release-events": [
+            {
+              "date": "2000",
+              "area": {
+                "id": "89a675c2-3e37-3518-b83c-418bad59a85a",
+                "name": "Europe",
+                "sort-name": "Europe",
+                "iso-3166-1-codes": [
+                  "XE"
+                ]
+              }
+            }
+          ],
+          "track-count": 16,
+          "media": [
+            {
+              "id": "dc9d7175-0405-38c6-a3dd-eea31ffbf2f4",
+              "position": 1,
+              "format": "CD",
+              "track": [
+                {
+                  "id": "410b0d1e-0735-4395-adb8-140513fd8537",
+                  "number": "4",
+                  "title": "Creep",
+                  "length": 46933
+                }
+              ],
+              "track-count": 16,
+              "track-offset": 3
+            }
+          ]
+        },
+        {
+          "id": "f8340783-1f01-42c3-a075-c048c752b8db",
+          "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
+          "artist-credit-id": "796cf027-2003-36fe-a20e-3c706a3150c2",
+          "count": 1,
+          "title": "Ghost Town",
+          "status": "Official",
+          "artist-credit": [
+            {
+              "name": "Bill Frisell",
+              "artist": {
+                "id": "a21318db-f228-4a4d-8bce-6947a62985a5",
+                "name": "Bill Frisell",
+                "sort-name": "Frisell, Bill"
+              }
+            }
+          ],
+          "release-group": {
+            "id": "773d6e5b-5316-3489-9a42-6e9fc7044711",
+            "type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+            "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+            "title": "Ghost Town",
+            "primary-type": "Album"
+          },
+          "date": "",
+          "country": "XW",
+          "release-events": [
+            {
+              "date": "",
+              "area": {
+                "id": "525d4e18-3d00-31b9-a58b-a146a916de8f",
+                "name": "[Worldwide]",
+                "sort-name": "[Worldwide]",
+                "iso-3166-1-codes": [
+                  "XW"
+                ]
+              }
+            }
+          ],
+          "track-count": 16,
+          "media": [
+            {
+              "id": "61aad0a6-bb13-3ff8-8741-75d519ba9c2d",
+              "position": 1,
+              "format": "Digital Media",
+              "track": [
+                {
+                  "id": "83af5f29-7ebd-4e9d-a094-b302e3e83fba",
+                  "number": "4",
+                  "title": "Creep",
+                  "length": 46933
+                }
+              ],
+              "track-count": 16,
+              "track-offset": 3
+            }
+          ]
+        },
+        {
+          "id": "3738e221-5ed8-4f04-981c-daf2607b2907",
+          "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
+          "artist-credit-id": "796cf027-2003-36fe-a20e-3c706a3150c2",
+          "count": 1,
+          "title": "Ghost Town",
+          "status": "Official",
+          "artist-credit": [
+            {
+              "name": "Bill Frisell",
+              "artist": {
+                "id": "a21318db-f228-4a4d-8bce-6947a62985a5",
+                "name": "Bill Frisell",
+                "sort-name": "Frisell, Bill"
+              }
+            }
+          ],
+          "release-group": {
+            "id": "773d6e5b-5316-3489-9a42-6e9fc7044711",
+            "type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+            "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+            "title": "Ghost Town",
+            "primary-type": "Album"
+          },
+          "date": "2000",
+          "country": "US",
+          "release-events": [
+            {
+              "date": "2000",
+              "area": {
+                "id": "489ce91b-6658-3307-9877-795b68554c98",
+                "name": "United States",
+                "sort-name": "United States",
+                "iso-3166-1-codes": [
+                  "US"
+                ]
+              }
+            }
+          ],
+          "track-count": 16,
+          "media": [
+            {
+              "id": "2cc4242c-9411-3f8d-a7c5-3aab9d5476b2",
+              "position": 1,
+              "format": "CD",
+              "track": [
+                {
+                  "id": "078bab74-375f-45a8-a3a7-17ec3ee4bcdf",
+                  "number": "4",
+                  "title": "Creep",
+                  "length": 46000
+                }
+              ],
+              "track-count": 16,
+              "track-offset": 3
+            }
+          ]
+        },
+        {
+          "id": "935093a7-bdda-4f42-bc7b-d4961af92d5f",
+          "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
+          "artist-credit-id": "796cf027-2003-36fe-a20e-3c706a3150c2",
+          "count": 1,
+          "title": "Ghost Town",
+          "status": "Official",
+          "artist-credit": [
+            {
+              "name": "Bill Frisell",
+              "artist": {
+                "id": "a21318db-f228-4a4d-8bce-6947a62985a5",
+                "name": "Bill Frisell",
+                "sort-name": "Frisell, Bill"
+              }
+            }
+          ],
+          "release-group": {
+            "id": "773d6e5b-5316-3489-9a42-6e9fc7044711",
+            "type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+            "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+            "title": "Ghost Town",
+            "primary-type": "Album"
+          },
+          "date": "2000",
+          "country": "US",
+          "release-events": [
+            {
+              "date": "2000",
+              "area": {
+                "id": "489ce91b-6658-3307-9877-795b68554c98",
+                "name": "United States",
+                "sort-name": "United States",
+                "iso-3166-1-codes": [
+                  "US"
+                ]
+              }
+            }
+          ],
+          "track-count": 16,
+          "media": [
+            {
+              "id": "a13cac23-09a9-3e29-a7d0-6484a83dcdbd",
+              "position": 1,
+              "format": "CD",
+              "track": [
+                {
+                  "id": "4a8ed77e-caef-3d6f-aaec-b59662503c41",
+                  "number": "4",
+                  "title": "Creep",
+                  "length": 46933
+                }
+              ],
+              "track-count": 16,
+              "track-offset": 3
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
