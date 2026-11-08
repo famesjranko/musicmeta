@@ -1,0 +1,255 @@
+{
+  "created": "2026-11-08T10:32:41.702Z",
+  "count": 2,
+  "offset": 0,
+  "recordings": [
+    {
+      "id": "31e2ea49-a493-4529-a64e-c1fa948cffcf",
+      "score": 100,
+      "artist-credit-id": "6c7a1871-1858-3139-a51c-5181f6804ee7",
+      "title": "S.O.S.",
+      "video": true,
+      "artist-credit": [
+        {
+          "name": "ABBA",
+          "artist": {
+            "id": "d87e52c5-bb8d-4da8-b941-9f4928627dc8",
+            "name": "ABBA",
+            "sort-name": "ABBA",
+            "disambiguation": "Swedish pop group",
+            "aliases": [
+              {
+                "sort-name": "아바",
+                "type-id": "894afba6-2816-3c24-8072-eadb66bd04bc",
+                "name": "아바",
+                "locale": "ko",
+                "type": "Artist name",
+                "primary": true,
+                "begin-date": null,
+                "end-date": null
+              },
+              {
+                "sort-name": "Björn Benny & Agnetha Frida",
+                "name": "Björn Benny & Agnetha Frida",
+                "locale": null,
+                "type": null,
+                "primary": null,
+                "begin-date": null,
+                "end-date": null
+              },
+              {
+                "sort-name": "Björn + Benny + Anna + Frieda",
+                "name": "Björn + Benny + Anna + Frieda",
+                "locale": null,
+                "type": null,
+                "primary": null,
+                "begin-date": null,
+                "end-date": null
+              },
+              {
+                "sort-name": "ABBA",
+                "type-id": "894afba6-2816-3c24-8072-eadb66bd04bc",
+                "name": "АББА",
+                "locale": "bg",
+                "type": "Artist name",
+                "primary": true,
+                "begin-date": null,
+                "end-date": null
+              },
+              {
+                "sort-name": "Björn Benny Agnetha & Anni-Frid",
+                "name": "Björn Benny Agnetha & Anni-Frid",
+                "locale": null,
+                "type": null,
+                "primary": null,
+                "begin-date": null,
+                "end-date": null
+              },
+              {
+                "sort-name": "Abba",
+                "name": "Abba",
+                "locale": null,
+                "type": null,
+                "primary": null,
+                "begin-date": null,
+                "end-date": null
+              },
+              {
+                "sort-name": "ᗅᗺᗷᗅ",
+                "type-id": "1937e404-b981-3cb7-8151-4c86ebfc8d8e",
+                "name": "ᗅᗺᗷᗅ",
+                "locale": null,
+                "type": "Search hint",
+                "primary": null,
+                "begin-date": null,
+                "end-date": null
+              },
+              {
+                "sort-name": "アバ",
+                "type-id": "894afba6-2816-3c24-8072-eadb66bd04bc",
+                "name": "アバ",
+                "locale": "ja",
+                "type": "Artist name",
+                "primary": true,
+                "begin-date": null,
+                "end-date": null
+              },
+              {
+                "sort-name": "ABBA",
+                "type-id": "894afba6-2816-3c24-8072-eadb66bd04bc",
+                "name": "АББА",
+                "locale": "ru",
+                "type": "Artist name",
+                "primary": null,
+                "begin-date": null,
+                "end-date": null
+              }
+            ]
+          }
+        }
+      ],
+      "first-release-date": "2008",
+      "releases": [
+        {
+          "id": "f0b647ce-8db2-4682-ac34-50d0cfd390fd",
+          "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
+          "artist-credit-id": "949a7fd5-fe73-3e8f-922e-01ff4ca958f7",
+          "count": 15,
+          "title": "Testament van de Seventies",
+          "status": "Official",
+          "artist-credit": [
+            {
+              "name": "Various Artists",
+              "artist": {
+                "id": "89ad4ac3-39f7-470e-963a-56509c546377",
+                "name": "Various Artists",
+                "sort-name": "Various Artists",
+                "disambiguation": "add compilations to this artist"
+              }
+            }
+          ],
+          "release-group": {
+            "id": "71b5e81c-e951-45a0-9554-8599ad1b52e9",
+            "type-id": "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1",
+            "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+            "title": "Testament van de Seventies",
+            "primary-type": "Album",
+            "secondary-types": [
+              "Compilation"
+            ],
+            "secondary-type-ids": [
+              "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1"
+            ]
+          },
+          "date": "2008",
+          "country": "NL",
+          "release-events": [
+            {
+              "date": "2008",
+              "area": {
+                "id": "ef1b7cc0-cd26-36f4-8ea0-04d9623786c7",
+                "name": "Netherlands",
+                "sort-name": "Netherlands",
+                "iso-3166-1-codes": [
+                  "NL"
+                ]
+              }
+            }
+          ],
+          "track-count": 301,
+          "media": [
+            {
+              "id": "ddaee579-326d-33eb-87d1-8a206c9a1934",
+              "position": 13,
+              "format": "DVD-Video",
+              "track": [
+                {
+                  "id": "e07c1ef7-715c-4c28-b80f-f3de1b87797c",
+                  "number": "17",
+                  "title": "S.O.S."
+                }
+              ],
+              "track-count": 20,
+              "track-offset": 16
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "3afebdda-23b3-4ead-9f2d-4144666234d2",
+      "score": 91,
+      "artist-credit-id": "a670c20b-f92d-427a-b369-d003c6f1932b",
+      "title": "SOS",
+      "length": 198573,
+      "video": null,
+      "artist-credit": [
+        {
+          "name": "Bootleg ABBA",
+          "artist": {
+            "id": "b76d85a5-c4a8-41db-a189-0065a23fe938",
+            "name": "Bootleg ABBA",
+            "sort-name": "Bootleg ABBA",
+            "disambiguation": "UK ABBA tribute act"
+          }
+        }
+      ],
+      "first-release-date": "2007",
+      "releases": [
+        {
+          "id": "a2bd714a-7532-4002-9693-7c7905ef2f9d",
+          "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
+          "count": 1,
+          "title": "The Legend Continues…",
+          "status": "Official",
+          "release-group": {
+            "id": "868afe5e-6f68-4a5a-afcb-fd61d417971d",
+            "type-id": "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1",
+            "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+            "title": "The Legend Continues…",
+            "primary-type": "Album",
+            "secondary-types": [
+              "Compilation"
+            ],
+            "secondary-type-ids": [
+              "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1"
+            ]
+          },
+          "date": "2007",
+          "country": "GB",
+          "release-events": [
+            {
+              "date": "2007",
+              "area": {
+                "id": "8a754a16-0027-3a29-b6d7-2b40ea0481ed",
+                "name": "United Kingdom",
+                "sort-name": "United Kingdom",
+                "iso-3166-1-codes": [
+                  "GB"
+                ]
+              }
+            }
+          ],
+          "track-count": 12,
+          "media": [
+            {
+              "id": "1a8202bb-80fc-3fd6-b961-02bf4ae6e8ff",
+              "position": 1,
+              "format": "CD",
+              "track": [
+                {
+                  "id": "2cab1895-268c-4e59-9e89-253fd23054aa",
+                  "number": "4",
+                  "title": "SOS",
+                  "length": 198573
+                }
+              ],
+              "track-count": 12,
+              "track-offset": 3
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

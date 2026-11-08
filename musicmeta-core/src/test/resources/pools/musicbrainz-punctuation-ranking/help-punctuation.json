@@ -1,0 +1,721 @@
+{
+  "created": "2026-11-08T10:31:46.296Z",
+  "count": 2,
+  "offset": 0,
+  "recordings": [
+    {
+      "id": "fa2b2af5-3ba2-4155-b1d9-45066322edc5",
+      "score": 100,
+      "artist-credit-id": "c81491ca-a4b0-3bd7-92c0-8467809c8500",
+      "title": "Help!",
+      "length": 136000,
+      "video": null,
+      "artist-credit": [
+        {
+          "name": "The Beatles",
+          "artist": {
+            "id": "b10bbbfc-cf9e-42e0-be17-e2c3e1d2600d",
+            "name": "The Beatles",
+            "sort-name": "Beatles, The",
+            "disambiguation": "UK rock band, “The Fab Four”",
+            "aliases": [
+              {
+                "sort-name": "ビートルズ",
+                "type-id": "894afba6-2816-3c24-8072-eadb66bd04bc",
+                "name": "ビートルズ",
+                "locale": "ja",
+                "type": "Artist name",
+                "primary": true,
+                "begin-date": null,
+                "end-date": null
+              },
+              {
+                "sort-name": "ビートルズ（ザ）",
+                "type-id": "894afba6-2816-3c24-8072-eadb66bd04bc",
+                "name": "ザ・ビートルズ",
+                "locale": "ja",
+                "type": "Artist name",
+                "primary": null,
+                "begin-date": null,
+                "end-date": null
+              },
+              {
+                "sort-name": "비틀스",
+                "type-id": "894afba6-2816-3c24-8072-eadb66bd04bc",
+                "name": "비틀스",
+                "locale": "ko",
+                "type": "Artist name",
+                "primary": null,
+                "begin-date": null,
+                "end-date": null
+              },
+              {
+                "sort-name": "披头士乐队",
+                "type-id": "894afba6-2816-3c24-8072-eadb66bd04bc",
+                "name": "披头士乐队",
+                "locale": "zh_Hans_CN",
+                "type": "Artist name",
+                "primary": true,
+                "begin-date": null,
+                "end-date": null
+              },
+              {
+                "sort-name": "披头士乐队",
+                "type-id": "894afba6-2816-3c24-8072-eadb66bd04bc",
+                "name": "披头士乐队",
+                "locale": "zh_Hans",
+                "type": "Artist name",
+                "primary": null,
+                "begin-date": null,
+                "end-date": null
+              },
+              {
+                "sort-name": "披頭四樂團",
+                "name": "披頭四樂團",
+                "locale": "zh_Hant",
+                "type": null,
+                "primary": null,
+                "begin-date": null,
+                "end-date": null
+              },
+              {
+                "sort-name": "Beatles",
+                "type-id": "894afba6-2816-3c24-8072-eadb66bd04bc",
+                "name": "Beatles",
+                "locale": "en",
+                "type": "Artist name",
+                "primary": null,
+                "begin-date": null,
+                "end-date": null
+              },
+              {
+                "sort-name": "Beetles",
+                "type-id": "1937e404-b981-3cb7-8151-4c86ebfc8d8e",
+                "name": "Beetles",
+                "locale": null,
+                "type": "Search hint",
+                "primary": null,
+                "begin-date": null,
+                "end-date": null
+              },
+              {
+                "sort-name": "披頭四樂隊",
+                "type-id": "894afba6-2816-3c24-8072-eadb66bd04bc",
+                "name": "披頭四樂隊",
+                "locale": "zh_Hant",
+                "type": "Artist name",
+                "primary": null,
+                "begin-date": null,
+                "end-date": null
+              },
+              {
+                "sort-name": "fab four",
+                "type-id": "1937e404-b981-3cb7-8151-4c86ebfc8d8e",
+                "name": "fab four",
+                "locale": null,
+                "type": "Search hint",
+                "primary": null,
+                "begin-date": null,
+                "end-date": null
+              },
+              {
+                "sort-name": "Պիթլս",
+                "type-id": "894afba6-2816-3c24-8072-eadb66bd04bc",
+                "name": "Պիթլս",
+                "locale": "hy",
+                "type": "Artist name",
+                "primary": null,
+                "begin-date": null,
+                "end-date": null
+              },
+              {
+                "sort-name": "ဘီးတဲလ်အဖွဲ့",
+                "type-id": "894afba6-2816-3c24-8072-eadb66bd04bc",
+                "name": "ဘီးတဲလ်အဖွဲ့",
+                "locale": "my",
+                "type": "Artist name",
+                "primary": null,
+                "begin-date": null,
+                "end-date": null
+              },
+              {
+                "sort-name": "द बिटल्स",
+                "type-id": "894afba6-2816-3c24-8072-eadb66bd04bc",
+                "name": "द बिटल्स",
+                "locale": "ne",
+                "type": "Artist name",
+                "primary": null,
+                "begin-date": null,
+                "end-date": null
+              },
+              {
+                "sort-name": "ᱫᱚ ᱵᱤᱴᱞᱮᱥ",
+                "type-id": "894afba6-2816-3c24-8072-eadb66bd04bc",
+                "name": "ᱫᱚ ᱵᱤᱴᱞᱮᱥ",
+                "locale": "sat",
+                "type": "Artist name",
+                "primary": null,
+                "begin-date": null,
+                "end-date": null
+              },
+              {
+                "sort-name": "די ביטלס",
+                "type-id": "894afba6-2816-3c24-8072-eadb66bd04bc",
+                "name": "די ביטלס",
+                "locale": "yi",
+                "type": "Artist name",
+                "primary": null,
+                "begin-date": null,
+                "end-date": null
+              },
+              {
+                "sort-name": "Бітлз",
+                "type-id": "894afba6-2816-3c24-8072-eadb66bd04bc",
+                "name": "Бітлз",
+                "locale": "uk",
+                "type": "Artist name",
+                "primary": null,
+                "begin-date": null,
+                "end-date": null
+              },
+              {
+                "sort-name": "Битлз",
+                "type-id": "894afba6-2816-3c24-8072-eadb66bd04bc",
+                "name": "Битлз",
+                "locale": "ru",
+                "type": "Artist name",
+                "primary": null,
+                "begin-date": null,
+                "end-date": null
+              },
+              {
+                "sort-name": "披头士",
+                "type-id": "894afba6-2816-3c24-8072-eadb66bd04bc",
+                "name": "披头士",
+                "locale": "zh_Hans",
+                "type": "Artist name",
+                "primary": true,
+                "begin-date": null,
+                "end-date": null
+              },
+              {
+                "sort-name": "披頭四",
+                "type-id": "894afba6-2816-3c24-8072-eadb66bd04bc",
+                "name": "披頭四",
+                "locale": "zh_Hant",
+                "type": "Artist name",
+                "primary": true,
+                "begin-date": null,
+                "end-date": null
+              },
+              {
+                "sort-name": "Silver Beatles, The",
+                "type-id": "894afba6-2816-3c24-8072-eadb66bd04bc",
+                "name": "The Silver Beatles",
+                "locale": "en",
+                "type": "Artist name",
+                "primary": null,
+                "begin-date": null,
+                "end-date": null
+              },
+              {
+                "sort-name": "Beatles, I",
+                "type-id": "894afba6-2816-3c24-8072-eadb66bd04bc",
+                "name": "I Beatles",
+                "locale": "it",
+                "type": "Artist name",
+                "primary": null,
+                "begin-date": null,
+                "end-date": null
+              },
+              {
+                "sort-name": "Beatles, Die",
+                "type-id": "894afba6-2816-3c24-8072-eadb66bd04bc",
+                "name": "Die Beatles",
+                "locale": "de",
+                "type": "Artist name",
+                "primary": null,
+                "begin-date": null,
+                "end-date": null
+              },
+              {
+                "sort-name": "ბითლზი",
+                "type-id": "894afba6-2816-3c24-8072-eadb66bd04bc",
+                "name": "ბითლზი",
+                "locale": "ka",
+                "type": "Artist name",
+                "primary": null,
+                "begin-date": null,
+                "end-date": null
+              },
+              {
+                "sort-name": "بیٹلز",
+                "type-id": "894afba6-2816-3c24-8072-eadb66bd04bc",
+                "name": "بیٹلز",
+                "locale": "ur",
+                "type": "Artist name",
+                "primary": null,
+                "begin-date": null,
+                "end-date": null
+              },
+              {
+                "sort-name": "เดอะบีเทิลส์",
+                "type-id": "894afba6-2816-3c24-8072-eadb66bd04bc",
+                "name": "เดอะบีเทิลส์",
+                "locale": "th",
+                "type": "Artist name",
+                "primary": null,
+                "begin-date": null,
+                "end-date": null
+              },
+              {
+                "sort-name": "ద బీటిల్స్",
+                "type-id": "894afba6-2816-3c24-8072-eadb66bd04bc",
+                "name": "ద బీటిల్స్",
+                "locale": "te",
+                "type": "Artist name",
+                "primary": null,
+                "begin-date": null,
+                "end-date": null
+              },
+              {
+                "sort-name": "பீட்டில்ஸ்",
+                "type-id": "894afba6-2816-3c24-8072-eadb66bd04bc",
+                "name": "பீட்டில்ஸ்",
+                "locale": "ta",
+                "type": "Artist name",
+                "primary": null,
+                "begin-date": null,
+                "end-date": null
+              },
+              {
+                "sort-name": "ਦ ਬੀਟਲਜ਼",
+                "type-id": "894afba6-2816-3c24-8072-eadb66bd04bc",
+                "name": "ਦ ਬੀਟਲਜ਼",
+                "locale": "pa",
+                "type": "Artist name",
+                "primary": null,
+                "begin-date": null,
+                "end-date": null
+              },
+              {
+                "sort-name": "Битлси",
+                "type-id": "894afba6-2816-3c24-8072-eadb66bd04bc",
+                "name": "Битлси",
+                "locale": "mk",
+                "type": "Artist name",
+                "primary": null,
+                "begin-date": null,
+                "end-date": null
+              },
+              {
+                "sort-name": "ദി ബീറ്റിൽസ്",
+                "type-id": "894afba6-2816-3c24-8072-eadb66bd04bc",
+                "name": "ദി ബീറ്റിൽസ്",
+                "locale": "ml",
+                "type": "Artist name",
+                "primary": null,
+                "begin-date": null,
+                "end-date": null
+              },
+              {
+                "sort-name": "ದಿ ಬೀಟಲ್ಸ್",
+                "type-id": "894afba6-2816-3c24-8072-eadb66bd04bc",
+                "name": "ದಿ ಬೀಟಲ್ಸ್",
+                "locale": "kn",
+                "type": "Artist name",
+                "primary": null,
+                "begin-date": null,
+                "end-date": null
+              },
+              {
+                "sort-name": "Bítlarnir",
+                "type-id": "894afba6-2816-3c24-8072-eadb66bd04bc",
+                "name": "Bítlarnir",
+                "locale": "is",
+                "type": "Artist name",
+                "primary": null,
+                "begin-date": null,
+                "end-date": null
+              },
+              {
+                "sort-name": "द बीटल्स",
+                "type-id": "894afba6-2816-3c24-8072-eadb66bd04bc",
+                "name": "द बीटल्स",
+                "locale": "hi",
+                "type": "Artist name",
+                "primary": null,
+                "begin-date": null,
+                "end-date": null
+              },
+              {
+                "sort-name": "더 비틀즈",
+                "type-id": "894afba6-2816-3c24-8072-eadb66bd04bc",
+                "name": "더 비틀즈",
+                "locale": "ko",
+                "type": "Artist name",
+                "primary": true,
+                "begin-date": null,
+                "end-date": null
+              },
+              {
+                "sort-name": "הביטלס",
+                "type-id": "894afba6-2816-3c24-8072-eadb66bd04bc",
+                "name": "הביטלס",
+                "locale": "he",
+                "type": "Artist name",
+                "primary": null,
+                "begin-date": null,
+                "end-date": null
+              },
+              {
+                "sort-name": "ધ બિટલ્સ",
+                "type-id": "894afba6-2816-3c24-8072-eadb66bd04bc",
+                "name": "ધ બિટલ્સ",
+                "locale": "gu",
+                "type": "Artist name",
+                "primary": null,
+                "begin-date": null,
+                "end-date": null
+              },
+              {
+                "sort-name": "بیتلز",
+                "type-id": "894afba6-2816-3c24-8072-eadb66bd04bc",
+                "name": "بیتلز",
+                "locale": "fa",
+                "type": "Artist name",
+                "primary": null,
+                "begin-date": null,
+                "end-date": null
+              },
+              {
+                "sort-name": "দ্য বিটল্‌স",
+                "type-id": "894afba6-2816-3c24-8072-eadb66bd04bc",
+                "name": "দ্য বিটল্‌স",
+                "locale": "bn",
+                "type": "Artist name",
+                "primary": null,
+                "begin-date": null,
+                "end-date": null
+              },
+              {
+                "sort-name": "البيتلز",
+                "type-id": "894afba6-2816-3c24-8072-eadb66bd04bc",
+                "name": "البيتلز",
+                "locale": "ar",
+                "type": "Artist name",
+                "primary": null,
+                "begin-date": null,
+                "end-date": null
+              },
+              {
+                "sort-name": "Beatles, Los",
+                "type-id": "894afba6-2816-3c24-8072-eadb66bd04bc",
+                "name": "Los Beatles",
+                "locale": "es",
+                "type": "Artist name",
+                "primary": true,
+                "begin-date": null,
+                "end-date": null
+              },
+              {
+                "sort-name": "ዘ ቢተልስ",
+                "type-id": "894afba6-2816-3c24-8072-eadb66bd04bc",
+                "name": "ዘ ቢተልስ",
+                "locale": "am",
+                "type": "Artist name",
+                "primary": null,
+                "begin-date": null,
+                "end-date": null
+              },
+              {
+                "sort-name": "Beatles, Les",
+                "type-id": "894afba6-2816-3c24-8072-eadb66bd04bc",
+                "name": "Les Beatles",
+                "locale": "fr",
+                "type": "Artist name",
+                "primary": null,
+                "begin-date": null,
+                "end-date": null
+              },
+              {
+                "sort-name": "Beatles, The",
+                "type-id": "894afba6-2816-3c24-8072-eadb66bd04bc",
+                "name": "The Beatles",
+                "locale": "en",
+                "type": "Artist name",
+                "primary": true,
+                "begin-date": null,
+                "end-date": null
+              }
+            ]
+          }
+        }
+      ],
+      "first-release-date": "1980-11-03",
+      "releases": [
+        {
+          "id": "38677237-1af6-4b7b-88aa-1e7d017257cb",
+          "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
+          "artist-credit-id": "c81491ca-a4b0-3bd7-92c0-8467809c8500",
+          "count": 8,
+          "title": "From Liverpool – The Beatles Box",
+          "status": "Official",
+          "artist-credit": [
+            {
+              "name": "The Beatles",
+              "artist": {
+                "id": "b10bbbfc-cf9e-42e0-be17-e2c3e1d2600d",
+                "name": "The Beatles",
+                "sort-name": "Beatles, The",
+                "disambiguation": "UK rock band, “The Fab Four”"
+              }
+            }
+          ],
+          "release-group": {
+            "id": "961f96ad-9160-4bff-afc6-9b0660a71d67",
+            "type-id": "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1",
+            "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+            "title": "From Liverpool – The Beatles Box",
+            "primary-type": "Album",
+            "secondary-types": [
+              "Compilation"
+            ],
+            "secondary-type-ids": [
+              "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1"
+            ]
+          },
+          "date": "1981",
+          "country": "JP",
+          "release-events": [
+            {
+              "date": "1981",
+              "area": {
+                "id": "2db42837-c832-3c27-b4a3-08198f75693c",
+                "name": "Japan",
+                "sort-name": "Japan",
+                "iso-3166-1-codes": [
+                  "JP"
+                ]
+              }
+            }
+          ],
+          "track-count": 124,
+          "media": [
+            {
+              "id": "7402e74a-1b53-3e11-8fb3-551320650d31",
+              "position": 3,
+              "format": "12\" Vinyl",
+              "track": [
+                {
+                  "id": "aa81cb5c-6698-43c0-9b56-dfcc5f778fa8",
+                  "number": "F3",
+                  "title": "Help!"
+                }
+              ],
+              "track-count": 16,
+              "track-offset": 10
+            }
+          ]
+        },
+        {
+          "id": "591b71bd-796a-4b38-8bb1-c99135287882",
+          "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
+          "artist-credit-id": "c81491ca-a4b0-3bd7-92c0-8467809c8500",
+          "count": 8,
+          "title": "From Liverpool – The Beatles Box",
+          "status": "Official",
+          "artist-credit": [
+            {
+              "name": "The Beatles",
+              "artist": {
+                "id": "b10bbbfc-cf9e-42e0-be17-e2c3e1d2600d",
+                "name": "The Beatles",
+                "sort-name": "Beatles, The",
+                "disambiguation": "UK rock band, “The Fab Four”"
+              }
+            }
+          ],
+          "release-group": {
+            "id": "961f96ad-9160-4bff-afc6-9b0660a71d67",
+            "type-id": "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1",
+            "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+            "title": "From Liverpool – The Beatles Box",
+            "primary-type": "Album",
+            "secondary-types": [
+              "Compilation"
+            ],
+            "secondary-type-ids": [
+              "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1"
+            ]
+          },
+          "date": "1980-11-03",
+          "country": "GB",
+          "release-events": [
+            {
+              "date": "1980-11-03",
+              "area": {
+                "id": "8a754a16-0027-3a29-b6d7-2b40ea0481ed",
+                "name": "United Kingdom",
+                "sort-name": "United Kingdom",
+                "iso-3166-1-codes": [
+                  "GB"
+                ]
+              }
+            }
+          ],
+          "track-count": 124,
+          "media": [
+            {
+              "id": "638dc0d6-555e-3644-b541-7883740b089e",
+              "position": 3,
+              "format": "Vinyl",
+              "track": [
+                {
+                  "id": "57812582-77ed-4c6e-ad24-bcd7c1a2d07f",
+                  "number": "F3",
+                  "title": "Help!",
+                  "length": 136000
+                }
+              ],
+              "track-count": 16,
+              "track-offset": 10
+            }
+          ]
+        },
+        {
+          "id": "e474484b-bb7e-4acc-be0d-51cb8798f40c",
+          "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
+          "artist-credit-id": "c81491ca-a4b0-3bd7-92c0-8467809c8500",
+          "count": 8,
+          "title": "Beatles Box",
+          "status": "Official",
+          "artist-credit": [
+            {
+              "name": "The Beatles",
+              "artist": {
+                "id": "b10bbbfc-cf9e-42e0-be17-e2c3e1d2600d",
+                "name": "The Beatles",
+                "sort-name": "Beatles, The",
+                "disambiguation": "UK rock band, “The Fab Four”"
+              }
+            }
+          ],
+          "release-group": {
+            "id": "961f96ad-9160-4bff-afc6-9b0660a71d67",
+            "type-id": "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1",
+            "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+            "title": "From Liverpool – The Beatles Box",
+            "primary-type": "Album",
+            "secondary-types": [
+              "Compilation"
+            ],
+            "secondary-type-ids": [
+              "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1"
+            ]
+          },
+          "date": "1981-03",
+          "country": "AU",
+          "release-events": [
+            {
+              "date": "1981-03",
+              "area": {
+                "id": "106e0bec-b638-3b37-b731-f53d507dc00e",
+                "name": "Australia",
+                "sort-name": "Australia",
+                "iso-3166-1-codes": [
+                  "AU"
+                ]
+              }
+            }
+          ],
+          "track-count": 123,
+          "media": [
+            {
+              "id": "82e37b51-07bd-3a7b-b385-2326a37335e7",
+              "position": 3,
+              "format": "12\" Vinyl",
+              "track": [
+                {
+                  "id": "609746bf-86ee-49f7-86b0-dfcae95e817b",
+                  "number": "F3",
+                  "title": "Help!"
+                }
+              ],
+              "track-count": 16,
+              "track-offset": 10
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "73f6f089-eda1-4092-87e7-8ae699000bd6",
+      "score": 81,
+      "artist-credit-id": "2730afb4-60ad-30ae-8219-868fc6a8edc3",
+      "title": "Help",
+      "length": 213866,
+      "video": null,
+      "artist-credit": [
+        {
+          "name": "Bride",
+          "artist": {
+            "id": "7badd4c2-4462-46b6-bd42-4ffdc7a462c7",
+            "name": "Bride",
+            "sort-name": "Bride",
+            "disambiguation": "Christian metal band"
+          }
+        }
+      ],
+      "first-release-date": "1994",
+      "releases": [
+        {
+          "id": "8dd80a7a-1e81-4395-990e-7e4993126c45",
+          "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
+          "count": 1,
+          "title": "The Lost Reels",
+          "status": "Official",
+          "release-group": {
+            "id": "9fc0cd97-14c6-3ef7-a87a-0523a837ed76",
+            "type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+            "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+            "title": "The Lost Reels",
+            "primary-type": "Album"
+          },
+          "date": "1994",
+          "country": "US",
+          "release-events": [
+            {
+              "date": "1994",
+              "area": {
+                "id": "489ce91b-6658-3307-9877-795b68554c98",
+                "name": "United States",
+                "sort-name": "United States",
+                "iso-3166-1-codes": [
+                  "US"
+                ]
+              }
+            }
+          ],
+          "track-count": 20,
+          "media": [
+            {
+              "id": "cbe1ea55-2d29-36a5-a3d1-368c506dc97a",
+              "position": 1,
+              "track": [
+                {
+                  "id": "75c8bd91-89b9-3141-9658-6603b19aba27",
+                  "number": "13",
+                  "title": "Help",
+                  "length": 213866
+                }
+              ],
+              "track-count": 20,
+              "track-offset": 12
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

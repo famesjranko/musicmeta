@@ -73,6 +73,17 @@ class TitleMatcherTest {
     }
 
     @Test
+    fun `enrichment matching keeps Help and Help distinct`() {
+        // Given - a plain title and its punctuation variant
+
+        // When - comparing them with the enrichment matcher
+        val result = TitleMatcher.equivalent("Help", "Help!")
+
+        // Then - punctuation remains part of enrichment identity
+        assertFalse(result)
+    }
+
+    @Test
     fun `equivalent titles normalize en-dash and em-dash qualifier syntax`() {
         // Given - the same qualifier spelled with an en dash and an ASCII hyphen
         // When - comparing them
