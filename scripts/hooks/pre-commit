@@ -6,7 +6,8 @@
 #
 # The staged tree, not the working tree: a partly staged file, an unstaged fix or an untracked
 # source must neither pass nor fail this commit. So the tree is checked out into one snapshot
-# worktree per clone, kept between commits so Gradle there stays warm and incremental. A lock
+# worktree per clone, kept between commits so Gradle stays warm and incremental. Compilation
+# bypasses the build cache so the snapshot cannot read or write shared compiled entries. A lock
 # serialises commits from different worktrees, which all share the snapshot.
 set -euo pipefail
 
@@ -48,7 +49,7 @@ commit="$(git commit-tree "$tree" ${parent:+-p "$parent"} -m "pre-commit snapsho
 # repository, such as a home directory under version control.
 if [ "$(git -C "$snap" rev-parse --path-format=absolute --git-common-dir 2>/dev/null)" = "$common" ]; then
     git -C "$snap" checkout -q --detach -f "$commit"
-    # Untracked files only; ignored build output stays, which is what keeps Gradle incremental.
+    # Untracked files only; ignored build output stays for incremental compilation.
     git -C "$snap" clean -fdq
 else
     rm -rf "$snap"

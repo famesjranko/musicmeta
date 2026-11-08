@@ -37,7 +37,8 @@ because the config is the thing that fails.
 | Demo frontend | `node --test` via `consumers/demo-web/package.json` | the demo browser code's wire-protocol reading and its "is this worth retrying" decision, as the pure functions in `consumers/demo-web/src/main/resources/stream-protocol.js`. Runs on every `./check`, including `--fast`. node is a **minimum major** (`NODE_MIN_MAJOR` in `scripts/bootstrap.sh`) rather than an exact pin, and bootstrap reports it rather than installing it — it is the machine's runtime, not an executable the script can fetch and verify by digest |
 | Kotlin format | ktlint (version pinned in `libs.versions.toml`) | all modules, `consumers/demo-cli/`, and `consumers/demo-web/` |
 | Kotlin static analysis | detekt, **type-resolved** (`detektMain`/`detektTest`/`detektTestFixtures`) | complexity, dead code, bug patterns |
-| Build | `./gradlew build -Pmusicmeta.rerunTests` | compile, all unit tests, `apiCheck` against `api/*.api`. The property makes every `Test` task neither up-to-date nor cacheable for this run: the build cache is on and its directory is shared by every checkout on the machine, so without it `./check` can report green having executed no test at all, against reports another tree wrote on another day |
+| Fresh compiled outputs | `./gradlew clean` followed by compilation with `-Pmusicmeta.uncachedCompilation` | full runs discard root-build output before compilation and do the same in each demo and doc-sample build. Full verification removes orphan suites and stale helpers whose source files still exist. `--commit` retains incremental output and bypasses the build cache without cleaning. `--fast` compiles nothing and keeps its incremental edit loop. Ordinary Gradle commands can still use the build cache; see "Known gaps" for recovery outside this guard |
+| Build | `./gradlew build -Pmusicmeta.rerunTests -Pmusicmeta.uncachedCompilation` | compile, all unit tests, `apiCheck` against `api/*.api`. The property explicitly forces every `Test` task to execute, in addition to the fresh-compilation guard. Ordinary Gradle builds can otherwise reuse test results from another checkout through the shared build cache |
 | Core dependency floor | `:musicmeta-core:generatePomFileForMavenPublication` + `scripts/checks/check_pom_dependencies.py` | every `<dependency>` in `musicmeta-core`'s published POM matches `musicmeta-core/api/musicmeta-core.pom-dependencies`, coordinate, version and scope alike. It reads the published artifact, not `build.gradle.kts`, so it sees a dependency a plugin, a `subprojects { }` block or a `configurations.all` contributed — `kotlin-stdlib` is in the baseline and in no build script. Versions are in it because Gradle resolves the highest in the graph, so raising one raises a floor every consumer inherits. Only `<dependencies>` is baselined; the rest of the POM moves on every version bump. An absent, unparseable or dependency-less POM, and a baseline with no dependency lines, are findings rather than passes. `musicmeta-core` only — the adapters exist to bring OkHttp and Room, so a baseline for them would document rather than gate. Regenerate with `make pom-dump`. It reads coordinates, never licences or provenance: nothing here says a dependency is one core should have |
 | Explicit API | Kotlin's `explicitApi()` on `musicmeta-core`, `musicmeta-okhttp`, `musicmeta-android` | every declaration reaching the published surface states its visibility and its return type, or the compile fails. It is part of the compile, so it runs wherever the modules are compiled — the Build step above, CI, and anything that depends on those compile tasks, including detekt's type-resolved tasks — but **not under `./check --fast`, which exits before any of them**. What it buys a consumer: a public signature's types are readable in the `.kt` rather than reconstructed from the dump's erased descriptors. Main source sets only, and only in these three modules: `src/test` (including its `e2e` package), `src/testFixtures` and `src/androidTest` are exempt by the compiler — the last confirmed by a green `./gradlew :musicmeta-android:compileDebugAndroidTestKotlin`, since no gate compiles that source set — while the `consumers/demo-cli/`, `consumers/demo-web/`, `consumers/docs-samples/` and `consumers/docs-samples-android/` builds are unaffected because they are separate Gradle builds that never set the flag. `internal` and `private` declarations are exempt anywhere. Kotlin exempts four kinds of declaration even in main sources — primary constructors, **properties of a `data class`** (constructor and body alike), property getters and setters, and `override` members — so a `data class`'s properties carry no modifier and are checked by nothing here. It reads declarations, never intent: it forces a visibility to be written, it cannot tell that the one written is the right one |
 | Consumer canary | `scripts/demo-canary.sh` over the `consumers/demo-cli/` and `consumers/demo-web/` composite builds — the one task list `./check`, CI's `demo-canary` job and `make demo` all run | an external consumer still compiles, and both demos' test source sets run — `consumers/demo-web/`'s reading of a profile off the wire, `consumers/demo-cli/`'s command parsing and rendering. Neither reaches a provider, so what they prove is that the demo agrees with the surface it compiled against, never that the surface answers |
@@ -72,16 +73,53 @@ the amend that removes it.
 The staged tree is checked out into one snapshot worktree per clone under
 `~/.cache/musicmeta-hooks/`, so a partly staged file, an unstaged fix or an untracked source
 neither passes nor fails a commit. The snapshot appears in `git worktree list`, and its throwaway
-commits appear in `git log --all`. It is kept between commits so its Gradle build stays
-incremental: on the machine it was measured on, the first commit in a fresh clone took 59 s and
-raised peak memory use by about 2.3 GB, and a commit after a small Kotlin change took about 25 s.
+commits appear in `git log --all`. It is kept between commits so dependency and tooling caches
+stay warm. Each commit check retains incremental build output and compiles without the Gradle
+build cache, so the snapshot cannot read or write shared compilation entries.
 A commit made while another Gradle build is running starts a second daemon. It does not compile
 `consumers/demo-cli/` or `consumers/demo-web/`, run tests, or run detekt.
+
+Local cost was measured on a 9.7 GiB machine with two Gradle workers and private caches.
+These are two warm full-check samples and two warm hook commits, with no Kotlin source change
+between samples. Timings exclude waiting for the build lock:
+
+- Original baseline: `make check` 166.11 / 167.00 s (mean 166.56 s); hook 6.22 / 6.84 s (mean 6.53 s).
+- Reviewed full cache bypass: `make check` 302.39 / 296.65 s (mean 299.52 s); hook 49.31 / 49.11 s (mean 49.21 s).
+- Chosen guard: `make check` 240.09 / 235.06 s (mean 237.58 s); hook 6.93 / 7.06 s (mean 7.00 s).
+
+The full-guard sample of 315.11 s showed transient memory pressure and was discarded and
+repeated. The earlier hung build was outside all timed samples. CI was not measured.
 
 ## Known gaps
 
 Not an audit of everything unenforced — these are the specific places where a green run means less
 than it looks like, each learned the hard way.
+
+- **The first stale-compilation cache writer is unexplained.** A shared pre-commit snapshot wrote
+  test bytecode from another tree into a Gradle build-cache entry. Normal source deletion and
+  branch transitions have not reproduced that first contamination, and the relevant Kotlin daemon
+  log has rotated away. Restoring a bad entry and changing an unrelated source can carry its
+  unmapped classes into a new entry. That propagation is reproducible; it does not explain the
+  first seed. Changing snapshot isolation alone therefore has no demonstrated preventive effect.
+
+  Full `./check` cleans outputs and disables caching for `KotlinCompile` and `JavaCompile` tasks
+  through `-Pmusicmeta.uncachedCompilation`. Analysis and Android tasks can reuse matching cached
+  results. The incremental `./check --commit` uses `--no-build-cache` without cleaning; it does not run tests.
+  Both parts matter: disabling cache access leaves warm stale classes, and cleaning alone can
+  restore the bad entry. Source-file provenance can find orphan suites but cannot identify a stale
+  helper whose source still exists. The guard covers compilation consumed by verification,
+  including the demos when they run. It does not repair or evict cache entries, cover direct
+  Gradle/IDE builds or unguarded standalone canaries, or protect against
+  another process writing into the same build directory during verification. `--fast` checks formatting without compiling or running tests.
+
+  For a suspect ordinary build, stop other writers to that build directory, clean the affected
+  build and rerun its tasks with `--no-build-cache`. Keep cache access disabled until the identified
+  bad entry is quarantined from the configured local or remote cache; an uncached success alone
+  leaves it available for the next cached build. The default local entry is
+  `${GRADLE_USER_HOME:-$HOME/.gradle}/caches/build-cache-1/<key>`; custom cache settings can move it. Descendant entries can contain the same bytecode,
+  so inspect them too. Do not clear a shared cache while other builds are using it. Then clean and
+  rebuild with caching enabled to verify recovery. A full `make check` verifies freshly compiled
+  output without changing the shared cache.
 
 - **Nothing reads the text that leaves this machine without being a commit.** `CLAUDE.md` forbids
   AI/tool attribution on PR titles and bodies, issue comments and review replies as much as on
