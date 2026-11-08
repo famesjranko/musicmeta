@@ -102,7 +102,7 @@ them, so `engine.artistProfile("pink floid").suggestions`, or `results.identity.
 | Wikipedia | Artist biography, album descriptions, supplemental photos | No |
 | LRCLIB | Synced + plain lyrics, track metadata | No |
 | Deezer | Artist photos, album art, discography, tracklists, album metadata, similar artists/tracks, artist radio, top tracks, similar albums, track previews | No |
-| iTunes | Album art, tracklists, discography, album metadata | No |
+| iTunes | Album art, tracklists, discography, album metadata, track previews | No |
 | ListenBrainz | Popularity, listen counts, discography, top tracks, similar artists, radio discovery (requires a token) | Optional |
 | Last.fm | Genres, similar artists/tracks, bios, popularity, album metadata | Yes |
 | Fanart.tv | Artist photos/backgrounds/logos/banners, CD art, album art | Yes |
@@ -145,7 +145,7 @@ val engine = EnrichmentEngine.Builder()
 | **Statistics** | ARTIST_POPULARITY, TRACK_POPULARITY | Both merged from 3, each source's claim kept in its own unit |
 | **Composite** | ARTIST_TIMELINE, GENRE_DISCOVERY | ARTIST_TIMELINE: discography + members + life-span; GENRE_DISCOVERY: static affinity taxonomy |
 | **Radio** | ARTIST_RADIO, ARTIST_RADIO_DISCOVERY | ARTIST_RADIO: Deezer curated playlist; ARTIST_RADIO_DISCOVERY: ListenBrainz LB Radio (easy/medium/hard modes), which requires `ApiKey.LISTENBRAINZ_USER_TOKEN` |
-| **Preview** | TRACK_PREVIEW | Deezer 30-second MP3 preview URL (on-demand, not in default types) |
+| **Preview** | TRACK_PREVIEW | Deezer 30-second MP3; iTunes fallback M4A with unknown clip duration (on-demand) |
 | **Discovery** | SIMILAR_ALBUMS | Deezer related artists + era scoring |
 
 22 of 36 types have multi-provider coverage with automatic fallback. Artwork types (ALBUM_ART, ARTIST_PHOTO) are merged rather than first-wins: the best image is primary, alternatives are available via `Artwork.alternatives`.

@@ -225,7 +225,7 @@ reuse is allowed. Whether to show content, and how to credit it, is your decisio
 | Value | Cause |
 |-------|-------|
 | `NETWORK` | Connectivity or timeout failure |
-| `AUTH` | 401/403 on a call that sent credentials — check API key |
+| `AUTH` | Rejected credentials (401/403), or Deezer refusing access from this host (403) |
 | `PARSE` | Malformed JSON or unexpected schema |
 | `RATE_LIMIT` | Upstream throttled the request (429) — normally widened to `RateLimited` (see below) |
 | `TIMEOUT` | Engine-level enrichment timeout expired |
@@ -239,10 +239,15 @@ widens it to that variant, carrying the upstream's `Retry-After` as `retryAfterM
 Two upstream quirks stay `NETWORK`, because neither is a 429 on the wire: a Deezer quota refusal
 arrives as HTTP 200 with an `error.code` of 4, and iTunes answers a throttle with 403.
 
-`AUTH` is narrower than the status code suggests: only a call that actually sends credentials
-(Last.fm, Discogs, Fanart.tv, and ListenBrainz's token-bearing radio call) turns a 401/403 into
-`AUTH`. On a keyless endpoint there is no key to be wrong, so a 403 there is either a genuine
-client error or — for iTunes — a throttle, and neither is `AUTH`.
+`AUTH` covers rejected credentials on Last.fm, Discogs, Fanart.tv and ListenBrainz's token-bearing
+radio call. It also covers Deezer HTTP 403: Deezer needs no key, so this means access from the host
+was blocked. Both Deezer provider ids report it, for every route. An iTunes 403 remains a
+`NETWORK` error because that provider uses it for throttling.
+
+A Deezer refusal falls through to the next provider and is not negatively cached. It counts as a
+breaker failure: five consecutive failures put every capability under that provider id into
+60-second cooldown, including routes that might still work. A successful route resets the count.
+`deezer-similar-albums` has a separate breaker from `deezer`.
 
 **Branch on `EnrichmentResult.RateLimited`, not on `ErrorKind.RATE_LIMIT`.** The engine widens the
 one into the other before you see it, so an `Error` still carrying `RATE_LIMIT` is the exception, not
@@ -267,7 +272,7 @@ for (type in results.requestedTypes) {
         is EnrichmentResult.Error -> {
             when (r.errorKind) {
                 ErrorKind.NETWORK -> println("$type: network error — ${r.message}")
-                ErrorKind.AUTH -> println("$type: auth error — check API key")
+                ErrorKind.AUTH -> println("$type: access denied by ${r.provider} — check credentials or host access")
                 ErrorKind.TIMEOUT -> println("$type: timed out")
                 else -> println("$type: error — ${r.message}")
             }

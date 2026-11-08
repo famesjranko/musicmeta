@@ -58,6 +58,52 @@ two response shapes under one cache key. `MusicBrainzQualifierFallback.kt` strip
   comment says why it is not a `CompositeSynthesizer`: keeping the calls in a plain provider means
   the engine schedules and rate-limits it like any other.
 
+## iTunes preview fallback
+
+`TRACK_PREVIEW` tries Deezer first, then iTunes. The preview-only song search is separate from
+album search. Preview text folds typographic apostrophes before title and album-hint comparisons.
+An exact title match outranks a credited variant for a plain request. Only credits in parentheses
+or brackets (`feat.`, `ft.`, `featuring`) are recognized, and stripping must leave a nonempty title.
+A credited request requires compatible candidate credits under the existing same-name rules.
+A plain request may accept a credited variant only when the eligible artist-matched rows at that
+title preference have one compatible credit group. Competing guest versions return no match;
+reordered guest lists are not treated as equivalent, and differently separated lists match only
+where the same-name rules equate the separators (`&` and `and`).
+Other qualifiers still pass unchanged to `TitleMatcher`; a credit group containing a version marker
+is kept intact. The primary artist must still be the same normalized name or a name in the resolved
+alias pool. Within the eligible title preference and compatible credit group, a supplied album
+hint prefers exact albums, then compatible editions, then other albums, before artist-tier and
+upstream-order ties.
+Album comparison reuses `TitleMatcher` parts and the shared `MusicBrainzQualifierFallback` edition
+vocabulary, so remaster, deluxe, expanded and anniversary decorations can match the same base
+album. Album hints never reject an otherwise matching recording; unrecognized suffixes such as
+`: Reloaded` receive no album preference. Track-title and guest-credit checks remain unchanged.
+If the album-qualified search has no acceptable recording, one search without the album follows
+through the same shared three-second limiter. This costs up to two iTunes requests per Deezer miss;
+an acceptable first pool costs one, and a missing or blank album skips the retry. Engine caching
+reuses the final preview result under the original request, including its hint. A supplied
+`itunesTrackId` or `ITUNES_COLLECTION` uses lookup and must still agree with the request; a wrong identifier never triggers a name-search substitution. ISRC lookup is unsupported
+by iTunes. The US store is explicit on both routes.
+
+Only HTTPS preview URLs are returned; a malformed URL disqualifies its row alone. Clip duration is
+null because the song result states the full track duration, not the clip duration. No audio is downloaded or proxied. Cached preview
+results contain the URL and provider identifiers, not media. The library logs live preview
+successes at debug level with the runtime provider id. The chain warns on any provider's auth
+refusal on every route, including when fallback succeeds. Cache hits add neither log.
+The demo prints engine warnings to stderr. A failed chain retains its last error; an empty fallback does
+not hide a Deezer block.
+
+## Deezer host refusals
+
+Deezer's shared API reader treats HTTP 403 as an authorization failure (`ErrorKind.AUTH`),
+including for `deezer-similar-albums`. Other HTTP 4xx keep their existing absence mapping.
+A refusal falls through to the next provider in a chain and is never negatively cached.
+It counts toward the provider's breaker: five consecutive failures open it for 60 seconds,
+including its otherwise healthy routes. A successful route resets the failure count.
+The two Deezer provider ids have separate breakers, even when they share the API reader.
+For previews, a source skipped during cooldown remains an error when the fallback has no clip;
+it cannot establish a cacheable absence for the unavailable source.
+
 ## Resolving a track by name
 
 A track request naming **no album** is resolved out of a pool MusicBrainz has already filtered with
@@ -244,11 +290,12 @@ pool is accepted on both artist and album title, not artist alone, before `ALBUM
 
 **iTunes.** Never read on results
 we fetch: `collectionViewUrl`, `collectionPrice`, `copyright`, `contentAdvisoryRating`,
-`collectionExplicitness`, `amgArtistId`, `artistViewUrl`; from a track lookup, `previewUrl` (Deezer
-serves `TRACK_PREVIEW`), `discNumber`, `discCount`, `trackPrice`, `isStreamable`. Entities never
-searched: `musicVideo`, `podcast`, `audiobook`. Title-only discovery searches `song` or `album`
-for artist hints in iTunes order. For a bare track title, same-base variants can identify an artist
-without selecting that variant as the recording. Album hints admit remaster-only decorations.
+`collectionExplicitness`, `amgArtistId`, `artistViewUrl`; from track rows, `discNumber`, `discCount`,
+`trackPrice`, `isStreamable`. Song search and preview lookup read `previewUrl` for `TRACK_PREVIEW`;
+the album-tracklist lookup does not. Entities never searched: `musicVideo`, `podcast`, `audiobook`.
+Title-only discovery searches `song` or `album` for artist hints in iTunes order. For a bare track
+title, same-base variants can identify an artist without selecting that variant as the recording.
+Discovery album hints admit remaster-only decorations.
 `lookup?isrc=` looks like the ISRC equivalent of `lookup?upc=` and is not: it returns `200 resultCount: 0` for an ISRC known to be in
 catalogue, so it is silently unsupported rather than broken (probed 2026-08-12) — never called.
 As with Deezer, the name-search pool behind `ALBUM_ART`, `ALBUM_METADATA` and `ALBUM_TRACKS` is

@@ -404,6 +404,14 @@ permanently, silently blank while the provider reported healthy. `ListenBrainzAp
 therefore checks for `ClientError` before the helper runs and throws, so `mapError` reaches an
 `Error` the consumer sees.
 
+Deezer's public routes need the same distinction for HTTP 403: there is no key to repair,
+but the host was refused, so the shared API reader throws an authorization failure with a
+host-block message before the helper runs. An empty search remains `NotFound`. The demo must
+read the raw enrichment result to retain this distinction; `resolveTrackPreviews` intentionally
+returns only nullable previews and discards failure details. A preview provider skipped during
+breaker cooldown must also leave an error when its fallback has no clip, or repeated blocked
+requests start negative-caching absence as soon as the breaker opens.
+
 Ask what the route's own "nothing" looks like before reaching for the helper. Where the upstream has
 a success shape for absence, a 4xx is a statement about the *request*, and collapsing it to absence
 destroys the only signal that the request stopped being valid.
@@ -504,6 +512,16 @@ siblings.
   absent id stays unlabelled); never to decide an identifier is worth removing. Distinguishing
   the two costs a lookup per id, which is the request budget that shape exists to avoid.
 
+Preview title matching must retain featured-artist evidence when ranking. Stripping both credits
+and accepting the first title match can choose the plain recording ahead of a credited one in the
+same response. A bare `ft`, `feat` or `featuring` can also be ordinary title text. Remove only
+bracketed credits, preserve a title that would become empty, and prefer exact titles. A credited
+request must not fall back to a plain recording. A plain request can accept one compatible guest
+group, but competing guest versions need more evidence than upstream order. Keep these tolerances
+private to previews. An album hint is a preference among those eligible recordings, not a
+recording constraint. Keep its edition-tolerant preference even when a nonmatching compilation
+comes first, but never strip a track-title qualifier to satisfy the album hint.
+
 ## 3. `org.json` returns a default for a missing key — it does not fail
 
 ```kotlin
@@ -519,6 +537,10 @@ No exception, no `NotFound` — empty strings enriched, cached and persisted, ne
 "clear your cache" migration note. A provider test must assert against a fixture copied from a real
 response; that is what pins the field name. `provider-drift.yml` then re-checks it daily against the
 live API, but only for a route someone put in `SCHEMA_PIN_TARGETS`, and it never gates a merge.
+
+iTunes' preview search and lookup pins must include `results[*].previewUrl`: a renamed field
+otherwise becomes an empty pool, a breaker success and a negatively cached absence. The wildcard
+is necessary because a healthy song row may have no preview (§37).
 
 ## 22. Two endpoints of one API do not carry the same fields
 

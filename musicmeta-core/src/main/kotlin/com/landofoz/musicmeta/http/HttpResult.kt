@@ -17,7 +17,7 @@ public sealed class HttpResult<out T> {
 }
 
 /**
- * A provider's credentials were rejected (HTTP 401/403).
+ * A provider rejected credentials or access from this host (HTTP 401/403).
  *
  * Thrown rather than returned so it travels the path a provider already has: the provider's
  * `catch (e: Exception) { mapError(type, e) }` turns it into an
@@ -25,7 +25,10 @@ public sealed class HttpResult<out T> {
  * A bad key collapsed to `null` here would become `NotFound` — a breaker *success* — and the
  * provider would look healthy while returning nothing forever (`docs/pitfalls.md` §4).
  */
-internal class AuthException(statusCode: Int) : Exception("HTTP $statusCode: credentials rejected")
+internal class AuthException(
+    statusCode: Int,
+    message: String = "HTTP $statusCode: credentials rejected",
+) : Exception(message)
 
 /**
  * A 429 that outlived the retry ladder. An [IOException] subtype so every existing
@@ -41,8 +44,8 @@ internal class RateLimitException(val retryAfterMs: Long?) : IOException("HTTP 4
  * configuration error the consumer can act on, not empty data.
  *
  * Only for a call that actually sends credentials. On a public endpoint an upstream 403 is not the
- * consumer's key being wrong — there is no key — so those callers use [bodyOrThrowTransient],
- * which leaves every `ClientError` a plain `null`.
+ * consumer's key being wrong — there is no key. A public caller can classify a host refusal before
+ * using [bodyOrThrowTransient], which leaves every `ClientError` a plain `null`.
  */
 internal fun <T> HttpResult<T>.bodyOrThrowAuthOrTransient(): T? = when {
     this is HttpResult.ClientError && (statusCode == 401 || statusCode == 403) ->

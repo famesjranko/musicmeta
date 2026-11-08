@@ -24,6 +24,25 @@ internal class ITunesApi(
     private val rateLimiter: RateLimiter,
 ) {
 
+    suspend fun previewTracks(term: String, trackId: Long?, collectionId: Long?): List<ITunesPreviewTrack> {
+        val url = (trackId ?: collectionId)?.let(::previewLookupUrl) ?: previewSearchUrl(term)
+        val json = fetchJson(url) ?: return emptyList()
+        val rows = json.optJSONArray("results") ?: return emptyList()
+        return (0 until rows.length()).mapNotNull { index ->
+            val row = rows.optJSONObject(index) ?: return@mapNotNull null
+            if (row.optString("wrapperType") != "track" || row.optString("kind") != "song") return@mapNotNull null
+            val preview = row.optString("previewUrl").takeIfNotEmpty() ?: return@mapNotNull null
+            ITunesPreviewTrack(
+                trackId = row.optLong("trackId"),
+                collectionId = row.optLong("collectionId"),
+                title = row.optString("trackName"),
+                artist = row.optString("artistName"),
+                album = row.optString("collectionName"),
+                previewUrl = preview,
+            )
+        }
+    }
+
     suspend fun searchAlbums(term: String, limit: Int): List<ITunesAlbumResult> {
         val json = fetchJson(albumSearchUrl(term, limit)) ?: return emptyList()
 
@@ -183,6 +202,11 @@ internal class ITunesApi(
     companion object {
         const val BASE_URL = "https://itunes.apple.com"
 
+        fun previewSearchUrl(term: String): String =
+            "$BASE_URL/search?media=music&entity=song&country=us&term=${encodeQueryValue(term)}&limit=25"
+
+        fun previewLookupUrl(id: Long): String = "$BASE_URL/lookup?id=$id&entity=song&country=us"
+
         /** Candidate pool size for artist search — enough hits for a wrong name to be passed over. */
         const val ARTIST_SEARCH_LIMIT = 10
 
@@ -199,6 +223,16 @@ internal class ITunesApi(
 
         /** Pins the song title/artist hints and the album artwork fields parsed above. */
         val SCHEMA_PIN_TARGETS: List<SchemaTarget> = listOf(
+            SchemaTarget(
+                provider = "itunes", route = "previewTracks", url = previewSearchUrl("Radiohead Karma Police"),
+                requiredPaths = listOf("results[0].trackId", "results[0].trackName", "results[0].artistName",
+                    "results[*].previewUrl"),
+            ),
+            SchemaTarget(
+                provider = "itunes", route = "previewTracks", url = previewLookupUrl(1097861836),
+                requiredPaths = listOf("results[0].trackId", "results[0].trackName", "results[0].artistName",
+                    "results[*].previewUrl"),
+            ),
             SchemaTarget(
                 provider = "itunes",
                 route = "title artist search",

@@ -6,13 +6,7 @@ import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
-/**
- * A played preview owes its provider a notice, and this page states each one once, in the credits
- * footer, rather than beside the button that played it. Deezer's is carried by `attribution.js`
- * (`standingNotices`, pinned in `attribution.test.js`); Apple's is carried by the policy snapshot
- * the same footer renders, which is what this pins — nothing in this repo writes those words, so a
- * snapshot that stopped calling the attribution owed would drop the only place the page says it.
- */
+/** The footer renders the policy notice; this does not verify Apple's nearby badge conditions. */
 class PreviewNoticeCoverageTest {
 
     /** The levels `index.js` renders a notice for; anything else leaves the footer silent. */

@@ -18,12 +18,10 @@ import com.landofoz.musicmeta.MusicBrainzEntityType
 import com.landofoz.musicmeta.ProviderCatalog
 import com.landofoz.musicmeta.ProviderInfo
 import com.landofoz.musicmeta.ProviderPolicies
-import com.landofoz.musicmeta.TrackPreviewRequest
 import com.landofoz.musicmeta.TrackProfile
 import com.landofoz.musicmeta.albumProfile
 import com.landofoz.musicmeta.artistProfile
 import com.landofoz.musicmeta.cache.CacheMode
-import com.landofoz.musicmeta.resolveTrackPreviews
 import com.landofoz.musicmeta.trackProfile
 import com.sun.net.httpserver.HttpExchange
 import com.sun.net.httpserver.HttpServer
@@ -1160,18 +1158,38 @@ private fun handlePreview(exchange: HttpExchange, engine: EnrichmentEngine) {
             return
         }
 
-        val preview = runBlocking {
-            val request = if (identifiers != null) {
-                TrackPreviewRequest(title, artist, album, identifiers)
-            } else {
-                TrackPreviewRequest(title, artist, album)
-            }
-            engine.resolveTrackPreviews(listOf(request)).first().preview
+        val results = runBlocking {
+            engine.enrich(
+                EnrichmentRequest.forTrack(
+                    title, artist, album,
+                    identifiers = identifiers ?: EnrichmentIdentifiers(),
+                ),
+                setOf(EnrichmentType.TRACK_PREVIEW),
+            )
         }
-        if (preview == null) {
-            exchange.respondJson(404, ApiError("No preview available for \"$title\" by $artist"))
-        } else {
-            exchange.respondJson(200, PreviewResponse(preview.url, preview.durationMs, preview.source))
+        val result = results.raw[EnrichmentType.TRACK_PREVIEW]
+        when (result) {
+            is EnrichmentResult.Success -> {
+                val preview = result.data as? EnrichmentData.TrackPreview
+                if (preview == null) {
+                    exchange.respondJson(502, ApiError("Preview provider returned an invalid response."))
+                } else {
+                    exchange.respondJson(200, PreviewResponse(preview.url, preview.durationMs, preview.source))
+                }
+            }
+            is EnrichmentResult.NotFound ->
+                exchange.respondJson(404, ApiError("No preview available for \"$title\" by $artist"))
+            is EnrichmentResult.Error -> {
+                val message = if (result.provider == "deezer" && result.errorKind == ErrorKind.AUTH) {
+                    "Preview provider blocked access from this host (deezer). No fallback preview is available."
+                } else {
+                    "Preview lookup failed (${result.provider}). Try again later."
+                }
+                exchange.respondJson(502, ApiError(message))
+            }
+            is EnrichmentResult.RateLimited ->
+                exchange.respondJson(502, ApiError("Preview provider is rate limited. Try again later."))
+            null -> exchange.respondJson(502, ApiError("Preview lookup returned no result. Try again later."))
         }
     } catch (e: InvalidEnrichQuery) {
         exchange.respondJson(400, ApiError(e.message ?: "invalid request"))

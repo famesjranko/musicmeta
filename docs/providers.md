@@ -25,9 +25,9 @@ Auth keys and how to supply them are in [README.md](../README.md).
 |---|---|---|---|---|
 | MusicBrainz | `musicbrainz` | none (User-Agent required) | [docs](https://musicbrainz.org/doc/MusicBrainz_API) | Identity backbone — `isIdentityProvider`, runs first, and the only `NotFound` that can carry `suggestions`. Also the only rating source for `ARTIST_POPULARITY`/`TRACK_POPULARITY` |
 | Cover Art Archive | `coverartarchive` | none | [docs](https://musicbrainz.org/doc/Cover_Art_Archive/API) | Only artwork source keyed on a release MBID rather than a name, and the only source of back cover, booklet and disc |
-| Deezer | `deezer` | none | [docs](https://developers.deezer.com/api) | Widest no-key catalogue; only source of `ARTIST_RADIO`, `TRACK_PREVIEW` |
+| Deezer | `deezer` | none | [docs](https://developers.deezer.com/api) | Widest no-key catalogue; only source of `ARTIST_RADIO`; first source of `TRACK_PREVIEW` |
 | Deezer Similar Albums | `deezer` | none | [docs](https://developers.deezer.com/api) | Only source of `SIMILAR_ALBUMS`; an artist-derived approximation — Deezer has no album-similarity endpoint, so results are albums by similar artists, era-weighted |
-| iTunes | `itunes` | none | [docs](https://performance-partners.apple.com/search-api) | No-key album search with artwork at any size; `lookup?upc=` resolves a known barcode as an identity match, replacing the search |
+| iTunes | `itunes` | none | [docs](https://performance-partners.apple.com/search-api) | No-key album search with artwork at any size; `TRACK_PREVIEW` fallback after Deezer; `lookup?upc=` resolves a known barcode as an identity match, replacing the search |
 | LRCLIB | `lrclib` | none | [docs](https://lrclib.net/docs) | Only lyrics source |
 | Wikidata | `wikidata` | none | [docs](https://www.wikidata.org/wiki/Wikidata:Data_access) | Structured claims keyed on a Q-id; our route to Commons imagery at any width |
 | Wikipedia | `wikipedia` | none | [docs](https://www.mediawiki.org/wiki/API:Main_page) | Highest-confidence bio; English only |
@@ -51,6 +51,7 @@ the engine to classify from canonical status.
 |---|---|---|
 | Deezer | `TRACK_PREVIEW`, `TRACK_METADATA` | A Deezer track id already on the request |
 | Deezer | `ARTIST_TOP_TRACKS`, `SIMILAR_ARTISTS`, `ARTIST_RADIO` | A Deezer artist id already on the request |
+| iTunes | `TRACK_PREVIEW` | A stored `extra["itunesTrackId"]` or `ITUNES_COLLECTION`, checked against the requested names |
 | iTunes | `ALBUM_TRACKS` | A stored `itunesCollectionId`, or a UPC/barcode lookup |
 | iTunes | `ALBUM_ART`, `ALBUM_METADATA` | A UPC/barcode lookup |
 | iTunes | `ARTIST_DISCOGRAPHY` | A stored iTunes artist id |
@@ -235,7 +236,7 @@ composer and MusicBrainz credits the performer.
 
 ## Terms, licences, attribution
 
-What each provider's terms said on **2026-08-12** — verify before relying on any of it. This is not
+What each provider's terms said on the date in its row — verify before relying on any of it. This is not
 a compliance promise and not legal advice: it is a dated snapshot of public terms pages, collected
 once, with no mechanism keeping it current. musicmeta takes no standing position on any provider's
 terms; a consumer enabling a provider is bound by that provider's terms, not by anything below.
@@ -248,7 +249,7 @@ terms; a consumer enabling a provider is bound by that provider's terms, not by 
 | Wikidata | Allowed, free, unauthenticated | CC0 (exact wording not verbatim-confirmed) | None required | wikidata.org/wiki/Wikidata:Data_access | 2026-08-12 |
 | Wikipedia | Allowed, free; UA policy binding | Text CC BY-SA 4.0 / GFDL; media per-file | Required: link, stable copy, or author list + licence notice | en.wikipedia.org/wiki/Wikipedia:Reusing_Wikipedia_content | 2026-08-12 |
 | Deezer | **Prohibited** — strictly non-commercial, incl. indirect revenue | Reproduction forbidden without express authorisation | Trademark Guidelines incorporated (content unverified) | developers.deezer.com/termsofuse | 2026-08-12 |
-| iTunes/Apple | Conditional (badge, streaming-only, promo rules) | Search JSON caching encouraged; preview-media restriction unverified | "provided courtesy of iTunes" when previews shown | performance-partners.apple.com/search-api | 2026-08-12 |
+| iTunes/Apple | Store promotion only; linked Apple-approved badge; no independent entertainment or promotion of other goods/services | Search JSON caching encouraged; song/video previews must be streamed, never downloaded, saved, cached or synced to video | "provided courtesy of iTunes" for previews (affiliate terms: "provided courtesy of Apple") | [Search API Legal](https://performance-partners.apple.com/search-api); [affiliate terms §2.1](https://docs.partnerize.com/itunes/terms/en.pdf) | 2026-11-07 |
 | LRCLIB | Could not verify — no terms published at all | Could not verify; MIT covers server code only | Could not verify | lrclib.net; github.com/tranxuanthang/lrclib | 2026-08-12 |
 | Last.fm | **Non-commercial only**; commercial needs written agreement | Copy/adapt/distribute, capped at 100 MB total storage; no sub-licensing, no DRM | "must credit Last.fm and include links to the Last.fm site" | last.fm/api/tos | 2026-08-12 |
 | Fanart.tv | Could not verify — Cloudflare 403 | Could not verify | Could not verify | fanart.tv/terms-of-use/ (403) | 2026-08-12 |
@@ -265,9 +266,23 @@ carries CC BY-NC-SA obligations — attribution *and* non-commercial, not just p
 **"Could not verify" rows are a finding, not a gap papered over.** Fanart.tv's terms page 403s a
 non-browser client; ListenBrainz's terms page is JS-only; LRCLIB publishes no terms instrument at
 all (its MIT licence covers the server code, not the lyrics it serves — those are third-party
-copyrighted works regardless). Apple is only partially verified: performance-partners.apple.com's
-Search API page is the source for the row above, but Apple's governing ToS document 404s, so the
-preview-media caching rule could not be confirmed against it.
+copyrighted works regardless). Apple's Search API Legal section and affiliate terms §2.1 were read on 2026-11-07.
+Both restrict preview use to promotion of the store content, require a nearby approved badge linking
+to that content in the store, require courtesy attribution, and prohibit saving or caching preview
+media. Search/lookup JSON caching is separate from media caching. The affiliate terms also require
+content appropriate to the target country. iTunes supplies `TRACK_PREVIEW` as a fallback after Deezer, from
+the US store. A consumer must show an Apple-approved badge linked to that store item near its
+preview, include the courtesy notice, and stream directly without downloading, saving, caching
+or proxying the audio. Only search metadata, including the media URL, is cached by musicmeta.
+Use `enrich()` and read the preview success's `resolvedIdentifiers.extra["itunesTrackId"]`
+and `ITUNES_COLLECTION` to look up the store item and obtain its store URL. musicmeta does not
+return Apple's `trackViewUrl`. `resolveTrackPreviews()` drops these identifiers; consumers using
+that helper must look the item up separately or switch to `enrich()` to build the required link.
+The demo does not supply the required nearby linked badge and courtesy notice.
+The [iTunes Store identity rules](https://marketing.services.apple/itunes-identity-guidelines)
+require unmodified official artwork, a minimum 30px badge height, clear space of at least a tenth
+of that height, placement below or to the right of the promoted content, and an iTunes Store
+trademark credit. The badge and notice are conditions of playback, not optional footer credits.
 
 **Deezer is strictly non-commercial**, including indirect revenue, with no separate-agreement
 escape hatch on its terms page. It ships enabled by default, and the README's audience is any

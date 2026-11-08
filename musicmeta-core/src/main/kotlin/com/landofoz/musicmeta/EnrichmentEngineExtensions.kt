@@ -132,8 +132,9 @@ public data class TrackPreviewResult(
  *
  * A `deezerId` in [EnrichmentIdentifiers.extra] makes Deezer use its direct track lookup —
  * typically 10x faster than searching by title/artist — but identity resolution still runs when
- * the request needs it; other `TRACK_PREVIEW`-eligible providers and identifier-keyed types have
- * no such shortcut.
+ * the request needs it. iTunes also supports direct lookup with `itunesTrackId` or
+ * [IdentifierNamespace.ITUNES_COLLECTION]. Errors and missing previews both return null here;
+ * use [EnrichmentEngine.enrich] for errors and resolved store identifiers.
  */
 public suspend fun EnrichmentEngine.resolveTrackPreviews(
     tracks: List<TrackPreviewRequest>,

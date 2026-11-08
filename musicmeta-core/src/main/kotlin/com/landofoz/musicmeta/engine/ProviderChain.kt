@@ -189,6 +189,12 @@ internal class ProviderChain(
             // consumer's provider that swallows the cancellation and returns an Error, which
             // no rethrow of ours could intercept. (#53)
             currentCoroutineContext().ensureActive()
+            if (result is EnrichmentResult.Error && result.errorKind == ErrorKind.AUTH) {
+                logger.warn(TAG, "${type.name}: ${provider.id}: ${result.message}", result.cause)
+            }
+            if (type == EnrichmentType.TRACK_PREVIEW && result is EnrichmentResult.Success) {
+                logger.debug(TAG, "${type.name}: ${provider.id} supplied preview.")
+            }
             // A `RateLimited` is a failure, not a no-op: a throttled provider that records neither
             // is a breaker that never opens under load, which is the collapse
             // `bodyOrThrowTransient` throws to avoid (`docs/pitfalls.md` §4).
@@ -226,7 +232,7 @@ internal class ProviderChain(
     ): WalkStep = when (val gate = gateFor(provider, request.identifiers, identifierOnly)) {
         Gate.Ineligible -> WalkStep(null, null)
         is Gate.MissingIdentifier -> { ledger.missing[provider.id] = gate.requirement; WalkStep(null, null) }
-        Gate.BreakerOpen -> { ledger.tripped.add(provider); WalkStep(null, null) }
+        Gate.BreakerOpen -> { ledger.tripped.add(provider); WalkStep(null, previewCooldownResult(provider)) }
         Gate.Attempt -> attemptStep(provider, request, ledger)
     }
 
@@ -239,7 +245,7 @@ internal class ProviderChain(
         val result = callThroughBreaker(provider, request)
         if (result == null) {
             ledger.tripped.add(provider)
-            return WalkStep(null, null)
+            return WalkStep(null, previewCooldownResult(provider))
         }
         ledger.attempted.add(provider.id)
         return when (result) {
@@ -307,6 +313,17 @@ internal class ProviderChain(
             errorKind = ErrorKind.NETWORK,
         )
     }
+
+    // A preview miss cannot establish absence while another source is in cooldown.
+    private fun previewCooldownResult(provider: EnrichmentProvider): EnrichmentResult.Error? =
+        if (type == EnrichmentType.TRACK_PREVIEW) {
+            EnrichmentResult.Error(
+                type, provider.id, "Preview provider is in circuit-breaker cooldown; data was not looked up",
+                errorKind = ErrorKind.NETWORK,
+            )
+        } else {
+            null
+        }
 
     /** Whether [provider]'s capability for [type] is keyed on an identifier rather than a name. */
     private fun requiresIdentifier(provider: EnrichmentProvider): Boolean =
