@@ -127,14 +127,19 @@ Combining marks can lift a short word over the floor even when upstream folds th
 `ज़ोर` (starting with U+095B) becomes four NFC code points and can return unrelated titles.
 Suggestions are not an identity claim or a guarantee of relevance across the search index.
 
-With a blank artist, the queries omit the artist clause. With an artist supplied, they append
-`AND artistname:<escaped artist>~` without changing artist matching. For example, `Rokc AND Roll`
-by `Kiss` sends `recording:rokc~ AND recording:and AND recording:roll~ AND artistname:Kiss~`.
+With a blank artist, the queries omit the artist clause. With an artist supplied, they extract NFC
+artist words, lowercase them with `Locale.ROOT`, and add one `artistname:` term per word joined by
+`AND`. Only words with at least four NFC code points and no Unicode number get `~`; short and
+numeric words stay exact. For example, `Rokc AND Roll` by `Kiss` sends
+`recording:rokc~ AND recording:and AND recording:roll~ AND artistname:kiss~`.
 An eligible title costs one fuzzy request on either endpoint; ineligible titles cost none even
-with an artist supplied, so short titles lose this typo rescue.
-Album enrichment uses the same fallback when its strict pool is empty; track enrichment refuses
-a blank artist without searching. Candidate search and enrichment suggestions share this query
-rule. Fuzzy rows remain choices for the caller; they do not resolve identity or change the fallback ladder.
+with an artist supplied. Artist words do not add an eligibility guard or a request. On an empty
+strict release pool, album enrichment may still make its symbol-fallback artist lookup before the
+fuzzy request. Track enrichment refuses a blank artist without searching. Featured credits may
+still miss: the captured Eminem feat. Rihanna query and its without-feat diagnostic both returned
+none, so the cause is not isolated. These terms do not promise general alias/article equivalence or
+artist exclusivity. Fuzzy rows remain choices for the caller; they do not resolve identity or
+change the fallback ladder.
 
 ## Resolving a track by name
 
