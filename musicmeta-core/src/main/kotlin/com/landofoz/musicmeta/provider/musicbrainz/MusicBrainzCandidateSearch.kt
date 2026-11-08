@@ -32,6 +32,8 @@ internal class MusicBrainzCandidateSearch(
             is EnrichmentRequest.ForArtist -> request.name to ""
         }
         return (pool + extra)
+            .groupBy { it.value.identifiers.musicBrainzId }.values
+            .map { entries -> entries.maxBy { it.value.matchScore } }
             .sortedWith(
                 compareByDescending<Candidate> { SearchTitleMatcher.equivalent(title, it.value.title) }
                     .thenByDescending { sameArtist(suppliedArtist, it) }

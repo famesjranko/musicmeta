@@ -23,6 +23,7 @@ Controlled models, not live captures:
   varies ID, year, country, and primary type to discriminate which fields are retained.
 - `album-partial.json` models a live-qualified Radiohead album alongside the captured other
   artist's exact title. `album-exact.json` supplies the exact Radiohead title for the second query.
+  The modelled live release has a distinct ID from the studio release; they represent different releases.
 - `exact-scores.json` varies two captured recording schemas' IDs and scores, retaining identical
   title, artist and other presentation fields.
 - `fuzzy.json` models the reported score-51 official-album `Sandman Enters` versus score-100
@@ -37,3 +38,10 @@ The fake signal tests model transport failures, stalls, unavailability, and brea
 Request-count tests reuse captured objects to model nonempty query arms; they do not claim captures
 for the bracketed title or the unavailable album hint used to exercise those paths.
 These captures and models establish offline contracts, not ongoing live API coverage.
+
+`overlap-general.json` and `overlap-canonical.json` are modelled pools, not captured upstream
+responses. Their IDs, titles, display credits and live disambiguation follow the 2026-11-08
+Karma Police result report; the report did not retain the raw search pools. Scores 90 and 100
+model its repeated collaboration MBID. Pool membership and minimal artist-credit structures
+are controlled to show that deduplication retains the higher score and frees a limited slot.
+The regression swaps the duplicate scores between pools and exercises supplied-artist and title-only artist-hint paths.

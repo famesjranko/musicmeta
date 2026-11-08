@@ -34,6 +34,41 @@ class MusicBrainzCandidateSelectionTest {
     }
 
     @Test
+    fun `merged pools keep the best score per MBID and fill the freed slot`() = runTest {
+        // Given - modelled general and canonical pools repeat one recording with different scores.
+        val general = fixture("overlap-general")
+        val canonical = fixture("overlap-canonical")
+        val reversedGeneral = org.json.JSONObject(general)
+        reversedGeneral.getJSONArray("recordings").getJSONObject(1).put("score", 100)
+        val reversedCanonical = org.json.JSONObject(canonical)
+        reversedCanonical.getJSONArray("recordings").getJSONObject(0).put("score", 90)
+        val pools = listOf(general to canonical, reversedGeneral.toString() to reversedCanonical.toString())
+        val requests = listOf(track, EnrichmentRequest.forTrack("Karma Police", ""))
+
+        // When - supplied and hinted artist searches merge the pools in either score order.
+        val results = requests.flatMap { request ->
+            pools.map { (broad, extra) ->
+                http.givenJsonResponse("comment", extra)
+                http.givenJsonResponse("recording?query", broad)
+                provider.searchCandidates(request, 3, listOf("Radiohead"), logger)
+            }
+        }
+
+        // Then - each recording appears once at its best score and the live choice fills the third slot.
+        results.forEach { found ->
+            assertEquals(
+                listOf(
+                    "00e9aa21-e7f9-4369-a6a8-f1087791780a",
+                    "adbf08e6-2cf8-4dd3-bb5b-bdddba25da27",
+                    "7366f202-39e0-4604-b235-8823b5f96003",
+                ),
+                found.map { it.identifiers.musicBrainzId },
+            )
+            assertEquals(1f, found[1].matchScore)
+        }
+    }
+
+    @Test
     fun `album choices preserve differences in year country and type`() = runTest {
         // Given - modelled pressings contain one duplicate and three independently different visible fields.
         http.givenJsonResponse("release?query", fixture("album-variants"))

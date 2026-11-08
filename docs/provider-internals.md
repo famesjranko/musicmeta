@@ -113,7 +113,8 @@ name does not inherit its rank. Search alone folds curly double quotes, typograp
 (including U+2032/U+02BC), U+2010/U+2011 hyphens, and the ellipsis before title comparison;
 enrichment's shared title matcher keeps its own policy.
 
-After ranking, candidates with identical title, artist, year, country, type, thumbnail,
+Before ranking, merged recording and release pools keep each MusicBrainz ID once at its highest
+upstream score. After ranking, candidates with identical title, artist, year, country, type, thumbnail,
 disambiguation and score collapse to the first row before the limit. Distinct visible editions
 remain choices. Artist search keeps its upstream order with the same collapse rule.
 A nonempty strict track search with a supplied artist adds one filtered canonical pool, unless

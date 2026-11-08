@@ -1,0 +1,25 @@
+{
+  "recordings": [
+    {
+      "id": "adbf08e6-2cf8-4dd3-bb5b-bdddba25da27",
+      "title": "Karma Police",
+      "score": 100,
+      "artist-credit": [
+        {
+          "name": "Radiohead",
+          "artist": {
+            "id": "a74b1b7f-71a5-4011-9441-d0b5e4122711",
+            "name": "Radiohead"
+          },
+          "joinphrase": " feat. "
+        },
+        {
+          "name": "Michael Stipe",
+          "artist": {
+            "name": "Michael Stipe"
+          }
+        }
+      ]
+    }
+  ]
+}

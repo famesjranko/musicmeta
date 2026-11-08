@@ -425,6 +425,10 @@ siblings.
 
 ## Area — Provider data and matching
 
+- Broad and artist-specific MusicBrainz searches can return the same MBID at different scores.
+  Deduplicate their combined candidate pool by MBID, keeping the highest score before ranking
+  and limiting. Visible-row collapse includes score, so it cannot enforce entity uniqueness.
+
 - A popularity hint about an artist is not an acceptance decision about a recording. On
   2026-11-07, iTunes' first result for `Creep` was Radiohead's `Creep (Acoustic)`, before bare-title
   results from Stone Temple Pilots and TLC. Applying recording-title equality before reading the
