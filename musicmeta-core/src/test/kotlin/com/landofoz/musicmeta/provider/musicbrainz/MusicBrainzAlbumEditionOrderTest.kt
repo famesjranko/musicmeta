@@ -11,6 +11,61 @@ import org.junit.Test
 
 class MusicBrainzAlbumEditionOrderTest {
     @Test
+    fun `artist credit ids preserve upstream credit order`() {
+        // Given - the captured original credits Getz, Gilberto and Jobim in that order.
+        val original = row("getz-gilberto", "3dbe8250-a4e4-4bc4-a32c-db0e3a88375d")
+
+        // When - the release is parsed from the upstream response shape.
+        val found = MusicBrainzParser.parseReleases(JSONObject().put("releases", JSONArray().put(original))).single()
+
+        // Then - the first credited artist and every following id retain their upstream positions.
+        assertEquals(
+            listOf("8f2422ab-0ec6-4c92-80c4-afe9622fab32", "286ec4c2-b5ca-4f85-b331-280a6d73dd14", "7a8dbe84-f4c0-4457-bfa3-edced1f8cde0"),
+            found.artistCreditIds,
+        )
+    }
+
+    @Test
+    fun `different first artists keep separate edition slots despite a shared guest`() {
+        // Given - a boundary pool has a Getz and Gilberto duet followed by an earlier Jobim and Getz edition.
+        val duet = parsed("getz-gilberto", "1cb544a7-f1d6-4159-9661-8645cbaf257c")
+        val original = parsed("getz-gilberto", "3dbe8250-a4e4-4bc4-a32c-db0e3a88375d")
+        val other = original.copy(
+            artistCredit = "Antônio Carlos Jobim feat. Stan Getz",
+            artistCredits = listOf(original.artistCredits.last(), duet.artistCredits.first()),
+            artistCreditIds = listOf(original.artistCreditIds.last(), duet.artistCreditIds.first()),
+        )
+
+        // When - equivalent-title editions in the same release group are ordered.
+        val found = MusicBrainzAlbumCandidateOrder.order(listOf(duet, other), "Getz/Gilberto") { it }
+
+        // Then - a shared guest cannot move an edition with a different first artist into the duet's slot.
+        assertEquals(listOf(duet.id, other.id), found.map { it.id })
+    }
+
+    @Test
+    fun `first credited artist cannot merge a solo release across groups above a supplied collaborator`() = runTest {
+        // Given - a boundary pool has Getz and Gilberto together and an earlier Getz solo release in another group.
+        val duet = row("getz-gilberto", "1cb544a7-f1d6-4159-9661-8645cbaf257c")
+        val soloArtist = JSONObject(duet.getJSONArray("artist-credit").getJSONObject(0).toString()).put("joinphrase", "")
+        val otherGroup = row("getz-gilberto", "472652de-f9b0-4dad-a836-bdd754699c9c").getJSONObject("release-group").getString("id")
+        val solo = row("getz-gilberto", "3dbe8250-a4e4-4bc4-a32c-db0e3a88375d").apply {
+            put("artist-credit", JSONArray().put(soloArtist))
+            getJSONObject("release-group").put("id", otherGroup)
+        }
+        val http = FakeHttpClient().apply {
+            givenJsonResponse("release?query", JSONObject().put("releases", JSONArray(listOf(duet, solo))).toString())
+        }
+        val provider = MusicBrainzProvider(http, RateLimiter(0))
+
+        // When - the caller supplies the collaborator Gilberto rather than the first credited artist.
+        val found = provider.searchCandidates(EnrichmentRequest.forAlbum("Getz/Gilberto", "João Gilberto"), 2)
+
+        // Then - the shared first artist cannot move the solo release above the supplied collaborator.
+        assertEquals(listOf(duet.getString("id"), solo.getString("id")), found.map { it.identifiers.musicBrainzId })
+    }
+
+    @Test
     fun `release group joins guest credit variations before truncation`() = runTest {
         // Given - the captured original adds Jobim to the reissue's Getz and Gilberto credits.
         val http = FakeHttpClient().apply { givenJsonResponse("release?query", fixture("getz-gilberto")) }

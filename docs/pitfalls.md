@@ -583,8 +583,8 @@ without filtering them; retention in the pool does not promise a place inside ev
 One release group's credits can vary between pressings: Getz/Gilberto's 1964 original credits
 Jobim as well as Getz and Gilberto, while the captured 2011 reissue credits only the latter two.
 An exact artist-id set splits these editions and leaves the reissue first. Compare editions by
-release group as well, but require a shared credited artist id between every pair that can
-exchange slots; a guest credit must not bridge disjoint artists. Artist-id sets also do not
+release group and first credited artist as well; a shared guest cannot bridge different first
+artists. Artist-id sets also do not
 preserve display-credit priority: `&`, `and` and `-` forms naming the same people may exchange
 places even when a supplied name or hint matches one form more closely.
 

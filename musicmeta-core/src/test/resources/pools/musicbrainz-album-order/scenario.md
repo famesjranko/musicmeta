@@ -55,8 +55,8 @@ MusicBrainz `created` values, not independently recorded wall-clock fetch times.
   URL: `https://musicbrainz.org/ws/2/release?query=release%3A%22Rumours%22+AND+artistname%3A%22Fleetwood+Mac%22&fmt=json&limit=100`
   SHA-256: `13dc4ef678eb4194e2a554d5f2d333f0fd61e10903dd6de62f05529d67065a99`
 
-The disjoint-credit boundary tests deliberately replace or select artist credits
-from captured rows while retaining a release group. These model inconsistent
-credits, not additional upstream observations. The date-policy unit test uses
+The credit-boundary tests deliberately replace or select artist credits and
+release-group ids from captured rows to isolate grouping rules. These model
+boundary cases, not additional upstream observations. The date-policy unit test uses
 explicit boundary dates on a captured DTO; the live-pool date regressions use
 unchanged response bodies. No test claims the modelled cases were seen live.

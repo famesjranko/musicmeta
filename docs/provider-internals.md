@@ -166,10 +166,8 @@ For album candidates, exact-title releases are first reordered within the same s
 artist-id set. Different display-credit forms for those people can exchange places, even when
 a supplied artist or hint matched one form more closely. Releases without structured ids use
 the complete display credit; an absent credit is not grouped. A second pass orders editions
-of one release group together, including guest-credit variations, only when each pair shares
-at least one credited artist id. Disjoint credits cannot exchange slots or be joined through
-an overlapping guest credit. These groups are formed in MBID order so upstream order cannot
-change membership.
+of one release group together when their first credited artist id matches, including guest-credit
+variations; different first artists and different id sets stay separate.
 
 Complete date/status/type evidence leads, then official status, Album primary type, no secondary
 types, earliest pressing date, blank disambiguation, score and MBID. Within a year or month,

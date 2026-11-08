@@ -2,7 +2,7 @@ package com.landofoz.musicmeta.provider.musicbrainz
 
 import com.landofoz.musicmeta.engine.SearchTitleMatcher
 
-/** Orders exact-title pressings within artist credits and compatible release-group editions before the limit. */
+/** Orders exact-title pressings by artist-id set, then release group and first credited artist, before the limit. */
 internal object MusicBrainzAlbumCandidateOrder {
     fun <T> order(
         candidates: List<T>, title: String, releaseOf: (T) -> MusicBrainzRelease?,
@@ -19,7 +19,11 @@ internal object MusicBrainzAlbumCandidateOrder {
                     it.artistCreditIds.isNotEmpty()
             }?.let { index to it }
         }.toMap()
-        rankSlots(result, editionGroups(editions), releaseOf)
+        val editionGroups = editions.keys.groupBy { index ->
+            val release = editions.getValue(index)
+            release.releaseGroupId to release.artistCreditIds.first()
+        }
+        rankSlots(result, editionGroups.values, releaseOf)
         return result
     }
 
@@ -32,22 +36,6 @@ internal object MusicBrainzAlbumCandidateOrder {
             slots.sorted().zip(ordered).forEach { (index, candidate) -> candidates[index] = candidate }
         }
     }
-
-    private fun editionGroups(releases: Map<Int, MusicBrainzRelease>): List<List<Int>> =
-        releases.keys.groupBy { releases.getValue(it).releaseGroupId }.values.flatMap { slots ->
-            val groups = mutableListOf<MutableList<Int>>()
-            slots.sortedBy { releases.getValue(it).id }.forEach { index ->
-                val release = releases.getValue(index)
-                // Every pair must overlap: a guest credit cannot bridge otherwise disjoint artists.
-                val group = groups.firstOrNull { members ->
-                    members.all { other ->
-                        release.artistCreditIds.any { it in releases.getValue(other).artistCreditIds }
-                    }
-                }
-                if (group == null) groups.add(mutableListOf(index)) else group.add(index)
-            }
-            groups
-        }
 
     private fun artistKey(release: MusicBrainzRelease): List<String>? =
         if (release.artistCreditIds.isNotEmpty()) {
