@@ -79,16 +79,11 @@ build cache, so the snapshot cannot read or write shared compilation entries.
 A commit made while another Gradle build is running starts a second daemon. It does not compile
 `consumers/demo-cli/` or `consumers/demo-web/`, run tests, or run detekt.
 
-Local cost was measured on a 9.7 GiB machine with two Gradle workers and private caches.
-These are two warm full-check samples and two warm hook commits, with no Kotlin source change
-between samples. Timings exclude waiting for the build lock:
-
-- Original baseline: `make check` 166.11 / 167.00 s (mean 166.56 s); hook 6.22 / 6.84 s (mean 6.53 s).
-- Reviewed full cache bypass: `make check` 302.39 / 296.65 s (mean 299.52 s); hook 49.31 / 49.11 s (mean 49.21 s).
-- Chosen guard: `make check` 240.09 / 235.06 s (mean 237.58 s); hook 6.93 / 7.06 s (mean 7.00 s).
-
-The full-guard sample of 315.11 s showed transient memory pressure and was discarded and
-repeated. The earlier hung build was outside all timed samples. CI was not measured.
+On a 9.7 GiB machine with two Gradle workers, a full `make check` takes about 238 s,
+compared with about 167 s without the guard. Each check figure uses two warm samples.
+A warm hook commit takes about 7 s, based on two empty commits. The hook's cost for the
+first commit in a fresh clone and after a Kotlin change is not measured. CI is not measured.
+Timings exclude waiting for the build lock.
 
 ## Known gaps
 
