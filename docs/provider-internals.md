@@ -71,7 +71,17 @@ reordered guest lists are not treated as equivalent, and differently separated l
 where the same-name rules equate the separators (`&` and `and`).
 Other qualifiers still pass unchanged to `TitleMatcher`; a credit group containing a version marker
 is kept intact. The primary artist must still be the same normalized name or a name in the resolved
-alias pool, and the album must agree with a supplied hint. A supplied
+alias pool. Within the eligible title preference and compatible credit group, a supplied album
+hint prefers exact albums, then compatible editions, then other albums, before artist-tier and
+upstream-order ties.
+Album comparison reuses `TitleMatcher` parts and the shared `MusicBrainzQualifierFallback` edition
+vocabulary, so remaster, deluxe, expanded and anniversary decorations can match the same base
+album. Album hints never reject an otherwise matching recording; unrecognized suffixes such as
+`: Reloaded` receive no album preference. Track-title and guest-credit checks remain unchanged.
+If the album-qualified search has no acceptable recording, one search without the album follows
+through the same shared three-second limiter. This costs up to two iTunes requests per Deezer miss;
+an acceptable first pool costs one, and a missing or blank album skips the retry. Engine caching
+reuses the final preview result under the original request, including its hint. A supplied
 `itunesTrackId` or `ITUNES_COLLECTION` uses lookup and must still agree with the request; a wrong identifier never triggers a name-search substitution. ISRC lookup is unsupported
 by iTunes. The US store is explicit on both routes.
 

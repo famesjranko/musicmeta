@@ -160,7 +160,7 @@ class ITunesPreviewFallbackTest {
     }
 
     @Test
-    fun `an album hint cannot be replaced by an unrelated release`() = runTest {
+    fun `an album hint does not reject the same recording on an EP`() = runTest {
         // Given - only the EP release matches the title and artist but the request names OK Computer.
         http.givenJsonResponse("api.deezer.com", """{"data":[]}""")
         http.givenJsonResponse("itunes.apple.com/search", songs { it.getLong("collectionId") == 1112414716L })
@@ -169,9 +169,9 @@ class ITunesPreviewFallbackTest {
         // When - requesting the preview from that album.
         val result = engine.enrich(hinted, setOf(type))
 
-        // Then - the EP is not accepted as a substitute for the requested album.
-        assertTrue(result.raw[type] is EnrichmentResult.NotFound)
-        assertTrue(http.requestedUrls.any { "itunes.apple.com" in it })
+        // Then - the matching recording supplies a preview even though the hinted album is unavailable.
+        assertTrue(result.raw[type] is EnrichmentResult.Success)
+        assertEquals(1, http.requestedUrls.count { "itunes.apple.com" in it })
         engine.close()
     }
 
@@ -229,17 +229,19 @@ class ITunesPreviewFallbackTest {
 
     @Test
     fun `a cached iTunes URL is reused without fetching preview media`() = runTest {
-        // Given - a successful fallback after a Deezer block is cached as URL metadata.
+        // Given - a broader search finds the preview after a Deezer block and an empty album-qualified search.
         http.givenHttpResult("api.deezer.com", HttpResult.ClientError(403))
-        http.givenJsonResponse("itunes.apple.com/search", fixture)
-        val first = engine.enrich(request, setOf(type))
+        http.givenJsonResponsesInTurn("itunes.apple.com/search", """{"resultCount":0,"results":[]}""", fixture)
+        val hinted = EnrichmentRequest.forTrack("Karma Police", "Radiohead", "OK Computer")
+        val first = engine.enrich(hinted, setOf(type))
 
         // When - the same preview is served again from cache.
-        val cached = engine.enrich(request, setOf(type))
+        val cached = engine.enrich(hinted, setOf(type))
 
-        // Then - the cached metadata answers without downloading or proxying preview media.
+        // Then - the cached metadata answers without repeating either search or fetching preview media.
+        assertTrue(first.raw[type] is EnrichmentResult.Success)
         assertEquals(first.raw[type], cached.raw[type])
-        assertEquals(2, http.requestedUrls.size)
+        assertEquals(3, http.requestedUrls.size)
         assertTrue(http.requestedUrls.all { "api.deezer.com" in it || "itunes.apple.com/search" in it })
         engine.close()
     }

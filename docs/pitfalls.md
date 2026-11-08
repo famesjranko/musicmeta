@@ -507,7 +507,9 @@ same response. A bare `ft`, `feat` or `featuring` can also be ordinary title tex
 bracketed credits, preserve a title that would become empty, and prefer exact titles. A credited
 request must not fall back to a plain recording. A plain request can accept one compatible guest
 group, but competing guest versions need more evidence than upstream order. Keep these tolerances
-private to previews.
+private to previews. An album hint is a preference among those eligible recordings, not a
+recording constraint. Keep its edition-tolerant preference even when a nonmatching compilation
+comes first, but never strip a track-title qualifier to satisfy the album hint.
 
 ## 3. `org.json` returns a default for a missing key — it does not fail
 

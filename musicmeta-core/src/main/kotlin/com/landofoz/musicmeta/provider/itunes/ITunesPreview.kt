@@ -13,6 +13,7 @@ import com.landofoz.musicmeta.engine.ConfidenceCalculator
 import com.landofoz.musicmeta.engine.TitleMatcher
 import com.landofoz.musicmeta.engine.resolvedAliasPool
 import com.landofoz.musicmeta.engine.sameNameTier
+import com.landofoz.musicmeta.provider.musicbrainz.MusicBrainzQualifierFallback
 import java.net.URI
 import java.net.URISyntaxException
 
@@ -22,12 +23,13 @@ internal suspend fun ITunesProvider.enrichPreview(request: EnrichmentRequest, ap
     if (request !is EnrichmentRequest.ForTrack) return EnrichmentResult.NotFound(type, id)
     return try {
         val constraints = PreviewConstraints.from(request) ?: return EnrichmentResult.NotFound(type, id)
-        val term = listOfNotNull(request.artist, previewTitle(request.title), request.album?.takeIf { it.isNotBlank() })
-            .joinToString(" ").foldPreviewApostrophes()
-        val candidates = api.previewTracks(term, constraints.trackId, constraints.collectionId)
-            .filter(constraints::accepts)
-        val selected = candidates.groupBy { constraints.titlePreference(it) }.toSortedMap(reverseOrder())
-            .values.firstNotNullOfOrNull { it.selectArtist(request.artist) }
+        val baseTerm = "${request.artist} ${previewTitle(request.title)}".foldPreviewApostrophes()
+        val album = request.album?.takeIf { it.isNotBlank() }
+        val term = listOfNotNull(baseTerm, album?.foldPreviewApostrophes()).joinToString(" ")
+        val selected = constraints.select(api.previewTracks(term, constraints.trackId, constraints.collectionId))
+            ?: baseTerm.takeIf { album != null && !constraints.hasIdentifier }?.let {
+                constraints.select(api.previewTracks(it, null, null))
+            }
             ?: return EnrichmentResult.NotFound(type, id)
         val track = selected.value
         EnrichmentResult.Success(
@@ -50,6 +52,8 @@ private class PreviewConstraints(
     val collectionId: Long?,
 ) {
     private val title = parsePreviewTitle(request.title)
+    private val album = request.album?.takeIf { it.isNotBlank() }?.foldPreviewApostrophes()
+    private val albumTitles = album?.let(::previewAlbumTitles).orEmpty()
 
     val hasIdentifier: Boolean get() = trackId != null || collectionId != null
 
@@ -58,9 +62,6 @@ private class PreviewConstraints(
         if (trackId != null && track.trackId != trackId) return false
         if (collectionId != null && track.collectionId != collectionId) return false
         if (!title.matches(parsePreviewTitle(track.title))) return false
-        val album = request.album
-        if (!album.isNullOrBlank() &&
-            !TitleMatcher.equivalent(album.foldPreviewApostrophes(), track.album.foldPreviewApostrophes())) return false
         val url = try {
             URI(track.previewUrl)
         } catch (_: URISyntaxException) {
@@ -69,7 +70,18 @@ private class PreviewConstraints(
         return url.scheme == "https" && url.host != null
     }
 
-    fun titlePreference(track: ITunesPreviewTrack): Int = when {
+    suspend fun select(candidates: List<ITunesPreviewTrack>): ArtistNameMatch<ITunesPreviewTrack>? =
+        candidates.filter(::accepts).groupBy(::titlePreference).toSortedMap(reverseOrder())
+            .values.firstNotNullOfOrNull { it.selectArtist(request.artist, ::albumPreference) }
+
+    private fun albumPreference(track: ITunesPreviewTrack): TitleMatcher.TitleTier = when {
+        album != null && TitleMatcher.equivalent(album, track.album.foldPreviewApostrophes()) ->
+            TitleMatcher.TitleTier.EXACT
+        albumTitles.any { it in previewAlbumTitles(track.album) } -> TitleMatcher.TitleTier.EDITION
+        else -> TitleMatcher.TitleTier.NONE
+    }
+
+    private fun titlePreference(track: ITunesPreviewTrack): Int = when {
         TitleMatcher.equivalent(request.title.foldPreviewApostrophes(), track.title.foldPreviewApostrophes()) -> 2
         title.credits.isNotEmpty() && parsePreviewTitle(track.title).credits.isNotEmpty() -> 1
         else -> 0
@@ -85,16 +97,24 @@ private class PreviewConstraints(
     }
 }
 
-private suspend fun List<ITunesPreviewTrack>.selectArtist(artist: String): ArtistNameMatch<ITunesPreviewTrack>? {
+private suspend fun List<ITunesPreviewTrack>.selectArtist(
+    artist: String,
+    albumPreference: (ITunesPreviewTrack) -> TitleMatcher.TitleTier,
+): ArtistNameMatch<ITunesPreviewTrack>? {
     fun matches(aliases: List<AlternativeName>) = mapNotNull { track ->
         sameNameTier(artist, track.artist, aliases)?.let { ArtistNameMatch(track, it) }
     }
     val matches = matches(emptyList()).ifEmpty { matches(resolvedAliasPool()) }
-    val selected = matches.maxByOrNull { it.tier.confidenceFactor } ?: return null
+    val selected = matches.maxWithOrNull(compareBy<ArtistNameMatch<ITunesPreviewTrack>> { albumPreference(it.value) }
+        .thenBy { it.tier.confidenceFactor }) ?: return null
     val title = parsePreviewTitle(selected.value.title)
     if (matches.any { !title.sameCredits(parsePreviewTitle(it.value.title)) }) return null
     return selected
 }
+
+private fun previewAlbumTitles(album: String): List<TitleMatcher.Parts> =
+    MusicBrainzQualifierFallback.qualifierFallbackCandidates(album.foldPreviewApostrophes())
+        .map { TitleMatcher.parse(it.title) }
 
 private fun String.foldPreviewApostrophes(): String = replace('‘', '\'').replace('’', '\'')
 

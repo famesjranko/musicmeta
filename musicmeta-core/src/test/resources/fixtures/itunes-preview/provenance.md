@@ -29,3 +29,17 @@ credited recordings. Plain-request tests reverse a two-row subset to prove that 
 beats upstream order in both directions. Boundary and credit-selection tests explicitly replace a captured title or URL
 to exercise malformed data and ordinary title words; these replacements are not upstream claims.
 The schema-pin test removes `previewUrl` to simulate drift. No preview media was requested or saved.
+
+Full Journey US song pools captured 2026-11-08 before the album-preference change:
+
+- `journey-escape.json`: HTTP 200 at 06:39:09 UTC from https://itunes.apple.com/search?media=music&entity=song&country=us&term=Journey+Don%27t+Stop+Believin%27+Escape&limit=25 (25 rows).
+- `journey-full.json`: HTTP 200 at 06:39:12 UTC from https://itunes.apple.com/search?media=music&entity=song&country=us&term=Journey+Don%27t+Stop+Believin%27&limit=25 (23 rows).
+
+These files retain complete JSON responses and upstream order; only surrounding blank lines and
+trailing whitespace were removed. Exactly two iTunes requests were sent, at least 3.2 seconds apart, with `MusicEnrichmentEngine/1.0` and the repository URL
+in the User-Agent. No Deezer request or preview-media request was sent.
+The Escape row (`1640102584`) has both a track-title and an album-title `2022 Remaster` qualifier;
+a plain-title request must still refuse that track, even when the album preference matches.
+Album-preference tests use unchanged captured rows and vary only the requested album hint,
+including edition qualifiers from the shared vocabulary. Retry tests select only captured live
+or other-artist rows for an unacceptable first pool, or an empty pool to model absence.

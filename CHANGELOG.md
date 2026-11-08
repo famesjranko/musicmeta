@@ -30,7 +30,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
-- iTunes supplies `TRACK_PREVIEW` after Deezer and plays only the requested recording: exact titles win, named guests must match, and competing guest versions give no preview
+- iTunes supplies `TRACK_PREVIEW` after Deezer: exact titles win, guests must match, and competing guests give no preview; album hints prefer compatible editions but allow other albums
 - Any provider's auth refusal now logs a warning, including a rejected Last.fm, Discogs or Fanart.tv key and a Deezer host block that iTunes covered; cache hits stay silent
 - The demo web UI marks a provider that refused this host at startup with a warning and explains it on hover (demo only)
 
@@ -42,7 +42,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - iTunes preview clips use `.m4a` URLs with `durationMs = null`; players must accept both these and Deezer's 30-second MP3 clips
 - `STALE_IF_ERROR` can now replace a Deezer 403 with an expired cache entry; inspect `isStale`
 - A failed `TRACK_PREVIEW` chain reports its last failing provider instead of `all_providers`
-- Each Deezer preview miss takes a serial 3-second iTunes slot shared with art and metadata; batches can hit the engine deadline, which `resolveTrackPreviews` returns as null
+- Each Deezer preview miss takes up to two serial 3-second iTunes slots shared with art and metadata: an album-qualified miss retries without the hint; batches can hit the engine deadline
 - Keeping iTunes art while refusing its previews requires checking `preview.source` or hand-wiring providers; there is no per-capability opt-out
 - Apple's policy snapshot now records verified preview restrictions: store promotion, a linked approved badge, courtesy attribution, and streaming without saving or caching media
 
