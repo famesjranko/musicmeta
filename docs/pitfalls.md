@@ -278,6 +278,8 @@ the deadline and persisted it under the primary *and* name-alias keys, so every 
 hit that skipped filtering (#56). Anything added inside that block inherits the same shape, which is
 why the guard is on the write-back rather than on catalog filtering.
 
+A rate limiter's wait counts against a `withTimeout` budget around the call. An optional signal must have more budget than the limiter interval, or the signal must be skipped.
+
 ## 20. `scope.launch` on an already-cancelled `Job` silently never runs its block
 
 ```kotlin
