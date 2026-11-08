@@ -73,10 +73,10 @@ internal class ProviderRegistry(
         allProviders.filterIsInstance<MusicBrainzProvider>().firstOrNull()
 
     /**
-     * Whether [id]'s breaker is closed — the best-effort gate for the one caller that reaches a
-     * provider without going through a chain. It admits only CLOSED: a half-open breaker's single
-     * probe belongs to a call whose outcome the breaker is waiting on, and this caller never reports
-     * one, so taking or spending it here would leave the breaker with no answer to settle on.
+     * Whether [id]'s breaker is closed — the gate for best-effort callers outside a provider chain.
+     * It admits only CLOSED: a half-open breaker's single probe belongs to a call whose outcome
+     * the breaker is waiting on, and these callers never report one, so taking or spending it here
+     * would leave the breaker with no answer to settle on.
      *
      * A caller that reads this must not report its own outcome back: a breaker is opened by the
      * failures of the answers a provider owes, never by a best-effort extra asked alongside them.

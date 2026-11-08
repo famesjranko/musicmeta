@@ -524,7 +524,7 @@ function clearCandidates() {
 }
 
 function candidateSubtitle(hit) {
-  return [hit.disambiguation, hit.artist, hit.releaseType, hit.year].filter(Boolean).join(' \u00b7 ');
+  return [hit.disambiguation, hit.artist, hit.releaseType, hit.year, hit.country].filter(Boolean).join(' \u00b7 ');
 }
 
 function renderCandidates(query) {

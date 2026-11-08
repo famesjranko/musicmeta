@@ -217,13 +217,24 @@ public interface EnrichmentEngine {
      * merging entirely. Every call re-asks providers over the network; nothing here reads or
      * writes [cache].
      *
-     * Asks the provider whose [EnrichmentProvider.isIdentityProvider] is true first, for up to
-     * [limit] candidates. Only if that returns fewer does it also ask every other provider whose
-     * [EnrichmentProvider.isAvailable] is true for the remainder. A candidate whose lowercased
-     * `title:artist` duplicates one the identity provider already returned is dropped. That dedup
-     * runs only against the identity provider, so two supplemental providers can both return the
-     * same entity — dedupe in the UI if that matters. A provider that throws is logged and
-     * contributes no candidates rather than failing the call.
+     * MusicBrainz searches rank exact titles first, then the supplied artist; non-exact titles
+     * keep upstream relevance ahead of edition evidence. Popular artists precede covers, with
+     * unmarked recordings first within an artist.
+     * Artist matching includes individual collaboration credits at same-name quality. With a
+     * registered iTunes provider, title-only album and track searches use its artist order as a
+     * popularity hint. This optional signal has a short timeout; failures warn, skips log at debug, and search
+     * continues with MusicBrainz ranking. Artist ranking and enrichment identity are unaffected.
+     *
+     * Asks the provider whose [EnrichmentProvider.isIdentityProvider] is true for up to
+     * [limit] candidates. Identical visible rows collapse before counting the remainder. Only if
+     * fewer remain does it also ask every other provider whose [EnrichmentProvider.isAvailable]
+     * is true for that same remainder. Supplemental title/artist matches are dropped unless their
+     * year, country, type or disambiguation identifies a distinct edition; absent year, country
+     * or type alone does not establish a difference. Scores and artwork do not identify editions.
+     * The combined list then collapses rows with identical title,
+     * artist, year, country, type, thumbnail, disambiguation and score, keeping the first provider's
+     * row. There is no paging to replace collapsed rows, so fewer than [limit] may remain.
+     * A provider that throws is logged and contributes no candidates rather than failing the call.
      */
     public suspend fun search(
         request: EnrichmentRequest,

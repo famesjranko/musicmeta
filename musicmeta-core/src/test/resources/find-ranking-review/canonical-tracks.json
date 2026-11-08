@@ -1,0 +1,40 @@
+{
+  "recordings": [
+    {
+      "id": "00000000-0000-4000-8000-000000000001",
+      "score": 100,
+      "title": "Under Pressure (Live)",
+      "length": 235400,
+      "artist-credit": [
+        {
+          "name": "Queen",
+          "joinphrase": " & ",
+          "artist": {
+            "id": "0383dadf-2a4e-4d10-a46a-e9e041da8eb3",
+            "name": "Queen"
+          }
+        },
+        {
+          "name": "David Bowie",
+          "joinphrase": "",
+          "artist": {
+            "id": "5441c29d-3602-4898-b1a1-b77fa23b8e50",
+            "name": "David Bowie"
+          }
+        }
+      ],
+      "releases": [
+        {
+          "id": "46a1cce2-a0a8-4816-9c7c-f48e0537032b",
+          "title": "The Freddie Mercury Tribute Concert",
+          "status": "Official",
+          "release-group": {
+            "id": "13ed01fd-af02-3030-afc1-17e62c53eb02",
+            "title": "The Freddie Mercury Tribute Concert",
+            "primary-type": "Album"
+          }
+        }
+      ]
+    }
+  ]
+}

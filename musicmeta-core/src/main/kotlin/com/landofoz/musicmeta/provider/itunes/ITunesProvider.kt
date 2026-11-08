@@ -70,6 +70,9 @@ public class ITunesProvider(
         ProviderCapability(EnrichmentType.ARTIST_DISCOGRAPHY, priority = 30),
     )
 
+    internal suspend fun searchTitleArtists(title: String, album: Boolean): List<String> =
+        api.searchTitleArtists(title, album)
+
     override suspend fun searchCandidates(
         request: EnrichmentRequest,
         limit: Int,

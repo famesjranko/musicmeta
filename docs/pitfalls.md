@@ -433,6 +433,17 @@ siblings.
 
 ## Area — Provider data and matching
 
+- Broad and artist-specific MusicBrainz searches can return the same MBID at different scores.
+  Deduplicate their combined candidate pool by MBID, keeping the highest score before ranking
+  and limiting. Visible-row collapse includes score, so it cannot enforce entity uniqueness.
+
+- A popularity hint about an artist is not an acceptance decision about a recording. On
+  2026-11-07, iTunes' first result for `Creep` was Radiohead's `Creep (Acoustic)`, before bare-title
+  results from Stone Temple Pilots and TLC. Applying recording-title equality before reading the
+  artist order discarded Radiohead's signal and filled Find with another artist's versions.
+  For a bare track title, the artist-hint route accepts same-base qualifiers; MusicBrainz still
+  searches and ranks the requested recording title. Keep this tolerance out of identity resolution.
+
 - A MusicBrainz `inc=` that names a relationship gets you the **link**, not the linked entity's own
   relations. `inc=work-rels` returns each work as a stub — id and title, no `relations` array — and
   the sub-entity's relations need `work-level-rels` (or `recording-level-rels`,
@@ -617,6 +628,13 @@ so a split can never displace a match the field already has, and an act whose ow
 for the reason `NameMatchTier` refuses a partial alias match: taking one field apart multiplies the
 strings a request is compared against, and a partial match against one of many is not a name.
 
+MusicBrainz supplies individual names in structured `artist-credit` entries. Keep those names
+through candidate mapping: the joined display `Queen & David Bowie` is not the same name as
+`Queen`, and lowering the bar to containment also admits `Killer Queen`. Candidate discovery needs
+the same-name test against each structured credit for both supplied artists and popularity hints.
+A supplied artist must have its own comparator tier before disambiguation; an empty hint list
+cannot stand in for the artist the request already named.
+
 ## 5. A capability's `identifierRequirement` defaults to `NONE`
 
 ```kotlin
@@ -667,6 +685,13 @@ loose at the bottom — bare containment, then 50% token overlap. For "Bad Compa
 Bunny. Rank on `matchQuality` first and let popularity break ties only *within* a rank: a
 popularity signal must never outrank name quality, only settle candidates whose names are equally
 good.
+
+Candidate discovery has a different title contract from enrichment identity. MusicBrainz's curly
+apostrophes and iTunes's straight ones can describe the same search choice, but changing the shared
+`TitleMatcher` would also change enrichment's acceptance policy. `SearchTitleMatcher` folds those
+punctuation forms only for candidate ranking and artist-hint filtering. Collapse duplicate choices
+after ranking and before the limit, using every visible field: collapsing by title and artist alone
+deletes distinct pressings, while collapsing only by identifier leaves an unusable list of equal rows.
 
 **Within a rank, though, popularity is not a tiebreak between two spellings — it is a guess between
 two acts.** The ghost case (one act listed twice) and the homonym case (two different acts of the

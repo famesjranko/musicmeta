@@ -1,0 +1,290 @@
+{
+  "recordings": [
+    {
+      "id": "c4291490-7989-4a9a-9850-e645d97cc6c9",
+      "score": 100,
+      "artist-credit-id": "2c9554a3-3ee3-37cb-8ac3-2c9bdc4ef7d2",
+      "title": "HUMBLE.",
+      "length": 199000,
+      "video": null,
+      "artist-credit": [
+        {
+          "name": "Kendrick Lamar",
+          "artist": {
+            "id": "381086ea-f511-4aba-bdf9-71c753dc5077",
+            "name": "Kendrick Lamar",
+            "sort-name": "Lamar, Kendrick",
+            "aliases": [
+              {
+                "sort-name": "Kendrick LAmar & SZA",
+                "name": "Kendrick Lamar, SZA",
+                "locale": null,
+                "type": null,
+                "primary": null,
+                "begin-date": null,
+                "end-date": null
+              },
+              {
+                "sort-name": "K. Duckworth",
+                "type-id": "1937e404-b981-3cb7-8151-4c86ebfc8d8e",
+                "name": "K. Duckworth",
+                "locale": null,
+                "type": "Search hint",
+                "primary": null,
+                "begin-date": null,
+                "end-date": null
+              },
+              {
+                "sort-name": "Kendrick Duckworth",
+                "type-id": "1937e404-b981-3cb7-8151-4c86ebfc8d8e",
+                "name": "Kendrick Duckworth",
+                "locale": null,
+                "type": "Search hint",
+                "primary": null,
+                "begin-date": null,
+                "end-date": null
+              },
+              {
+                "sort-name": "Duckworth, Kendrick Lamar",
+                "type-id": "d4dcd0c0-b341-3612-a332-c0ce797b25cf",
+                "name": "Kendrick Lamar Duckworth",
+                "locale": null,
+                "type": "Legal name",
+                "primary": null,
+                "begin-date": null,
+                "end-date": null
+              },
+              {
+                "sort-name": "ケンドリック・ラマー",
+                "type-id": "894afba6-2816-3c24-8072-eadb66bd04bc",
+                "name": "ケンドリック・ラマー",
+                "locale": "ja",
+                "type": "Artist name",
+                "primary": true,
+                "begin-date": null,
+                "end-date": null
+              },
+              {
+                "sort-name": "켄드릭 라마",
+                "type-id": "894afba6-2816-3c24-8072-eadb66bd04bc",
+                "name": "켄드릭 라마",
+                "locale": "ko",
+                "type": "Artist name",
+                "primary": true,
+                "begin-date": null,
+                "end-date": null
+              },
+              {
+                "sort-name": "OKLAMA",
+                "type-id": "1937e404-b981-3cb7-8151-4c86ebfc8d8e",
+                "name": "OKLAMA",
+                "locale": null,
+                "type": "Search hint",
+                "primary": null,
+                "begin-date": null,
+                "end-date": null
+              },
+              {
+                "sort-name": "K‐Dot",
+                "type-id": "894afba6-2816-3c24-8072-eadb66bd04bc",
+                "name": "K‐Dot",
+                "locale": null,
+                "type": "Artist name",
+                "primary": null,
+                "begin-date": null,
+                "end-date": null
+              },
+              {
+                "sort-name": "K. Dot",
+                "type-id": "1937e404-b981-3cb7-8151-4c86ebfc8d8e",
+                "name": "K. Dot",
+                "locale": null,
+                "type": "Search hint",
+                "primary": null,
+                "begin-date": null,
+                "end-date": null
+              }
+            ]
+          }
+        }
+      ],
+      "first-release-date": "2023"
+    },
+    {
+      "id": "398bf241-7d57-4993-860b-1f9ef496c97f",
+      "score": 100,
+      "artist-credit-id": "2c9554a3-3ee3-37cb-8ac3-2c9bdc4ef7d2",
+      "title": "HUMBLE.",
+      "length": 177000,
+      "disambiguation": "explicit",
+      "video": null,
+      "artist-credit": [
+        {
+          "name": "Kendrick Lamar",
+          "artist": {
+            "id": "381086ea-f511-4aba-bdf9-71c753dc5077",
+            "name": "Kendrick Lamar",
+            "sort-name": "Lamar, Kendrick",
+            "aliases": [
+              {
+                "sort-name": "Kendrick LAmar & SZA",
+                "name": "Kendrick Lamar, SZA",
+                "locale": null,
+                "type": null,
+                "primary": null,
+                "begin-date": null,
+                "end-date": null
+              },
+              {
+                "sort-name": "K. Duckworth",
+                "type-id": "1937e404-b981-3cb7-8151-4c86ebfc8d8e",
+                "name": "K. Duckworth",
+                "locale": null,
+                "type": "Search hint",
+                "primary": null,
+                "begin-date": null,
+                "end-date": null
+              },
+              {
+                "sort-name": "Kendrick Duckworth",
+                "type-id": "1937e404-b981-3cb7-8151-4c86ebfc8d8e",
+                "name": "Kendrick Duckworth",
+                "locale": null,
+                "type": "Search hint",
+                "primary": null,
+                "begin-date": null,
+                "end-date": null
+              },
+              {
+                "sort-name": "Duckworth, Kendrick Lamar",
+                "type-id": "d4dcd0c0-b341-3612-a332-c0ce797b25cf",
+                "name": "Kendrick Lamar Duckworth",
+                "locale": null,
+                "type": "Legal name",
+                "primary": null,
+                "begin-date": null,
+                "end-date": null
+              },
+              {
+                "sort-name": "ケンドリック・ラマー",
+                "type-id": "894afba6-2816-3c24-8072-eadb66bd04bc",
+                "name": "ケンドリック・ラマー",
+                "locale": "ja",
+                "type": "Artist name",
+                "primary": true,
+                "begin-date": null,
+                "end-date": null
+              },
+              {
+                "sort-name": "켄드릭 라마",
+                "type-id": "894afba6-2816-3c24-8072-eadb66bd04bc",
+                "name": "켄드릭 라마",
+                "locale": "ko",
+                "type": "Artist name",
+                "primary": true,
+                "begin-date": null,
+                "end-date": null
+              },
+              {
+                "sort-name": "OKLAMA",
+                "type-id": "1937e404-b981-3cb7-8151-4c86ebfc8d8e",
+                "name": "OKLAMA",
+                "locale": null,
+                "type": "Search hint",
+                "primary": null,
+                "begin-date": null,
+                "end-date": null
+              },
+              {
+                "sort-name": "K‐Dot",
+                "type-id": "894afba6-2816-3c24-8072-eadb66bd04bc",
+                "name": "K‐Dot",
+                "locale": null,
+                "type": "Artist name",
+                "primary": null,
+                "begin-date": null,
+                "end-date": null
+              },
+              {
+                "sort-name": "K. Dot",
+                "type-id": "1937e404-b981-3cb7-8151-4c86ebfc8d8e",
+                "name": "K. Dot",
+                "locale": null,
+                "type": "Search hint",
+                "primary": null,
+                "begin-date": null,
+                "end-date": null
+              }
+            ]
+          }
+        }
+      ],
+      "first-release-date": "2017-03-31",
+      "isrcs": [
+        "USUM71703085"
+      ],
+      "tags": [
+        {
+          "count": 1,
+          "name": "pop"
+        },
+        {
+          "count": 3,
+          "name": "hip hop"
+        },
+        {
+          "count": 1,
+          "name": "pop rap"
+        },
+        {
+          "count": 1,
+          "name": "english"
+        },
+        {
+          "count": 1,
+          "name": "west coast hip hop"
+        },
+        {
+          "count": 1,
+          "name": "trap"
+        },
+        {
+          "count": 1,
+          "name": "westcoast rap"
+        },
+        {
+          "count": 1,
+          "name": "offizielle charts"
+        },
+        {
+          "count": 1,
+          "name": "5+ wochen"
+        },
+        {
+          "count": 1,
+          "name": "ph_temp_checken"
+        }
+      ]
+    },
+    {
+      "id": "0cbef5ee-96b0-44d5-b829-f969c56f03a0",
+      "score": 100,
+      "artist-credit-id": "97b732fb-38fe-462a-8659-b045124e3e38",
+      "title": "humble.",
+      "length": 89000,
+      "video": null,
+      "artist-credit": [
+        {
+          "name": "TEARY EYED FOX",
+          "artist": {
+            "id": "0529b937-e436-4316-bf3c-8c69b02c6a0d",
+            "name": "TEARY EYED FOX",
+            "sort-name": "TEARY EYED FOX",
+            "disambiguation": "Indie Rap Musician"
+          }
+        }
+      ],
+      "first-release-date": "2023-12-21"
+    }
+  ]
+}

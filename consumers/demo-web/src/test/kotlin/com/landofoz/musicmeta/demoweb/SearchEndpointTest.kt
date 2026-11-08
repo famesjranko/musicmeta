@@ -74,6 +74,7 @@ class SearchEndpointTest {
             artist = "David Bowie",
             year = 1972,
             releaseType = "single",
+            country = "GB",
         )
         val port = startTestServer(StubSearchProvider(listOf(candidate)))
 
@@ -90,6 +91,7 @@ class SearchEndpointTest {
         assertEquals("Starman", hitJson["title"]?.jsonPrimitive?.content)
         assertEquals(0.95f, hitJson["score"]!!.jsonPrimitive.float, 0.0001f)
         assertEquals("mbid-starman", hitJson["mbid"]?.jsonPrimitive?.content)
+        assertEquals("GB", hitJson["country"]?.jsonPrimitive?.content)
     }
 
     @Test fun `search with no matching candidates is an empty result, not an error`() {

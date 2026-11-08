@@ -1,0 +1,69 @@
+{
+  "count": 187,
+  "recordings": [
+    {
+      "id": "a2a656a5-e15a-4364-ab05-275f6ade9786",
+      "score": 100,
+      "title": "Under Pressure",
+      "length": 267933,
+      "artist-credit": [
+        {
+          "name": "Joss Stone",
+          "joinphrase": "",
+          "artist": {
+            "id": "dbbc47a5-1338-4830-9298-a8d0b11c0a46",
+            "name": "Joss Stone"
+          }
+        }
+      ],
+      "releases": [
+        {
+          "id": "144526f8-40ab-49b0-85d5-fc28694be43e",
+          "title": "Killer Queen: A Tribute to Queen",
+          "status": "Official",
+          "release-group": {
+            "id": "422e196f-52d0-360c-8a8d-94f9aed28ef3",
+            "title": "Killer Queen: A Tribute to Queen",
+            "primary-type": "Album"
+          }
+        }
+      ]
+    },
+    {
+      "id": "6f903161-8757-4363-a6ab-54bfe1149bb8",
+      "score": 100,
+      "title": "Under Pressure",
+      "length": 235400,
+      "artist-credit": [
+        {
+          "name": "Queen",
+          "joinphrase": " & ",
+          "artist": {
+            "id": "0383dadf-2a4e-4d10-a46a-e9e041da8eb3",
+            "name": "Queen"
+          }
+        },
+        {
+          "name": "David Bowie",
+          "joinphrase": "",
+          "artist": {
+            "id": "5441c29d-3602-4898-b1a1-b77fa23b8e50",
+            "name": "David Bowie"
+          }
+        }
+      ],
+      "releases": [
+        {
+          "id": "46a1cce2-a0a8-4816-9c7c-f48e0537032b",
+          "title": "Greatest Hits II",
+          "status": "Official",
+          "release-group": {
+            "id": "13ed01fd-af02-3030-afc1-17e62c53eb02",
+            "title": "Greatest Hits II",
+            "primary-type": "Album"
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,54 @@
+{
+  "recordings": [
+    {
+      "id": "00e9aa21-e7f9-4369-a6a8-f1087791780a",
+      "title": "Karma Police",
+      "score": 100,
+      "artist-credit": [
+        {
+          "name": "Radiohead",
+          "artist": {
+            "id": "a74b1b7f-71a5-4011-9441-d0b5e4122711",
+            "name": "Radiohead"
+          }
+        }
+      ]
+    },
+    {
+      "id": "adbf08e6-2cf8-4dd3-bb5b-bdddba25da27",
+      "title": "Karma Police",
+      "score": 90,
+      "artist-credit": [
+        {
+          "name": "Radiohead",
+          "artist": {
+            "id": "a74b1b7f-71a5-4011-9441-d0b5e4122711",
+            "name": "Radiohead"
+          },
+          "joinphrase": " feat. "
+        },
+        {
+          "name": "Michael Stipe",
+          "artist": {
+            "name": "Michael Stipe"
+          }
+        }
+      ]
+    },
+    {
+      "id": "7366f202-39e0-4604-b235-8823b5f96003",
+      "title": "Karma Police",
+      "score": 100,
+      "artist-credit": [
+        {
+          "name": "Radiohead",
+          "artist": {
+            "id": "a74b1b7f-71a5-4011-9441-d0b5e4122711",
+            "name": "Radiohead"
+          }
+        }
+      ],
+      "disambiguation": "live, 2016\u201005\u201027: Roundhouse, London, UK"
+    }
+  ]
+}
