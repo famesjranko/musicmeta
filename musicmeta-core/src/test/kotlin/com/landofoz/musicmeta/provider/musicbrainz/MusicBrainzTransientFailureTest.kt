@@ -202,7 +202,7 @@ class MusicBrainzTransientFailureTest {
         /** `recording:"Enter Sandmanz Xyzqq" AND artistname:"Metallica"` URL-encoded — the strict track search. */
         private const val STRICT_TRACK_QUERY = "recording%3A%22Enter+Sandmanz+Xyzqq%22"
 
-        /** `recording:enter~ AND recording:sandmanz~ AND recording:xyzqq~ AND artistname:Metallica~` URL-encoded — the fuzzy track search. */
+        /** `recording:enter~ AND recording:sandmanz~ AND recording:xyzqq~ AND artistname:metallica~` URL-encoded — the fuzzy track search. */
         private const val FUZZY_TRACK_QUERY = "recording%3Aenter%7E+AND+recording%3Asandmanz%7E+AND+recording%3Axyzqq%7E"
 
         private val FUZZY_RECORDINGS_NEAR_MISS = """

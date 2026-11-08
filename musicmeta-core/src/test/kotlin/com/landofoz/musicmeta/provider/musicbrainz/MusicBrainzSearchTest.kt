@@ -194,7 +194,7 @@ class MusicBrainzSearchTest {
         /** `recording:"Enter Sandmanz Xyzqq" AND artistname:"Metallica"` URL-encoded — the strict query. */
         private const val STRICT_TYPO_QUERY = "recording%3A%22Enter+Sandmanz+Xyzqq%22"
 
-        /** `recording:enter~ AND recording:sandmanz~ AND recording:xyzqq~ AND artistname:Metallica~` URL-encoded — the fuzzy query. */
+        /** `recording:enter~ AND recording:sandmanz~ AND recording:xyzqq~ AND artistname:metallica~` URL-encoded — the fuzzy query. */
         private const val FUZZY_TYPO_QUERY = "recording%3Aenter%7E+AND+recording%3Asandmanz%7E+AND+recording%3Axyzqq%7E"
 
         private val RECORDING_SEARCH_FUZZY_MATCH = """

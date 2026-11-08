@@ -149,7 +149,7 @@ class MusicBrainzApiHostileQueryTest {
         api.searchReleasesFuzzy("""Abbey "Road""", "The Beatles")
 
         // Then - the quote is dropped and both lowercase words are required in one request
-        assertEquals("release:abbey~ AND release:road~ AND artistname:The Beatles~", decodedQuery())
+        assertEquals("release:abbey~ AND release:road~ AND artistname:the AND artistname:beatles~", decodedQuery())
         assertEquals(1, httpClient.requestedUrls.size)
     }
 
@@ -162,7 +162,7 @@ class MusicBrainzApiHostileQueryTest {
         api.searchReleasesFuzzy("OK\u0000Computer\nSide2", "Radiohead")
 
         // Then - controls separate words while short and numeric words stay exact in one request
-        assertEquals("release:ok AND release:computer~ AND release:side2 AND artistname:Radiohead~", decodedQuery())
+        assertEquals("release:ok AND release:computer~ AND release:side2 AND artistname:radiohead~", decodedQuery())
         assertEquals(1, httpClient.requestedUrls.size)
     }
 

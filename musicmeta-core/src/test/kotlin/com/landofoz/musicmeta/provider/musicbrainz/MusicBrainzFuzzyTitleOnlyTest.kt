@@ -77,7 +77,7 @@ class MusicBrainzFuzzyTitleOnlyTest(private val entity: String) {
     @Test
     fun `a supplied artist uses title words and preserves the request count`() = runTest {
         // Given - the captured response to the fielded artist-qualified typo query
-        val query = "$entity:karma~ AND $entity:polise~ AND artistname:Radiohead~"
+        val query = "$entity:karma~ AND $entity:polise~ AND artistname:radiohead~"
         val body = checkNotNull(
             javaClass.getResourceAsStream("/pools/musicbrainz-fuzzy-supplied-artist/$entity-polise-words.json"),
         ).bufferedReader().use { it.readText() }
@@ -87,8 +87,8 @@ class MusicBrainzFuzzyTitleOnlyTest(private val entity: String) {
         val titles = fuzzyTitles("Karma Polise", "Radiohead", limit = 3)
 
         // Then - the fielded query returns the intended three titles in one request
-        assertEquals(listOf("Karma Police", "Karma Police", "Karma Police"), titles)
         assertEquals(query, queries().single())
+        assertEquals(listOf("Karma Police", "Karma Police", "Karma Police"), titles)
         assertEquals("fmt=json&limit=3", httpClient.requestedUrls.single().substringAfter("&"))
     }
 
