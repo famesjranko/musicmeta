@@ -69,7 +69,7 @@ class MusicBrainzFuzzyWordSafetyTest(private val entity: String) {
         // When - requesting a fuzzy rescue for the decomposed title
         val titles = fuzzyTitles(title)
 
-        // Then - canonical composition keeps the short title below the fuzzy floor
+        // Then - the short Hangul title returns no suggestions and causes no request
         assertEquals(emptyList<String>(), titles)
         assertEquals(emptyList<String>(), httpClient.requestedUrls)
     }
@@ -95,7 +95,7 @@ class MusicBrainzFuzzyWordSafetyTest(private val entity: String) {
         // When - requesting a fuzzy rescue for the two-letter title
         val titles = fuzzyTitles(title)
 
-        // Then - the floor counts code points rather than UTF-16 code units
+        // Then - the two-letter title returns no suggestions and causes no request
         assertEquals(emptyList<String>(), titles)
         assertEquals(emptyList<String>(), httpClient.requestedUrls)
     }

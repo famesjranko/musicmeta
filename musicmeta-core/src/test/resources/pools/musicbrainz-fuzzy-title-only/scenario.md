@@ -2,6 +2,9 @@
 
 ## Provenance
 
+An unlabeled timestamp is local receipt time. `created=` labels the upstream response
+creation time; `received=` explicitly labels local receipt time when both are given.
+
 Captured on 2026-11-07. Each JSON file is the complete,
 unmodified HTTP 200 response (limit=3) from the URL below. No fields or rows were edited.
 User-Agent: `MusicEnrichmentEngine/1.0 ( https://github.com/famesjranko/musicmeta )`,
@@ -124,7 +127,7 @@ HTTP 200 responses; every URL and timestamp is recorded below.
   - `https://musicbrainz.org/ws/2/release?query=release%3ARumours~+AND+release%3ADeluxe~+AND+%28release%3ARumours+OR+release%3ADeluxe%29&fmt=json&limit=3`
 - `release-rumours-punctuated.json` — 2026-11-07T17:03:39.382561+00:00, count=0
   - `https://musicbrainz.org/ws/2/release?query=release%3ARumours~+AND+release%3A%5C-~+AND+release%3ADeluxe~&fmt=json&limit=3`
-- `recording-short-cjk-fuzzy.json` — 2026-11-07T16:55:27.785Z, count=5743
+- `recording-short-cjk-fuzzy.json` — created=2026-11-07T16:55:27.785Z, count=5743
   - `https://musicbrainz.org/ws/2/recording?query=recording%3A%E6%9D%B1%E5%87%89~&fmt=json&limit=3`
 - `recording-short-cjk-strict.json` — 2026-11-07T17:00:17.139146+00:00, count=0
   - `https://musicbrainz.org/ws/2/recording?query=recording%3A%22%E6%9D%B1%E5%87%89%22+AND+artistname%3A%22%22&fmt=json&limit=3`
@@ -138,7 +141,7 @@ HTTP 200 responses; every URL and timestamp is recorded below.
   - `https://musicbrainz.org/ws/2/release?query=release%3A%E6%9D%B1%E5%87%89~&fmt=json&limit=3`
 - `release-short-cjk-strict.json` — 2026-11-07T17:01:25.187489+00:00, count=0
   - `https://musicbrainz.org/ws/2/release?query=release%3A%22%E6%9D%B1%E5%87%89%22+AND+artistname%3A%22%22&fmt=json&limit=3`
-- `release-symbols-fuzzy.json` — 2026-11-07T16:55:39.008Z, count=172
+- `release-symbols-fuzzy.json` — created=2026-11-07T16:55:39.008Z, count=172
   - `https://musicbrainz.org/ws/2/release?query=release%3AF%E2%99%AF~+AND+release%3AB%E2%99%AF~+AND+release%3A%E2%88%9E~&fmt=json&limit=3`
 - `release-symbols-strict.json` — 2026-11-07T17:01:37.792662+00:00, count=0
   - `https://musicbrainz.org/ws/2/release?query=release%3A%22F%E2%99%AF+B%E2%99%AF+%E2%88%9E%22+AND+artistname%3A%22%22&fmt=json&limit=3`
@@ -411,14 +414,14 @@ the recording query supplies the positive title match.
 
 ### Query policy and limits
 
-Title-only queries use a four-code-point threshold. Their words contain letters, numbers
-and combining marks, with internal apostrophes retained, curly apostrophes normalized,
-and lowercase conversion using `Locale.ROOT`. Every word is required; only long words take
-`~`, with no additional exact-word constraint. A title whose long words are all misspelled
-can produce candidates. One approximate word can satisfy several fuzzy clauses, as `Rolc`
-can for `Rokc Roll`. Responses are not filtered by title. Short-only titles receive no fuzzy
-request. These captures do not prove relevance of the complete pool, general multilingual
-recall, latency or live enrichment end to end.
+Title-only queries normalize to NFC and use a four-code-point threshold before lowercasing.
+Words start with a letter or number and can continue with letters, numbers and combining marks;
+internal apostrophes are retained, curly apostrophes normalized, and lowercasing uses `Locale.ROOT`.
+Every word is required; only long words without a Unicode number take `~`, with no additional
+exact-word constraint. Several misspelled words can still produce candidates. One approximate
+word can satisfy several fuzzy clauses, as `Rolc` can for `Rokc Roll`. Responses are not filtered
+by title. Without a qualifying word, no fuzzy request is sent. These captures do not prove
+relevance of the complete pool, general multilingual recall, latency or live enrichment end to end.
 
 ## Numeric terms and Unicode word lengths
 
@@ -428,39 +431,92 @@ each response, including unsuccessful attempts. HTTP 503 responses were retried 
 three times; only complete unmodified HTTP 200 bodies are fixtures. Each entry records
 the response's `created` time, local receipt time, count, URL and SHA-256.
 
-- `recording-strman-2012-remaster-strict.json` — 2026-11-08T04:17:56.761Z, received=2026-11-08T04:17:56.892081+00:00, count=0
+- `recording-strman-2012-remaster-strict.json` — created=2026-11-08T04:17:56.761Z, received=2026-11-08T04:17:56.892081+00:00, count=0
   - `https://musicbrainz.org/ws/2/recording?query=recording%3A%22Strman+%5C-+2012+Remaster%22+AND+artistname%3A%22%22&fmt=json&limit=3`
   - SHA-256: `7c5dfbe3451d133eaccedf93aa3fde71d8694c2a8c22e91bcf49b9a0c808f030`
-- `recording-strman-2012-remaster-fuzzy-number.json` — 2026-11-08T04:17:59.312Z, received=2026-11-08T04:17:59.452523+00:00, count=5
+- `recording-strman-2012-remaster-fuzzy-number.json` — created=2026-11-08T04:17:59.312Z, received=2026-11-08T04:17:59.452523+00:00, count=5
   - `https://musicbrainz.org/ws/2/recording?query=recording%3Astrman~+AND+recording%3A2012~+AND+recording%3Aremaster~&fmt=json&limit=3`
   - SHA-256: `d4cbb022f1b0f166e4cb315e93ae9c12487555aad86975a11a40e35fd93ee62f`
-- `recording-strman-2012-remaster-exact-number.json` — 2026-11-08T04:18:05.567Z, received=2026-11-08T04:18:05.697051+00:00, count=2
+- `recording-strman-2012-remaster-exact-number.json` — created=2026-11-08T04:18:05.567Z, received=2026-11-08T04:18:05.697051+00:00, count=2
   - `https://musicbrainz.org/ws/2/recording?query=recording%3Astrman~+AND+recording%3A2012+AND+recording%3Aremaster~&fmt=json&limit=3`
   - SHA-256: `8ddb6474697e0fcbcd72d96869dbdd70d4cc0a592c521e955b0e2f2626157194`
-- `release-live-at-wembly-1986-strict.json` — 2026-11-08T04:18:11.410Z, received=2026-11-08T04:18:11.537651+00:00, count=0
+- `release-live-at-wembly-1986-strict.json` — created=2026-11-08T04:18:11.410Z, received=2026-11-08T04:18:11.537651+00:00, count=0
   - `https://musicbrainz.org/ws/2/release?query=release%3A%22Live+at+Wembly+1986%22+AND+artistname%3A%22%22&fmt=json&limit=3`
   - SHA-256: `4a9de2f46d88c2e357608f6c01cfa19396be5f2502f7f421e997b4858f14b8ec`
-- `release-live-at-wembly-1986-fuzzy-number.json` — 2026-11-08T04:18:13.872Z, received=2026-11-08T04:18:14.003203+00:00, count=14
+- `release-live-at-wembly-1986-fuzzy-number.json` — created=2026-11-08T04:18:13.872Z, received=2026-11-08T04:18:14.003203+00:00, count=14
   - `https://musicbrainz.org/ws/2/release?query=release%3Alive~+AND+release%3Aat+AND+release%3Awembly~+AND+release%3A1986~&fmt=json&limit=3`
   - SHA-256: `eeccd52f662ad8e20009174a92531a46e0887714e422ea57f16d9da35f7a3c89`
-- `release-live-at-wembly-1986-exact-number.json` — 2026-11-08T04:18:17.900Z, received=2026-11-08T04:18:18.027359+00:00, count=0
+- `release-live-at-wembly-1986-exact-number.json` — created=2026-11-08T04:18:17.900Z, received=2026-11-08T04:18:18.027359+00:00, count=0
   - `https://musicbrainz.org/ws/2/release?query=release%3Alive~+AND+release%3Aat+AND+release%3Awembly~+AND+release%3A1986&fmt=json&limit=3`
   - SHA-256: `bd0cb7978f9a37495700b69fea99bb9ca112b9a4390d2961284942e75c5546bc`
-- `recording-karma-polise-quoted-empty-artist.json` — 2026-11-08T04:18:20.461Z, received=2026-11-08T04:18:20.592010+00:00, count=0
+- `recording-karma-polise-quoted-empty-artist.json` — created=2026-11-08T04:18:20.461Z, received=2026-11-08T04:18:20.592010+00:00, count=0
   - `https://musicbrainz.org/ws/2/recording?query=recording%3A%22Karma+Polise%22+AND+artistname%3A%22%22&fmt=json&limit=3`
   - SHA-256: `c754fd4ef33865f880df7c0bcc9782cb05598fbf2c4ad3e73f98a77be31e281d`
-- `recording-sum41.json` — 2026-11-08T04:18:23.027Z, received=2026-11-08T04:18:23.155309+00:00, count=1353
+- `recording-sum41.json` — created=2026-11-08T04:18:23.027Z, received=2026-11-08T04:18:23.155309+00:00, count=1353
   - `https://musicbrainz.org/ws/2/recording?query=recording%3Asum41~&fmt=json&limit=3`
   - SHA-256: `48145ba63797c4887d154990508419b0dd071d3c10c8883d034911dd1819081c`
-- `release-karma-polise-quoted-empty-artist.json` — 2026-11-08T04:18:25.435Z, received=2026-11-08T04:18:25.562775+00:00, count=0
+- `release-karma-polise-quoted-empty-artist.json` — created=2026-11-08T04:18:25.435Z, received=2026-11-08T04:18:25.562775+00:00, count=0
   - `https://musicbrainz.org/ws/2/release?query=release%3A%22Karma+Polise%22+AND+artistname%3A%22%22&fmt=json&limit=3`
   - SHA-256: `2b54c77a2518f09b650f19695c0978696caf3944071a2a7909a2f9e7a775c29a`
-- `release-sum41.json` — 2026-11-08T04:18:27.878Z, received=2026-11-08T04:18:28.351371+00:00, count=340
+- `release-sum41.json` — created=2026-11-08T04:18:27.878Z, received=2026-11-08T04:18:28.351371+00:00, count=340
   - `https://musicbrainz.org/ws/2/release?query=release%3Asum41~&fmt=json&limit=3`
   - SHA-256: `7d1a576c0704339d0b2744da568ac47e9da772d6de6b797494dc9b4d56c797eb`
 
 The numeric comparisons change only the fuzzy suffix on the year. Both strict title queries
 miss. The exact-number recording query retains the two 2012 editions; the exact-number release
-query returns no rows. The `sum41~` captures document the mixed letter-and-number query shape,
-not a guarantee of related results. The quoted empty-artist captures are the exact strict queries
+query returns no rows. The `sum41~` captures contain unrelated rows from fuzzy mixed-number
+queries and back the no-request test for that shape. The quoted empty-artist captures are the exact strict queries
 sent by candidate search, including `AND artistname:""`.
+
+## Mixed numbers and musical symbols
+
+Captured live on 2026-11-08 with the same User-Agent and limit=3 as above. Requests were
+sequential with at least 1.1 seconds after every response. HTTP 503 responses were retried
+at most three times; each fixture is a complete unmodified HTTP 200 body.
+
+- `release-gratest-hits-1980s-strict.json` — created=2026-11-08T06:04:47.136Z, received=2026-11-08T06:04:47.263960+00:00, count=0
+  - `https://musicbrainz.org/ws/2/release?query=release%3A%22Gratest+Hits+of+the+1980s%22+AND+artistname%3A%22%22&fmt=json&limit=3`
+  - SHA-256: `3eece04c1e337cd8968d4e107aedfa59f7c4b88396ccfc8bba47377aeabfd104`
+- `release-gratest-hits-1980s-fuzzy-number.json` — created=2026-11-08T06:04:52.177Z, received=2026-11-08T06:04:52.309071+00:00, count=15
+  - `https://musicbrainz.org/ws/2/release?query=release%3Agratest~+AND+release%3Ahits~+AND+release%3Aof+AND+release%3Athe+AND+release%3A1980s~&fmt=json&limit=3`
+  - SHA-256: `8b7beafaceda43ff35fd102b00ee3422dc326a9f962b8c0445e09aa2258c4944`
+- `release-gratest-hits-1980s-exact-number.json` — created=2026-11-08T06:04:54.744Z, received=2026-11-08T06:04:54.869711+00:00, count=1
+  - `https://musicbrainz.org/ws/2/release?query=release%3Agratest~+AND+release%3Ahits~+AND+release%3Aof+AND+release%3Athe+AND+release%3A1980s&fmt=json&limit=3`
+  - SHA-256: `0de4430e1e7fda17509da20ab81a054582566ac7630a87502b415604861bfd22`
+- `recording-short-cjk-2020-strict.json` — created=2026-11-08T06:04:57.899Z, received=2026-11-08T06:04:58.029376+00:00, count=0
+  - `https://musicbrainz.org/ws/2/recording?query=recording%3A%22%E6%9D%B1%E5%87%892020%22+AND+artistname%3A%22%22&fmt=json&limit=3`
+  - SHA-256: `8fa8c22691d13e9c7b8caf4c167b50eb9921f82ea22653010e59508ab814cb3c`
+- `recording-short-cjk-2020-fuzzy-number.json` — created=2026-11-08T06:05:00.450Z, received=2026-11-08T06:05:00.614570+00:00, count=8329
+  - `https://musicbrainz.org/ws/2/recording?query=recording%3A%E6%9D%B1%E5%87%892020~&fmt=json&limit=3`
+  - SHA-256: `87dd86ea7c87efd928a429cf88bc6fde5deaeafabfa4312e6153eca7e69bd441`
+- `recording-short-cjk-2020-exact-number.json` — created=2026-11-08T06:05:02.963Z, received=2026-11-08T06:05:03.095213+00:00, count=16526
+  - `https://musicbrainz.org/ws/2/recording?query=recording%3A%E6%9D%B1%E5%87%892020&fmt=json&limit=3`
+  - SHA-256: `a310bb84e5e2e181b31f09e7c51efb8b83089974efdab68c7b1d709683b46268`
+- `recording-year-2012-cjk-strict.json` — created=2026-11-08T06:05:07.350Z, received=2026-11-08T06:05:07.479065+00:00, count=79
+  - `https://musicbrainz.org/ws/2/recording?query=recording%3A%222012%E5%B9%B4%22+AND+artistname%3A%22%22&fmt=json&limit=3`
+  - SHA-256: `1bf3d51e40ab8dffbcf11847c0f935ca86d86dc5b13a0b08500b3a4fe3a9222f`
+- `recording-year-2012-cjk-fuzzy-number.json` — created=2026-11-08T06:05:12.412Z, received=2026-11-08T06:05:12.562349+00:00, count=7795
+  - `https://musicbrainz.org/ws/2/recording?query=recording%3A2012%E5%B9%B4~&fmt=json&limit=3`
+  - SHA-256: `29dbc1c1a48216cda2f8222d7b9a16df0bed0df985674af2f143ddfbc7c920fc`
+- `recording-year-2012-cjk-exact-number.json` — created=2026-11-08T06:05:17.344Z, received=2026-11-08T06:05:17.473948+00:00, count=19224
+  - `https://musicbrainz.org/ws/2/recording?query=recording%3A2012%E5%B9%B4&fmt=json&limit=3`
+  - SHA-256: `bd099c497fb3bbde93f0232f4616245bc5c7916550bccd1708b3fb6a4f231d71`
+- `recording-karma-polise-musical-mark.json` — created=2026-11-08T06:05:22.576Z, received=2026-11-08T06:05:22.701999+00:00, count=2
+  - `https://musicbrainz.org/ws/2/recording?query=recording%3A%F0%9D%85%A5+AND+recording%3Akarma~+AND+recording%3Apolise~&fmt=json&limit=3`
+  - SHA-256: `6d71f6e729a23e8a8812e966033b45fe2a3635daf3f666d17d6d904dcbd82e67`
+- `recording-karma-polise-words.json` — created=2026-11-08T06:05:25.704Z, received=2026-11-08T06:05:25.830446+00:00, count=412
+  - `https://musicbrainz.org/ws/2/recording?query=recording%3Akarma~+AND+recording%3Apolise~&fmt=json&limit=3`
+  - SHA-256: `aee88cd10ae9bd4efac9c2f37e6434468ec4a0fd2acd739169b7d01d34433706`
+- `release-karma-polise-musical-mark.json` — created=2026-11-08T06:05:28.595Z, received=2026-11-08T06:05:28.719829+00:00, count=0
+  - `https://musicbrainz.org/ws/2/release?query=release%3A%F0%9D%85%A5+AND+release%3Akarma~+AND+release%3Apolise~&fmt=json&limit=3`
+  - SHA-256: `031a92d806cd37c5290c9fef590eff627b76a2952782838fa1fdcb28df3a596a`
+- `release-karma-polise-words.json` — created=2026-11-08T06:05:32.052Z, received=2026-11-08T06:05:32.181638+00:00, count=22
+  - `https://musicbrainz.org/ws/2/release?query=release%3Akarma~+AND+release%3Apolise~&fmt=json&limit=3`
+  - SHA-256: `fbf3f566cc167b2af0c3f385e74fc5fbe520b13550ceb44d3092ae40d4ceed81`
+
+The mixed-number comparisons change only the suffix on the word containing numbers.
+The strict queries for `Gratest Hits of the 1980s` and `東凉2020` miss; the strict query for
+`2012年` returns 79 hits, so that capture does not exercise a strict-miss fallback. The exact
+`1980s` query finds a compilation from that decade. Neither CJK title has a qualifying word,
+so the fuzzy API skips their exact-only queries even when called directly.
+The musical-symbol comparisons add or remove only the standalone combining mark.

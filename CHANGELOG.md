@@ -50,7 +50,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Search collapses identical visible rows and drops cross-provider title/artist duplicates unless edition details differ; distinct editions remain selectable, and the demo shows release country.
 - Search folds typographic quotes, apostrophes, hyphens and ellipses without changing enrichment matching; fuzzy results keep relevance ahead of edition evidence.
 - Search keeps a popular artist's marked recordings ahead of covers, fetches missing unmarked exact albums, and avoids repeated supplied-artist recording queries.
-- MusicBrainz title-only typo suggestions require title words and keep numbers exact; titles made only of numbers or words under 4 characters get no suggestions (#414)
+- MusicBrainz title-only typo suggestions require title words; words containing digits stay exact, and titles without a qualifying word of 4+ characters get no suggestions (#414)
 
 ## [0.14.0] - 2026-10-08
 

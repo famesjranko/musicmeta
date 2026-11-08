@@ -545,9 +545,10 @@ Normalize the title to NFC before extracting letter/digit runs including combini
 internal apostrophes, and normalize curly apostrophes. Count code points before lowercasing: NFD
 Hangul can occupy more code points than NFC, and lowercasing `İyi` adds a combining dot. Two
 supplementary-plane letters occupy four UTF-16 units but only two code points. Require words
-shorter than four NFC code points exactly, and keep entirely Unicode-number words exact regardless
-of length. Only qualifying non-numeric words take `~`. Lowercase the extracted words with `Locale.ROOT`: uppercase `AND`, `OR` and `NOT` are
-operators even after a field prefix. `recording:Now AND recording:OR AND recording:Nevr~` returned
+shorter than four NFC code points exactly, and keep any word containing a Unicode number exact
+regardless of length, including mixed words such as `sum41`, `1980s` and `2012年`. Only qualifying
+words without numbers take `~`. Lowercase the extracted words with `Locale.ROOT`: uppercase `AND`,
+`OR` and `NOT` are operators even after a field prefix. `recording:Now AND recording:OR AND recording:Nevr~` returned
 7,341,859 hits led by `&=&=&=&=OR; immense` (2026-11-08); lowercasing the title words returned
 2,002 hits led by `Now or Never Now`. Keep the query's own Boolean operators uppercase.
 
@@ -556,7 +557,16 @@ queries for `Strman - 2012 Remaster` and `Live at Wembly 1986` both missed. Maki
 in `recording:strman~ AND recording:2012~ AND recording:remaster~` narrowed 5 hits led by
 `Barman (2022 remaster)` to 2, both `Starman (2012 remastered version)`. Making the year exact
 in `release:live~ AND release:at AND release:wembly~ AND release:1986~` narrowed 14 hits led
-by `Live At Wembley 1988` to none. Mixed words such as `sum41` retain fuzzy matching.
+by `Live At Wembley 1988` to none. Mixed words containing numbers also need exact matching:
+`release:gratest~ AND release:hits~ AND release:of AND release:the AND release:1980s~` returned
+15 hits, led by other decades; making `1980s` exact returned one 1980s compilation.
+`recording:東凉2020~` returned 8,329 hits and `recording:2012年~` returned 7,795
+(2026-11-08, limit=3). Neither title has a word that can safely qualify for a fuzzy request.
+
+A word must start with a letter or number: NFC can decompose musical symbols into a symbol and
+combining marks, which must not become required words on their own. On 2026-11-08 (limit=3),
+`recording:𝅥 AND recording:karma~ AND recording:polise~` returned 2 hits against 412 without
+the mark; the release equivalents returned 0 and 22.
 
 Combining marks belong inside a word: omitting `\p{M}` split `ความรัก` into `ความร` and `ก`,
 losing the intended recording. The complete fuzzy word returned 15 hits led by `ความรัก`.
@@ -568,7 +578,8 @@ punctuated forms return none, without client-side filtering.
 
 If no long word qualifies, skip the request: an exact-only fallback cannot rescue a typo and an
 exact short CJK term can itself broaden (`recording:東凉` returned 8,429 hits led by `凉凉`).
-The recall cost includes `U2`, `AC/DC`, short CJK titles, three-letter typos and number-only titles.
+The recall cost includes `U2`, `AC/DC`, short CJK titles, three-letter typos and titles whose only
+long words contain numbers, including `sum41`.
 
 The captures, timestamps and query comparisons are in `pools/musicbrainz-fuzzy-title-only/`
 under core's test resources. The scenario records capture timestamps and exact queries; only the

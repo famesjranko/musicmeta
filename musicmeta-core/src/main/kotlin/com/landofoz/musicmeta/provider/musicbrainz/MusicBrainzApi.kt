@@ -57,7 +57,7 @@ internal class MusicBrainzApi(
         return MusicBrainzParser.parseArtistDisambiguations(json)
     }
 
-    /** Near-miss suggestions; title-only queries need a non-numeric word of at least four NFC code points. */
+    /** Near-miss suggestions; title-only queries need a word with at least four NFC code points and no numbers. */
     suspend fun searchReleasesFuzzy(
         title: String,
         artist: String,
@@ -270,7 +270,7 @@ internal class MusicBrainzApi(
         }
 
     /**
-     * Near-miss suggestions; title-only queries need a non-numeric word of at least four NFC code points.
+     * Near-miss suggestions; title-only queries need a word with at least four NFC code points and no numbers.
      * [searchRecordings]'s own hint-less retry only drops the `release:"…"` album term. It re-sends
      * [title] quoted, so this loosened match is needed to rescue a typo. Like the release/artist
      * variants, this takes no album hint — a release term would narrow a near-miss query.
@@ -478,8 +478,10 @@ internal class MusicBrainzApi(
             value.replace(LUCENE_SPECIAL_CHARS) { "\\${it.value}" }
 
         private const val MIN_FUZZY_WORD_LENGTH = 4
-        private val FUZZY_TITLE_WORDS = Regex("[\\p{L}\\p{M}\\p{N}]+(?:['’][\\p{L}\\p{M}\\p{N}]+)*")
-        private val NUMERIC_TITLE_WORD = Regex("\\p{N}+")
+        private val FUZZY_TITLE_WORDS = Regex(
+            "[\\p{L}\\p{N}][\\p{L}\\p{M}\\p{N}]*(?:['’][\\p{L}\\p{N}][\\p{L}\\p{M}\\p{N}]*)*",
+        )
+        private val TITLE_NUMBERS = Regex("\\p{N}+")
 
         private fun fuzzyTitleQuery(field: String, title: String, artist: String): String? {
             if (artist.isNotBlank()) {
@@ -490,7 +492,7 @@ internal class MusicBrainzApi(
             val words = FUZZY_TITLE_WORDS.findAll(Normalizer.normalize(title, Normalizer.Form.NFC))
                 .map { it.value.replace('’', '\'') }.toList()
             val fuzzyWords = words.filter {
-                it.codePointCount(0, it.length) >= MIN_FUZZY_WORD_LENGTH && !NUMERIC_TITLE_WORD.matches(it)
+                it.codePointCount(0, it.length) >= MIN_FUZZY_WORD_LENGTH && !TITLE_NUMBERS.containsMatchIn(it)
             }.distinct()
             if (fuzzyWords.isEmpty()) return null
             val terms = words.joinToString(" AND ") {
