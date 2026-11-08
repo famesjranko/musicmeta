@@ -9,10 +9,11 @@
 # but not from formatting, so a formatting failure reports first. -Pmusicmeta.rerunTests forces the
 # tests to execute rather than be served from the shared build cache.
 #
-#   scripts/demo-canary.sh [gradle flags...]   e.g. --quiet
+#   scripts/demo-canary.sh [gradle flags/tasks...]   e.g. --quiet --no-build-cache clean
+# Arguments precede the canary tasks so a requested clean finishes before compilation.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
 for demo in consumers/demo-cli consumers/demo-web; do
-    (cd "$demo" && ../../gradlew compileKotlin ktlintCheck test -Pmusicmeta.rerunTests "$@")
+    (cd "$demo" && ../../gradlew "$@" compileKotlin ktlintCheck test -Pmusicmeta.rerunTests)
 done

@@ -58,3 +58,13 @@ tasks.withType<Test>().configureEach {
         outputs.cacheIf { false }
     }
 }
+
+// Verification rebuilds bytecode but can reuse analysis and Android task results.
+if (providers.gradleProperty("musicmeta.uncachedCompilation").isPresent) {
+    tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile>().configureEach {
+        outputs.cacheIf { false }
+    }
+    tasks.withType<JavaCompile>().configureEach {
+        outputs.cacheIf { false }
+    }
+}
