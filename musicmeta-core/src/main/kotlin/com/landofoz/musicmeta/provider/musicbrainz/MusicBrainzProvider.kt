@@ -89,6 +89,10 @@ public class MusicBrainzProvider(
     internal suspend fun discoverEntityType(mbid: String): MusicBrainzEntityType? =
         enricher().discoverEntityType(mbid)
 
+    /**
+     * This direct-call overload has no logger and does not emit candidate-search supplement warnings.
+     * Use [com.landofoz.musicmeta.EnrichmentEngine.search] with a configured engine logger to receive these warnings.
+     */
     override suspend fun searchCandidates(
         request: EnrichmentRequest,
         limit: Int,
