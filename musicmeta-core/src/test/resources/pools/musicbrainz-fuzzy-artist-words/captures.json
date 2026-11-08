@@ -1,0 +1,1076 @@
+[
+  {
+    "file": "recording-alone-words.json",
+    "endpoint": "recording",
+    "case": "alone",
+    "title": "You Are NOT Aloen",
+    "artist": "Michael Jackson",
+    "arm": "words",
+    "query": "recording:you AND recording:are AND recording:not AND recording:aloen~ AND artistname:michael~ AND artistname:jackson~",
+    "url": "https://musicbrainz.org/ws/2/recording?query=recording%3Ayou+AND+recording%3Aare+AND+recording%3Anot+AND+recording%3Aaloen~+AND+artistname%3Amichael~+AND+artistname%3Ajackson~&fmt=json&limit=3",
+    "receivedAt": "2026-11-08T14:49:13.469175+00:00",
+    "sha256": "59fa03b3ccc00cbb58a20328a670ee53808a0e5565ee92c8e4b0cb27f89f2715",
+    "count": 50,
+    "rows": [
+      {
+        "title": "You Are Not Alone",
+        "artist": "Michael Jackson",
+        "id": "6c2caade-7eff-4261-98ec-23acd0852bf4"
+      },
+      {
+        "title": "You Are Not Alone",
+        "artist": "Michael Jackson",
+        "id": "931f799c-e872-4241-a858-77502a1f3287"
+      },
+      {
+        "title": "You Are Not Alone",
+        "artist": "Michael Jackson",
+        "id": "3f6721aa-6b5e-45d1-8903-e472155baca0"
+      }
+    ]
+  },
+  {
+    "file": "release-alone-words.json",
+    "endpoint": "release",
+    "case": "alone",
+    "title": "You Are NOT Aloen",
+    "artist": "Michael Jackson",
+    "arm": "words",
+    "query": "release:you AND release:are AND release:not AND release:aloen~ AND artistname:michael~ AND artistname:jackson~",
+    "url": "https://musicbrainz.org/ws/2/release?query=release%3Ayou+AND+release%3Aare+AND+release%3Anot+AND+release%3Aaloen~+AND+artistname%3Amichael~+AND+artistname%3Ajackson~&fmt=json&limit=3",
+    "receivedAt": "2026-11-08T14:49:39.412188+00:00",
+    "sha256": "e17efec9ac373847c42f558d71187aa78ea34706ad1f9e937b1386665a18cdf2",
+    "count": 10,
+    "rows": [
+      {
+        "title": "You Are Not Alone",
+        "artist": "Michael Jackson",
+        "id": "f2d7f60c-e9bc-4c43-9125-c39b4de23bd0"
+      },
+      {
+        "title": "You Are Not Alone",
+        "artist": "Michael Jackson",
+        "id": "73ef94c1-00f2-4094-aac4-d23d1c53ca96"
+      },
+      {
+        "title": "You Are Not Alone",
+        "artist": "Michael Jackson",
+        "id": "082e21ff-54f9-4a5e-b615-3e39f157e2c0"
+      }
+    ]
+  },
+  {
+    "file": "recording-billie-words.json",
+    "endpoint": "recording",
+    "case": "billie",
+    "title": "Bilie Jean",
+    "artist": "Michael Jackson",
+    "arm": "words",
+    "query": "recording:bilie~ AND recording:jean~ AND artistname:michael~ AND artistname:jackson~",
+    "url": "https://musicbrainz.org/ws/2/recording?query=recording%3Abilie~+AND+recording%3Ajean~+AND+artistname%3Amichael~+AND+artistname%3Ajackson~&fmt=json&limit=3",
+    "receivedAt": "2026-11-08T14:50:00.536035+00:00",
+    "sha256": "0bcd82e5cf2b1720cc8ca17ba03992c6d28f2bf40eef5dd6101a9777edcc1b38",
+    "count": 155,
+    "rows": [
+      {
+        "title": "Billie Jean",
+        "artist": "Michael Jackson",
+        "id": "1e16139a-08eb-4ec0-9674-234edcc0463b"
+      },
+      {
+        "title": "Billie Jean",
+        "artist": "Michael Jackson",
+        "id": "2b262927-eccb-466a-8849-f221c8f8eb59"
+      },
+      {
+        "title": "Billie Jean",
+        "artist": "Michael Jackson",
+        "id": "109a2534-351b-4e80-b320-3ec04e2cf0c0"
+      }
+    ]
+  },
+  {
+    "file": "release-billie-words.json",
+    "endpoint": "release",
+    "case": "billie",
+    "title": "Bilie Jean",
+    "artist": "Michael Jackson",
+    "arm": "words",
+    "query": "release:bilie~ AND release:jean~ AND artistname:michael~ AND artistname:jackson~",
+    "url": "https://musicbrainz.org/ws/2/release?query=release%3Abilie~+AND+release%3Ajean~+AND+artistname%3Amichael~+AND+artistname%3Ajackson~&fmt=json&limit=3",
+    "receivedAt": "2026-11-08T14:50:25.592481+00:00",
+    "sha256": "73be2a6d44b13116b27cb622ea5f74c71ef1da95e44e47de30021dfd677327b2",
+    "count": 12,
+    "rows": [
+      {
+        "title": "Billie Jean",
+        "artist": "Michael Jackson",
+        "id": "67410c54-af48-4339-af7e-d53de4c12639"
+      },
+      {
+        "title": "Billie Jean",
+        "artist": "Michael Jackson",
+        "id": "e2b79365-9aaf-415c-9321-a1ac702273ac"
+      },
+      {
+        "title": "Billie Jean",
+        "artist": "Michael Jackson",
+        "id": "83e293de-4511-4869-8b27-d53f22e736e6"
+      }
+    ]
+  },
+  {
+    "file": "recording-stairway-words.json",
+    "endpoint": "recording",
+    "case": "stairway",
+    "title": "Stairway to Heavne",
+    "artist": "Led Zeppelin",
+    "arm": "words",
+    "query": "recording:stairway~ AND recording:to AND recording:heavne~ AND artistname:led AND artistname:zeppelin~",
+    "url": "https://musicbrainz.org/ws/2/recording?query=recording%3Astairway~+AND+recording%3Ato+AND+recording%3Aheavne~+AND+artistname%3Aled+AND+artistname%3Azeppelin~&fmt=json&limit=3",
+    "receivedAt": "2026-11-08T14:50:39.505282+00:00",
+    "sha256": "cf117ccd56142f6be715037ca973a9cf7ef8d1faf2ea7a34ef2a74d3e1356763",
+    "count": 853,
+    "rows": [
+      {
+        "title": "Stairway to Heaven",
+        "artist": "Led Zeppelin",
+        "id": "736047e7-2672-4dc6-a516-bb058812ff4a"
+      },
+      {
+        "title": "Stairway to Heaven",
+        "artist": "Led Zeppelin",
+        "id": "41bc5c79-7cfd-4686-8a55-0b9f12cf39d1"
+      },
+      {
+        "title": "Stairway to Heaven",
+        "artist": "Led Zeppelin",
+        "id": "b03473bb-ffa9-4c4c-bc8b-568eb027ed04"
+      }
+    ]
+  },
+  {
+    "file": "release-stairway-words.json",
+    "endpoint": "release",
+    "case": "stairway",
+    "title": "Stairway to Heavne",
+    "artist": "Led Zeppelin",
+    "arm": "words",
+    "query": "release:stairway~ AND release:to AND release:heavne~ AND artistname:led AND artistname:zeppelin~",
+    "url": "https://musicbrainz.org/ws/2/release?query=release%3Astairway~+AND+release%3Ato+AND+release%3Aheavne~+AND+artistname%3Aled+AND+artistname%3Azeppelin~&fmt=json&limit=3",
+    "receivedAt": "2026-11-08T14:51:00.757132+00:00",
+    "sha256": "e8bd8450da99dd083825b883be575d381560a4baf7b617cc482fae485d584423",
+    "count": 10,
+    "rows": [
+      {
+        "title": "Stairway to Heaven",
+        "artist": "Led Zeppelin",
+        "id": "9cab9de9-960c-4351-89a4-f526c30a36cd"
+      },
+      {
+        "title": "“Stairway to Heaven” (Vol. 3)",
+        "artist": "Led Zeppelin",
+        "id": "6091a755-abaf-4a9b-9658-0b45c1161375"
+      },
+      {
+        "title": "Stairway to Heaven, Volume 4",
+        "artist": "Led Zeppelin",
+        "id": "3f1350f2-85a4-41ef-a7d7-86a94d7d7768"
+      }
+    ]
+  },
+  {
+    "file": "recording-simon-words.json",
+    "endpoint": "recording",
+    "case": "simon",
+    "title": "The Sound of Silnce",
+    "artist": "SIMON AND GARFUNKEL",
+    "arm": "words",
+    "query": "recording:the AND recording:sound~ AND recording:of AND recording:silnce~ AND artistname:simon~ AND artistname:and AND artistname:garfunkel~",
+    "url": "https://musicbrainz.org/ws/2/recording?query=recording%3Athe+AND+recording%3Asound~+AND+recording%3Aof+AND+recording%3Asilnce~+AND+artistname%3Asimon~+AND+artistname%3Aand+AND+artistname%3Agarfunkel~&fmt=json&limit=3",
+    "receivedAt": "2026-11-08T14:51:19.875532+00:00",
+    "sha256": "62250ad7525612ab56430903bbb92b6790954b926ab44e6e1a7df688895cf582",
+    "count": 116,
+    "rows": [
+      {
+        "title": "The Sound of Silence",
+        "artist": "Simon & Garfunkel",
+        "id": "1d1fa5ea-f1d1-4672-9a28-67b4cbe71102"
+      },
+      {
+        "title": "The Sound of Silence",
+        "artist": "Simon & Garfunkel",
+        "id": "bfd05cc2-070d-4e97-8a9f-83b0af9989d4"
+      },
+      {
+        "title": "The Sound of Silence",
+        "artist": "Simon & Garfunkel",
+        "id": "b62fbbff-ce6f-4579-88c2-0df51f5f14ae"
+      }
+    ]
+  },
+  {
+    "file": "release-simon-words.json",
+    "endpoint": "release",
+    "case": "simon",
+    "title": "The Sound of Silnce",
+    "artist": "SIMON AND GARFUNKEL",
+    "arm": "words",
+    "query": "release:the AND release:sound~ AND release:of AND release:silnce~ AND artistname:simon~ AND artistname:and AND artistname:garfunkel~",
+    "url": "https://musicbrainz.org/ws/2/release?query=release%3Athe+AND+release%3Asound~+AND+release%3Aof+AND+release%3Asilnce~+AND+artistname%3Asimon~+AND+artistname%3Aand+AND+artistname%3Agarfunkel~&fmt=json&limit=3",
+    "receivedAt": "2026-11-08T14:51:46.706547+00:00",
+    "sha256": "cc2e88d801f3289f275ad9fad49c121ad70dcdccb82fd7d8b73c8c3797a8bc00",
+    "count": 5,
+    "rows": [
+      {
+        "title": "The Sounds of Silence, Part 1",
+        "artist": "Simon & Garfunkel",
+        "id": "b21668bc-acc6-4069-82ee-125d867e88e9"
+      },
+      {
+        "title": "1969-11-11: The Sound of Silence: OH, USA",
+        "artist": "Simon & Garfunkel",
+        "id": "e8ea4825-9c6a-4178-a6ff-38cf7da6a237"
+      },
+      {
+        "title": "The Sounds of Silence / I Am a Rock",
+        "artist": "Simon & Garfunkel",
+        "id": "f0d9bbaf-0175-4ebc-bca5-a9a2ecb78bc2"
+      }
+    ]
+  },
+  {
+    "file": "recording-earth-words.json",
+    "endpoint": "recording",
+    "case": "earth",
+    "title": "Septmeber",
+    "artist": "EARTH, WIND AND FIRE",
+    "arm": "words",
+    "query": "recording:septmeber~ AND artistname:earth~ AND artistname:wind~ AND artistname:and AND artistname:fire~",
+    "url": "https://musicbrainz.org/ws/2/recording?query=recording%3Aseptmeber~+AND+artistname%3Aearth~+AND+artistname%3Awind~+AND+artistname%3Aand+AND+artistname%3Afire~&fmt=json&limit=3",
+    "receivedAt": "2026-11-08T14:52:11.517765+00:00",
+    "sha256": "2f44dc5f0310e0d1e97564c633112b1ce4742f9f714adaa5f8a0db801c9cac98",
+    "count": 172,
+    "rows": [
+      {
+        "title": "September",
+        "artist": "Earth Wind and Fire",
+        "id": "df6db3ea-8879-4bad-a953-53f33b37b391"
+      },
+      {
+        "title": "September",
+        "artist": "Earth, Wind & Fire",
+        "id": "dcc7aed3-5310-41cf-a2b0-e800a1aed3cc"
+      },
+      {
+        "title": "September",
+        "artist": "Earth, Wind & Fire",
+        "id": "3cb9da56-d4e8-4c4b-9dd0-2f61c82dc624"
+      }
+    ]
+  },
+  {
+    "file": "release-earth-words.json",
+    "endpoint": "release",
+    "case": "earth",
+    "title": "Septmeber",
+    "artist": "EARTH, WIND AND FIRE",
+    "arm": "words",
+    "query": "release:septmeber~ AND artistname:earth~ AND artistname:wind~ AND artistname:and AND artistname:fire~",
+    "url": "https://musicbrainz.org/ws/2/release?query=release%3Aseptmeber~+AND+artistname%3Aearth~+AND+artistname%3Awind~+AND+artistname%3Aand+AND+artistname%3Afire~&fmt=json&limit=3",
+    "receivedAt": "2026-11-08T14:52:27.445230+00:00",
+    "sha256": "69f31fe8c3eb0de00ee8f5cf12bfdee3c3aafe790d4140b9815ffc86cb037b36",
+    "count": 14,
+    "rows": [
+      {
+        "title": "September",
+        "artist": "Earth, Wind & Fire",
+        "id": "cb71332d-ca36-47c2-ac1a-a04787f44be4"
+      },
+      {
+        "title": "September",
+        "artist": "Earth, Wind & Fire",
+        "id": "247b0d94-d041-4bd4-9c94-8bb703f6bb81"
+      },
+      {
+        "title": "September",
+        "artist": "Earth, Wind & Fire",
+        "id": "23d86e7e-3a60-4c73-b786-b7e7f83703de"
+      }
+    ]
+  },
+  {
+    "file": "recording-micheal-strict.json",
+    "endpoint": "recording",
+    "case": "micheal",
+    "title": "Bilie Jean",
+    "artist": "Micheal Jackson",
+    "arm": "strict",
+    "query": "recording:\"Bilie Jean\" AND artistname:\"Micheal Jackson\"",
+    "url": "https://musicbrainz.org/ws/2/recording?query=recording%3A%22Bilie+Jean%22+AND+artistname%3A%22Micheal+Jackson%22&fmt=json&limit=3",
+    "receivedAt": "2026-11-08T14:52:33.113098+00:00",
+    "sha256": "27ea3002ecee6a3f67e46556a88ccc0f9c46381cdb397fb4b8f99e16a121bcc7",
+    "count": 0,
+    "rows": []
+  },
+  {
+    "file": "recording-micheal-current.json",
+    "endpoint": "recording",
+    "case": "micheal",
+    "title": "Bilie Jean",
+    "artist": "Micheal Jackson",
+    "arm": "current",
+    "query": "recording:bilie~ AND recording:jean~ AND artistname:Micheal Jackson~",
+    "url": "https://musicbrainz.org/ws/2/recording?query=recording%3Abilie~+AND+recording%3Ajean~+AND+artistname%3AMicheal+Jackson~&fmt=json&limit=3",
+    "receivedAt": "2026-11-08T14:52:38.773152+00:00",
+    "sha256": "1228beea2d23d959eef389651ca660561b00729bc3c7c213b2fa5af6007722bb",
+    "count": 0,
+    "rows": []
+  },
+  {
+    "file": "recording-micheal-words.json",
+    "endpoint": "recording",
+    "case": "micheal",
+    "title": "Bilie Jean",
+    "artist": "Micheal Jackson",
+    "arm": "words",
+    "query": "recording:bilie~ AND recording:jean~ AND artistname:micheal~ AND artistname:jackson~",
+    "url": "https://musicbrainz.org/ws/2/recording?query=recording%3Abilie~+AND+recording%3Ajean~+AND+artistname%3Amicheal~+AND+artistname%3Ajackson~&fmt=json&limit=3",
+    "receivedAt": "2026-11-08T14:52:41.357838+00:00",
+    "sha256": "1eb69acb1d0705603fd6871c167a3c4521b55c87178acd045038f813cb3186f0",
+    "count": 155,
+    "rows": [
+      {
+        "title": "Billie Jean",
+        "artist": "Michael Jackson",
+        "id": "d28ff8e5-0fc6-4c0f-9d38-0016b2369251"
+      },
+      {
+        "title": "Billie Jean",
+        "artist": "Michael Jackson",
+        "id": "b98fe22e-2881-4f47-9250-c97033c380c7"
+      },
+      {
+        "title": "Billie Jean",
+        "artist": "Michael Jackson",
+        "id": "9bc996e5-58b1-4d99-8df2-6e42ac0aa291"
+      }
+    ]
+  },
+  {
+    "file": "recording-micheal-phrase.json",
+    "endpoint": "recording",
+    "case": "micheal",
+    "title": "Bilie Jean",
+    "artist": "Micheal Jackson",
+    "arm": "phrase",
+    "query": "recording:bilie~ AND recording:jean~ AND artistname:\"micheal jackson\"",
+    "url": "https://musicbrainz.org/ws/2/recording?query=recording%3Abilie~+AND+recording%3Ajean~+AND+artistname%3A%22micheal+jackson%22&fmt=json&limit=3",
+    "receivedAt": "2026-11-08T14:52:45.926187+00:00",
+    "sha256": "9e7357c368a08086c38fc114b4903f80b27e154721d81eb465d574542349bea7",
+    "count": 0,
+    "rows": []
+  },
+  {
+    "file": "recording-micheal-canonical.json",
+    "endpoint": "recording",
+    "case": "micheal",
+    "title": "Bilie Jean",
+    "artist": "Micheal Jackson",
+    "arm": "canonical",
+    "query": "recording:\"Bilie Jean\" AND artistname:\"Micheal Jackson\" AND -comment:*",
+    "url": "https://musicbrainz.org/ws/2/recording?query=recording%3A%22Bilie+Jean%22+AND+artistname%3A%22Micheal+Jackson%22+AND+-comment%3A%2A&fmt=json&limit=3",
+    "receivedAt": "2026-11-08T14:52:48.418583+00:00",
+    "sha256": "24cec9c7362f99a300db3135e37e04636edf92dab11d57d7f30a7d7c16e75fb9",
+    "count": 0,
+    "rows": []
+  },
+  {
+    "file": "release-micheal-strict.json",
+    "endpoint": "release",
+    "case": "micheal",
+    "title": "Bilie Jean",
+    "artist": "Micheal Jackson",
+    "arm": "strict",
+    "query": "release:\"Bilie Jean\" AND artistname:\"Micheal Jackson\"",
+    "url": "https://musicbrainz.org/ws/2/release?query=release%3A%22Bilie+Jean%22+AND+artistname%3A%22Micheal+Jackson%22&fmt=json&limit=3",
+    "receivedAt": "2026-11-08T14:52:51.186319+00:00",
+    "sha256": "de109a251a56edfcfd8da141bb95500caca2b7a0e09bd37fffffe53c42f74fa0",
+    "count": 0,
+    "rows": []
+  },
+  {
+    "file": "release-micheal-current.json",
+    "endpoint": "release",
+    "case": "micheal",
+    "title": "Bilie Jean",
+    "artist": "Micheal Jackson",
+    "arm": "current",
+    "query": "release:bilie~ AND release:jean~ AND artistname:Micheal Jackson~",
+    "url": "https://musicbrainz.org/ws/2/release?query=release%3Abilie~+AND+release%3Ajean~+AND+artistname%3AMicheal+Jackson~&fmt=json&limit=3",
+    "receivedAt": "2026-11-08T14:53:01.749421+00:00",
+    "sha256": "ff42cfaa35dbd878a1487081a2abfbaee17f403ae828ed7e6b1bdfeb78f56c7b",
+    "count": 0,
+    "rows": []
+  },
+  {
+    "file": "release-micheal-words.json",
+    "endpoint": "release",
+    "case": "micheal",
+    "title": "Bilie Jean",
+    "artist": "Micheal Jackson",
+    "arm": "words",
+    "query": "release:bilie~ AND release:jean~ AND artistname:micheal~ AND artistname:jackson~",
+    "url": "https://musicbrainz.org/ws/2/release?query=release%3Abilie~+AND+release%3Ajean~+AND+artistname%3Amicheal~+AND+artistname%3Ajackson~&fmt=json&limit=3",
+    "receivedAt": "2026-11-08T14:53:05.147575+00:00",
+    "sha256": "bcacc3752a253331c8dabc0341e254cde854a1105b146853336b403c8df2916f",
+    "count": 12,
+    "rows": [
+      {
+        "title": "Billie Jean",
+        "artist": "Michael Jackson",
+        "id": "67410c54-af48-4339-af7e-d53de4c12639"
+      },
+      {
+        "title": "Billie Jean",
+        "artist": "Michael Jackson",
+        "id": "83e293de-4511-4869-8b27-d53f22e736e6"
+      },
+      {
+        "title": "Billie Jean",
+        "artist": "Michael Jackson",
+        "id": "0d33defc-70af-40ae-8681-36591874c049"
+      }
+    ]
+  },
+  {
+    "file": "release-micheal-phrase.json",
+    "endpoint": "release",
+    "case": "micheal",
+    "title": "Bilie Jean",
+    "artist": "Micheal Jackson",
+    "arm": "phrase",
+    "query": "release:bilie~ AND release:jean~ AND artistname:\"micheal jackson\"",
+    "url": "https://musicbrainz.org/ws/2/release?query=release%3Abilie~+AND+release%3Ajean~+AND+artistname%3A%22micheal+jackson%22&fmt=json&limit=3",
+    "receivedAt": "2026-11-08T14:53:10.025766+00:00",
+    "sha256": "2cd5f3a2814c1659592ec5b28c125168598eb4d0f7629788aec41be8cafd124d",
+    "count": 0,
+    "rows": []
+  },
+  {
+    "file": "recording-zepplin-current.json",
+    "endpoint": "recording",
+    "case": "zepplin",
+    "title": "Stairway to Heavne",
+    "artist": "Led Zepplin",
+    "arm": "current",
+    "query": "recording:stairway~ AND recording:to AND recording:heavne~ AND artistname:Led Zepplin~",
+    "url": "https://musicbrainz.org/ws/2/recording?query=recording%3Astairway~+AND+recording%3Ato+AND+recording%3Aheavne~+AND+artistname%3ALed+Zepplin~&fmt=json&limit=3",
+    "receivedAt": "2026-11-08T14:53:15.850200+00:00",
+    "sha256": "f658042aa59490d007c8821391e15dfb6c67801ab2bda27c62e48f9a3f3d38a8",
+    "count": 856,
+    "rows": [
+      {
+        "title": "Stairway to Heaven",
+        "artist": "Led Zeppelin",
+        "id": "6a9c98ba-d5a2-4b12-aab1-f16c6df0132a"
+      },
+      {
+        "title": "Stairway to Heaven",
+        "artist": "Led Zeppelin",
+        "id": "3e50fa0d-e6e8-4f78-b015-9a52f732fb14"
+      },
+      {
+        "title": "Stairway to Heaven",
+        "artist": "Led Zeppelin",
+        "id": "240b1214-fdf3-403f-b473-631ce0519d4d"
+      }
+    ]
+  },
+  {
+    "file": "recording-zepplin-words.json",
+    "endpoint": "recording",
+    "case": "zepplin",
+    "title": "Stairway to Heavne",
+    "artist": "Led Zepplin",
+    "arm": "words",
+    "query": "recording:stairway~ AND recording:to AND recording:heavne~ AND artistname:led AND artistname:zepplin~",
+    "url": "https://musicbrainz.org/ws/2/recording?query=recording%3Astairway~+AND+recording%3Ato+AND+recording%3Aheavne~+AND+artistname%3Aled+AND+artistname%3Azepplin~&fmt=json&limit=3",
+    "receivedAt": "2026-11-08T14:53:18.585020+00:00",
+    "sha256": "3bc73a14e8a3f9c9d26571078a63541df7621aa66092192c942c95188d1199e1",
+    "count": 853,
+    "rows": [
+      {
+        "title": "Stairway to Heaven",
+        "artist": "Led Zeppelin",
+        "id": "6a9c98ba-d5a2-4b12-aab1-f16c6df0132a"
+      },
+      {
+        "title": "Stairway to Heaven",
+        "artist": "Led Zeppelin",
+        "id": "3e50fa0d-e6e8-4f78-b015-9a52f732fb14"
+      },
+      {
+        "title": "Stairway to Heaven",
+        "artist": "Led Zeppelin",
+        "id": "240b1214-fdf3-403f-b473-631ce0519d4d"
+      }
+    ]
+  },
+  {
+    "file": "recording-zepplin-phrase.json",
+    "endpoint": "recording",
+    "case": "zepplin",
+    "title": "Stairway to Heavne",
+    "artist": "Led Zepplin",
+    "arm": "phrase",
+    "query": "recording:stairway~ AND recording:to AND recording:heavne~ AND artistname:\"led zepplin\"",
+    "url": "https://musicbrainz.org/ws/2/recording?query=recording%3Astairway~+AND+recording%3Ato+AND+recording%3Aheavne~+AND+artistname%3A%22led+zepplin%22&fmt=json&limit=3",
+    "receivedAt": "2026-11-08T14:53:21.212593+00:00",
+    "sha256": "d13dc2d34bbfd14de3094a2bc4109514c23fdac936f1b9e31a8f917461c8d6b6",
+    "count": 0,
+    "rows": []
+  },
+  {
+    "file": "release-zepplin-current.json",
+    "endpoint": "release",
+    "case": "zepplin",
+    "title": "Stairway to Heavne",
+    "artist": "Led Zepplin",
+    "arm": "current",
+    "query": "release:stairway~ AND release:to AND release:heavne~ AND artistname:Led Zepplin~",
+    "url": "https://musicbrainz.org/ws/2/release?query=release%3Astairway~+AND+release%3Ato+AND+release%3Aheavne~+AND+artistname%3ALed+Zepplin~&fmt=json&limit=3",
+    "receivedAt": "2026-11-08T14:53:31.271735+00:00",
+    "sha256": "7179fa08fc93ee40b3e54f0c048b90c0c0474682c0b7e413d487fb00481c5297",
+    "count": 10,
+    "rows": [
+      {
+        "title": "Rock Report Led Zeppelin Stairway to Heaven",
+        "artist": "Led Zeppelin",
+        "id": "cb28340a-6447-419e-9c1b-131be9f709c4"
+      },
+      {
+        "title": "Stairway to Heaven",
+        "artist": "Led Zeppelin",
+        "id": "9cab9de9-960c-4351-89a4-f526c30a36cd"
+      },
+      {
+        "title": "“Stairway to Heaven” (Vol. 3)",
+        "artist": "Led Zeppelin",
+        "id": "6091a755-abaf-4a9b-9658-0b45c1161375"
+      }
+    ]
+  },
+  {
+    "file": "release-zepplin-words.json",
+    "endpoint": "release",
+    "case": "zepplin",
+    "title": "Stairway to Heavne",
+    "artist": "Led Zepplin",
+    "arm": "words",
+    "query": "release:stairway~ AND release:to AND release:heavne~ AND artistname:led AND artistname:zepplin~",
+    "url": "https://musicbrainz.org/ws/2/release?query=release%3Astairway~+AND+release%3Ato+AND+release%3Aheavne~+AND+artistname%3Aled+AND+artistname%3Azepplin~&fmt=json&limit=3",
+    "receivedAt": "2026-11-08T14:53:36.843497+00:00",
+    "sha256": "94bdbbbcb6dc12166eb18bf4b6df394452f3e9f1aa2fe3455bd6ea36ecd34268",
+    "count": 10,
+    "rows": [
+      {
+        "title": "Stairway to Heaven",
+        "artist": "Led Zeppelin",
+        "id": "9cab9de9-960c-4351-89a4-f526c30a36cd"
+      },
+      {
+        "title": "“Stairway to Heaven” (Vol. 3)",
+        "artist": "Led Zeppelin",
+        "id": "6091a755-abaf-4a9b-9658-0b45c1161375"
+      },
+      {
+        "title": "Stairway to Heaven, Volume 4",
+        "artist": "Led Zeppelin",
+        "id": "3f1350f2-85a4-41ef-a7d7-86a94d7d7768"
+      }
+    ]
+  },
+  {
+    "file": "release-zepplin-phrase.json",
+    "endpoint": "release",
+    "case": "zepplin",
+    "title": "Stairway to Heavne",
+    "artist": "Led Zepplin",
+    "arm": "phrase",
+    "query": "release:stairway~ AND release:to AND release:heavne~ AND artistname:\"led zepplin\"",
+    "url": "https://musicbrainz.org/ws/2/release?query=release%3Astairway~+AND+release%3Ato+AND+release%3Aheavne~+AND+artistname%3A%22led+zepplin%22&fmt=json&limit=3",
+    "receivedAt": "2026-11-08T14:53:39.366588+00:00",
+    "sha256": "9524d156535642b6360645fb138d01244e01dccb8c5af37bf0684aeb89ef6b17",
+    "count": 0,
+    "rows": []
+  },
+  {
+    "file": "recording-the-beatles-words.json",
+    "endpoint": "recording",
+    "case": "the-beatles",
+    "title": "Yestreday",
+    "artist": "The Beatles",
+    "arm": "words",
+    "query": "recording:yestreday~ AND artistname:the AND artistname:beatles~",
+    "url": "https://musicbrainz.org/ws/2/recording?query=recording%3Ayestreday~+AND+artistname%3Athe+AND+artistname%3Abeatles~&fmt=json&limit=3",
+    "receivedAt": "2026-11-08T14:53:48.322339+00:00",
+    "sha256": "9c4ee4d63dfecaec890f02f575a5d1d667ba4ebd6ec7d60e7005843efeb22f98",
+    "count": 228,
+    "rows": [
+      {
+        "title": "Yesterday",
+        "artist": "The Beatles",
+        "id": "0aa1938a-ee7f-487b-b742-8b2cfa110c85"
+      },
+      {
+        "title": "Yesterday",
+        "artist": "The Beatles",
+        "id": "66afcdd7-b3c1-4cf4-82e5-034976af0ab1"
+      },
+      {
+        "title": "Yesterday",
+        "artist": "The Beatles",
+        "id": "28815c11-1152-43d2-85b0-4131b2397c5e"
+      }
+    ]
+  },
+  {
+    "file": "release-the-beatles-words.json",
+    "endpoint": "release",
+    "case": "the-beatles",
+    "title": "Yestreday",
+    "artist": "The Beatles",
+    "arm": "words",
+    "query": "release:yestreday~ AND artistname:the AND artistname:beatles~",
+    "url": "https://musicbrainz.org/ws/2/release?query=release%3Ayestreday~+AND+artistname%3Athe+AND+artistname%3Abeatles~&fmt=json&limit=3",
+    "receivedAt": "2026-11-08T14:54:03.721338+00:00",
+    "sha256": "599c772a1b1fdef98204fd4843b21fe0b30285a43f6712ca0af3d98fd3aacc06",
+    "count": 39,
+    "rows": [
+      {
+        "title": "Yesterday",
+        "artist": "The Beatles",
+        "id": "779b2143-4237-39df-9153-b4d152941e23"
+      },
+      {
+        "title": "Yesterday",
+        "artist": "The Beatles",
+        "id": "e408ab4e-cac2-3c8d-abae-0eb65bfb2fe8"
+      },
+      {
+        "title": "Yesterday",
+        "artist": "The Beatles",
+        "id": "e272eaab-49a3-4a61-b755-e499cf40d207"
+      }
+    ]
+  },
+  {
+    "file": "recording-beatles-words.json",
+    "endpoint": "recording",
+    "case": "beatles",
+    "title": "Yestreday",
+    "artist": "Beatles",
+    "arm": "words",
+    "query": "recording:yestreday~ AND artistname:beatles~",
+    "url": "https://musicbrainz.org/ws/2/recording?query=recording%3Ayestreday~+AND+artistname%3Abeatles~&fmt=json&limit=3",
+    "receivedAt": "2026-11-08T14:54:16.132509+00:00",
+    "sha256": "4cfed52517cc50e5c2e57d76a3c2796fb6521e418b035c5ddd6902f26b5aa2e3",
+    "count": 234,
+    "rows": [
+      {
+        "title": "Yesterday",
+        "artist": "The Beatles",
+        "id": "553f802a-9d1a-4668-8283-b04fcbe6894a"
+      },
+      {
+        "title": "Yesterday",
+        "artist": "The Beatles",
+        "id": "d38dfefb-d7bf-4bff-a7ec-b8c1beb2a72b"
+      },
+      {
+        "title": "Yesterday",
+        "artist": "The Beatles",
+        "id": "f6e374e3-2390-4f76-9095-65c7c3a07212"
+      }
+    ]
+  },
+  {
+    "file": "release-beatles-words.json",
+    "endpoint": "release",
+    "case": "beatles",
+    "title": "Yestreday",
+    "artist": "Beatles",
+    "arm": "words",
+    "query": "release:yestreday~ AND artistname:beatles~",
+    "url": "https://musicbrainz.org/ws/2/release?query=release%3Ayestreday~+AND+artistname%3Abeatles~&fmt=json&limit=3",
+    "receivedAt": "2026-11-08T14:54:32.032136+00:00",
+    "sha256": "99b91f35f00ad648d94b82c076850fb59bc46251c497e3290998e8e8a2220c6b",
+    "count": 39,
+    "rows": [
+      {
+        "title": "Yesterday",
+        "artist": "The Beatles",
+        "id": "e408ab4e-cac2-3c8d-abae-0eb65bfb2fe8"
+      },
+      {
+        "title": "Yesterday",
+        "artist": "The Beatles",
+        "id": "e272eaab-49a3-4a61-b755-e499cf40d207"
+      },
+      {
+        "title": "Yesterday",
+        "artist": "The Beatles",
+        "id": "a177e36f-b60f-34c3-967a-e8f0fc43fda0"
+      }
+    ]
+  },
+  {
+    "file": "recording-featured-strict.json",
+    "endpoint": "recording",
+    "case": "featured",
+    "title": "Love the Way You Liee",
+    "artist": "Eminem feat. Rihanna",
+    "arm": "strict",
+    "query": "recording:\"Love the Way You Liee\" AND artistname:\"Eminem feat. Rihanna\"",
+    "url": "https://musicbrainz.org/ws/2/recording?query=recording%3A%22Love+the+Way+You+Liee%22+AND+artistname%3A%22Eminem+feat.+Rihanna%22&fmt=json&limit=3",
+    "receivedAt": "2026-11-08T14:54:37.025600+00:00",
+    "sha256": "a239a03a0111c6f8e15ee2e4bd90463c9f3b1f291b958578bfb7713b78a2268c",
+    "count": 0,
+    "rows": []
+  },
+  {
+    "file": "recording-featured-words.json",
+    "endpoint": "recording",
+    "case": "featured",
+    "title": "Love the Way You Liee",
+    "artist": "Eminem feat. Rihanna",
+    "arm": "words",
+    "query": "recording:love~ AND recording:the AND recording:way AND recording:you AND recording:liee~ AND artistname:eminem~ AND artistname:feat~ AND artistname:rihanna~",
+    "url": "https://musicbrainz.org/ws/2/recording?query=recording%3Alove~+AND+recording%3Athe+AND+recording%3Away+AND+recording%3Ayou+AND+recording%3Aliee~+AND+artistname%3Aeminem~+AND+artistname%3Afeat~+AND+artistname%3Arihanna~&fmt=json&limit=3",
+    "receivedAt": "2026-11-08T14:54:44.200743+00:00",
+    "sha256": "5393afde5782bcba78d08bf77dc1d71547ed63a81dae95303633edbd325a4815",
+    "count": 0,
+    "rows": []
+  },
+  {
+    "file": "recording-featured-canonical.json",
+    "endpoint": "recording",
+    "case": "featured",
+    "title": "Love the Way You Liee",
+    "artist": "Eminem feat. Rihanna",
+    "arm": "canonical",
+    "query": "recording:\"Love the Way You Liee\" AND artistname:\"Eminem feat. Rihanna\" AND -comment:*",
+    "url": "https://musicbrainz.org/ws/2/recording?query=recording%3A%22Love+the+Way+You+Liee%22+AND+artistname%3A%22Eminem+feat.+Rihanna%22+AND+-comment%3A%2A&fmt=json&limit=3",
+    "receivedAt": "2026-11-08T14:54:52.708611+00:00",
+    "sha256": "45aef56ffc0d5a2a0d78068b7784fa0d74127bebac1625e2ae333dd67906df0b",
+    "count": 0,
+    "rows": []
+  },
+  {
+    "file": "release-featured-strict.json",
+    "endpoint": "release",
+    "case": "featured",
+    "title": "Love the Way You Liee",
+    "artist": "Eminem feat. Rihanna",
+    "arm": "strict",
+    "query": "release:\"Love the Way You Liee\" AND artistname:\"Eminem feat. Rihanna\"",
+    "url": "https://musicbrainz.org/ws/2/release?query=release%3A%22Love+the+Way+You+Liee%22+AND+artistname%3A%22Eminem+feat.+Rihanna%22&fmt=json&limit=3",
+    "receivedAt": "2026-11-08T14:54:55.241726+00:00",
+    "sha256": "6bbcb893abbfb3fa6865108517df87f30468f6e005631be053d1230281b136b9",
+    "count": 0,
+    "rows": []
+  },
+  {
+    "file": "release-featured-words.json",
+    "endpoint": "release",
+    "case": "featured",
+    "title": "Love the Way You Liee",
+    "artist": "Eminem feat. Rihanna",
+    "arm": "words",
+    "query": "release:love~ AND release:the AND release:way AND release:you AND release:liee~ AND artistname:eminem~ AND artistname:feat~ AND artistname:rihanna~",
+    "url": "https://musicbrainz.org/ws/2/release?query=release%3Alove~+AND+release%3Athe+AND+release%3Away+AND+release%3Ayou+AND+release%3Aliee~+AND+artistname%3Aeminem~+AND+artistname%3Afeat~+AND+artistname%3Arihanna~&fmt=json&limit=3",
+    "receivedAt": "2026-11-08T14:55:04.521200+00:00",
+    "sha256": "7772669b945569d109ada3753b320a56caf6e5bcd045356e9e275f8add19cdee",
+    "count": 0,
+    "rows": []
+  },
+  {
+    "file": "recording-radiohead-words.json",
+    "endpoint": "recording",
+    "case": "radiohead",
+    "title": "Krama Police",
+    "artist": "Radiohead",
+    "arm": "words",
+    "query": "recording:krama~ AND recording:police~ AND artistname:radiohead~",
+    "url": "https://musicbrainz.org/ws/2/recording?query=recording%3Akrama~+AND+recording%3Apolice~+AND+artistname%3Aradiohead~&fmt=json&limit=3",
+    "receivedAt": "2026-11-08T14:55:17.405809+00:00",
+    "sha256": "b9dbad60443197730b748b4dc253d27a2742ba8835a0d4bbee8c1abae3b15c21",
+    "count": 281,
+    "rows": [
+      {
+        "title": "Karma Police",
+        "artist": "Radiohead",
+        "id": "689c761a-e399-470f-9477-910b6de82477"
+      },
+      {
+        "title": "Karma Police",
+        "artist": "Radiohead",
+        "id": "233e0c74-1dd2-4a3a-8ad7-c787bfecd002"
+      },
+      {
+        "title": "Karma Police",
+        "artist": "Radiohead",
+        "id": "8cc13e71-0e05-475b-85c0-26310cc4a877"
+      }
+    ]
+  },
+  {
+    "file": "release-radiohead-words.json",
+    "endpoint": "release",
+    "case": "radiohead",
+    "title": "Krama Police",
+    "artist": "Radiohead",
+    "arm": "words",
+    "query": "release:krama~ AND release:police~ AND artistname:radiohead~",
+    "url": "https://musicbrainz.org/ws/2/release?query=release%3Akrama~+AND+release%3Apolice~+AND+artistname%3Aradiohead~&fmt=json&limit=3",
+    "receivedAt": "2026-11-08T14:55:32.417152+00:00",
+    "sha256": "b4b6fa08c1959e3c3c1acc472ef172daeeb4c647b0987c00de57cbdc3fb67757",
+    "count": 9,
+    "rows": [
+      {
+        "title": "Karma Police",
+        "artist": "Radiohead",
+        "id": "4dbc3e39-a89e-4433-a50a-3a4e7d072da2"
+      },
+      {
+        "title": "Karma Police",
+        "artist": "Radiohead",
+        "id": "6251277a-64f7-46ac-b701-4545db74aced"
+      },
+      {
+        "title": "Karma Police",
+        "artist": "Radiohead",
+        "id": "f1429171-cf32-415f-97c5-23dfc8d2d37d"
+      }
+    ]
+  },
+  {
+    "file": "recording-eagles-words.json",
+    "endpoint": "recording",
+    "case": "eagles",
+    "title": "Hotle California",
+    "artist": "Eagles",
+    "arm": "words",
+    "query": "recording:hotle~ AND recording:california~ AND artistname:eagles~",
+    "url": "https://musicbrainz.org/ws/2/recording?query=recording%3Ahotle~+AND+recording%3Acalifornia~+AND+artistname%3Aeagles~&fmt=json&limit=3",
+    "receivedAt": "2026-11-08T14:55:46.549014+00:00",
+    "sha256": "8b4f31ced7d729689fae35079b530035f5167a3f2577ea979cf8e3c0c37e70e3",
+    "count": 113,
+    "rows": [
+      {
+        "title": "Hotel California",
+        "artist": "Eagles",
+        "id": "831af421-9489-4808-b41f-017dca910001"
+      },
+      {
+        "title": "Hotel California",
+        "artist": "Eagles",
+        "id": "4bd546f1-7ebd-485e-a66b-2dbfc3f1f5e9"
+      },
+      {
+        "title": "Hotel California",
+        "artist": "Eagles",
+        "id": "d6e9f97b-0739-4619-ade3-f04f117eebb2"
+      }
+    ]
+  },
+  {
+    "file": "release-eagles-words.json",
+    "endpoint": "release",
+    "case": "eagles",
+    "title": "Hotle California",
+    "artist": "Eagles",
+    "arm": "words",
+    "query": "release:hotle~ AND release:california~ AND artistname:eagles~",
+    "url": "https://musicbrainz.org/ws/2/release?query=release%3Ahotle~+AND+release%3Acalifornia~+AND+artistname%3Aeagles~&fmt=json&limit=3",
+    "receivedAt": "2026-11-08T14:56:06.393124+00:00",
+    "sha256": "7c780048da4d2099ee9f0c356570e385859e1cd5b9d7b4a195b4e299b845f8a1",
+    "count": 84,
+    "rows": [
+      {
+        "title": "Hotel California",
+        "artist": "Eagles",
+        "id": "bb82e6d7-bdd9-427b-8fc1-d3bb49e0c1db"
+      },
+      {
+        "title": "Hotel California",
+        "artist": "Eagles",
+        "id": "1c0f39f3-b90a-4832-9bad-4d84dbf12fef"
+      },
+      {
+        "title": "Hotel California",
+        "artist": "Eagles",
+        "id": "24ae881f-7cb3-4c43-b80e-70332cd7c50d"
+      }
+    ]
+  },
+  {
+    "file": "recording-negative-strict.json",
+    "endpoint": "recording",
+    "case": "negative",
+    "title": "Bilie Jean",
+    "artist": "Michael Radiohead",
+    "arm": "strict",
+    "query": "recording:\"Bilie Jean\" AND artistname:\"Michael Radiohead\"",
+    "url": "https://musicbrainz.org/ws/2/recording?query=recording%3A%22Bilie+Jean%22+AND+artistname%3A%22Michael+Radiohead%22&fmt=json&limit=3",
+    "receivedAt": "2026-11-08T14:56:15.709048+00:00",
+    "sha256": "36846cf24231c4e4e05016fcc28bed7b1243bde53b75123ef9ab34746b1cebf0",
+    "count": 0,
+    "rows": []
+  },
+  {
+    "file": "recording-negative-current.json",
+    "endpoint": "recording",
+    "case": "negative",
+    "title": "Bilie Jean",
+    "artist": "Michael Radiohead",
+    "arm": "current",
+    "query": "recording:bilie~ AND recording:jean~ AND artistname:Michael Radiohead~",
+    "url": "https://musicbrainz.org/ws/2/recording?query=recording%3Abilie~+AND+recording%3Ajean~+AND+artistname%3AMichael+Radiohead~&fmt=json&limit=3",
+    "receivedAt": "2026-11-08T14:56:19.213513+00:00",
+    "sha256": "11fca6a89e6b185b307812c04ba49eae0ca536a7f209532bb76509d08a5b782c",
+    "count": 156,
+    "rows": [
+      {
+        "title": "Billie Jean",
+        "artist": "Michael Jackson",
+        "id": "7edb2779-0827-4b72-92e1-1acf088793dc"
+      },
+      {
+        "title": "Billie Jean",
+        "artist": "Michael Jackson",
+        "id": "39d45c6f-0554-416d-b359-901a0fb6bd9a"
+      },
+      {
+        "title": "Billie Jean",
+        "artist": "Michael Jackson",
+        "id": "4730ae1d-6743-488d-8f03-f3bd93ae1129"
+      }
+    ]
+  },
+  {
+    "file": "recording-negative-words.json",
+    "endpoint": "recording",
+    "case": "negative",
+    "title": "Bilie Jean",
+    "artist": "Michael Radiohead",
+    "arm": "words",
+    "query": "recording:bilie~ AND recording:jean~ AND artistname:michael~ AND artistname:radiohead~",
+    "url": "https://musicbrainz.org/ws/2/recording?query=recording%3Abilie~+AND+recording%3Ajean~+AND+artistname%3Amichael~+AND+artistname%3Aradiohead~&fmt=json&limit=3",
+    "receivedAt": "2026-11-08T14:56:22.122553+00:00",
+    "sha256": "dfa686d98d51c197763c3233ba0199789c7cd9eb75d0b856a7642519266ada35",
+    "count": 0,
+    "rows": []
+  },
+  {
+    "file": "recording-negative-canonical.json",
+    "endpoint": "recording",
+    "case": "negative",
+    "title": "Bilie Jean",
+    "artist": "Michael Radiohead",
+    "arm": "canonical",
+    "query": "recording:\"Bilie Jean\" AND artistname:\"Michael Radiohead\" AND -comment:*",
+    "url": "https://musicbrainz.org/ws/2/recording?query=recording%3A%22Bilie+Jean%22+AND+artistname%3A%22Michael+Radiohead%22+AND+-comment%3A%2A&fmt=json&limit=3",
+    "receivedAt": "2026-11-08T14:56:32.106421+00:00",
+    "sha256": "9c3be477ed3d1d04b5fac75d3e59c0dc1920245d5e7acef565e6b4cc583e47c9",
+    "count": 0,
+    "rows": []
+  },
+  {
+    "file": "release-negative-strict.json",
+    "endpoint": "release",
+    "case": "negative",
+    "title": "Bilie Jean",
+    "artist": "Michael Radiohead",
+    "arm": "strict",
+    "query": "release:\"Bilie Jean\" AND artistname:\"Michael Radiohead\"",
+    "url": "https://musicbrainz.org/ws/2/release?query=release%3A%22Bilie+Jean%22+AND+artistname%3A%22Michael+Radiohead%22&fmt=json&limit=3",
+    "receivedAt": "2026-11-08T14:56:39.277854+00:00",
+    "sha256": "dc47bd6a39b0dc94dd70ddae1bdbc333fe9940ce11a60686b415333c2994bf99",
+    "count": 0,
+    "rows": []
+  },
+  {
+    "file": "release-negative-current.json",
+    "endpoint": "release",
+    "case": "negative",
+    "title": "Bilie Jean",
+    "artist": "Michael Radiohead",
+    "arm": "current",
+    "query": "release:bilie~ AND release:jean~ AND artistname:Michael Radiohead~",
+    "url": "https://musicbrainz.org/ws/2/release?query=release%3Abilie~+AND+release%3Ajean~+AND+artistname%3AMichael+Radiohead~&fmt=json&limit=3",
+    "receivedAt": "2026-11-08T14:56:42.076988+00:00",
+    "sha256": "dede74a919f6b5e67706076afa0b4a159fb283aa6cdf2fb10dc08335383691bf",
+    "count": 13,
+    "rows": [
+      {
+        "title": "Billie Jean",
+        "artist": "Michael Jackson",
+        "id": "67410c54-af48-4339-af7e-d53de4c12639"
+      },
+      {
+        "title": "Billie Jean",
+        "artist": "Michael Jackson",
+        "id": "e2b79365-9aaf-415c-9321-a1ac702273ac"
+      },
+      {
+        "title": "Billie Jean",
+        "artist": "Michael Jackson",
+        "id": "0d33defc-70af-40ae-8681-36591874c049"
+      }
+    ]
+  },
+  {
+    "file": "release-negative-words.json",
+    "endpoint": "release",
+    "case": "negative",
+    "title": "Bilie Jean",
+    "artist": "Michael Radiohead",
+    "arm": "words",
+    "query": "release:bilie~ AND release:jean~ AND artistname:michael~ AND artistname:radiohead~",
+    "url": "https://musicbrainz.org/ws/2/release?query=release%3Abilie~+AND+release%3Ajean~+AND+artistname%3Amichael~+AND+artistname%3Aradiohead~&fmt=json&limit=3",
+    "receivedAt": "2026-11-08T14:56:46.713303+00:00",
+    "sha256": "5243d1b7f92e78603041a0e960409f68978f162bc475e02b04e498c928c75cfe",
+    "count": 0,
+    "rows": []
+  },
+  {
+    "file": "recording-featured-without-feat.json",
+    "endpoint": "recording",
+    "case": "featured",
+    "title": "Love the Way You Liee",
+    "artist": "Eminem feat. Rihanna",
+    "arm": "without-feat",
+    "query": "recording:love~ AND recording:the AND recording:way AND recording:you AND recording:liee~ AND artistname:eminem~ AND artistname:rihanna~",
+    "url": "https://musicbrainz.org/ws/2/recording?query=recording%3Alove~+AND+recording%3Athe+AND+recording%3Away+AND+recording%3Ayou+AND+recording%3Aliee~+AND+artistname%3Aeminem~+AND+artistname%3Arihanna~&fmt=json&limit=3",
+    "receivedAt": "2026-11-08T14:57:53.386825+00:00",
+    "sha256": "79beb6d565891b0f0611a973f7b8af5b4f5ddfa48202751d8df6480c584ceda7",
+    "count": 0,
+    "rows": []
+  },
+  {
+    "file": "release-featured-without-feat.json",
+    "endpoint": "release",
+    "case": "featured",
+    "title": "Love the Way You Liee",
+    "artist": "Eminem feat. Rihanna",
+    "arm": "without-feat",
+    "query": "release:love~ AND release:the AND release:way AND release:you AND release:liee~ AND artistname:eminem~ AND artistname:rihanna~",
+    "url": "https://musicbrainz.org/ws/2/release?query=release%3Alove~+AND+release%3Athe+AND+release%3Away+AND+release%3Ayou+AND+release%3Aliee~+AND+artistname%3Aeminem~+AND+artistname%3Arihanna~&fmt=json&limit=3",
+    "receivedAt": "2026-11-08T14:57:56.922926+00:00",
+    "sha256": "e397f9c2bf2416849f840f28426da940d714c595cdd1e8dbd03eda45390dbf7c",
+    "count": 0,
+    "rows": []
+  }
+]
