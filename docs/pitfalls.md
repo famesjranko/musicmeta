@@ -593,6 +593,20 @@ exact short CJK term can itself broaden (`recording:東凉` returned 8,429 hits 
 The recall cost includes `U2`, `AC/DC`, short CJK titles, three-letter typos and titles whose only
 long words contain numbers, including `sum41`.
 
+A supplied artist does not repair unfielded title words or Boolean grammar. On 2026-11-08,
+`recording:Rokc AND Roll~ AND artistname:Kiss~` returned no hits; the fielded, lowercased words
+returned 353, led by KISS. `recording:NOT Afriad~ AND artistname:Eminem~` led with other artists,
+while the word query retained `Not Afraid` by Eminem. The trailing-AND Metallica release control
+led with `For All and None` by other artists; the word query retained `…And Justice for All`.
+`Karma Radiohead` by Radiohead returned rows lacking `karma` under the unsplit query and none
+under the word query. `Krama Police` and `Hotle California` retained their intended top three.
+Use the same word builder with a supplied artist, then append the unchanged escaped
+`artistname:<artist>~` clause. Eligible titles cost one fuzzy request; ineligible titles cost none,
+including short titles that previously received a supplied-artist fuzzy request. Artist fuzziness,
+word reuse and ties still prevent a general relevance guarantee. Candidate search and enrichment
+suggestions use this rule without changing identity matching or the fallback ladder.
+The supplied-artist captures are in `pools/musicbrainz-fuzzy-supplied-artist/`.
+
 The captures, timestamps and query comparisons are in `pools/musicbrainz-fuzzy-title-only/`
 under core's test resources. The scenario records capture timestamps and exact queries; only the
 first three hits were inspected. These queries constrain suggestions, not identity or semantic

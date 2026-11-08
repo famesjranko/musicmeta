@@ -57,7 +57,7 @@ internal class MusicBrainzApi(
         return MusicBrainzParser.parseArtistDisambiguations(json)
     }
 
-    /** Near-miss suggestions; title-only queries need a word with at least four NFC code points and no numbers. */
+    /** Near-miss suggestions need a title word with at least four NFC code points and no numbers. */
     suspend fun searchReleasesFuzzy(
         title: String,
         artist: String,
@@ -270,7 +270,7 @@ internal class MusicBrainzApi(
         }
 
     /**
-     * Near-miss suggestions; title-only queries need a word with at least four NFC code points and no numbers.
+     * Near-miss suggestions need a title word with at least four NFC code points and no numbers.
      * [searchRecordings]'s own hint-less retry only drops the `release:"…"` album term. It re-sends
      * [title] quoted, so this loosened match is needed to rescue a typo. Like the release/artist
      * variants, this takes no album hint — a release term would narrow a near-miss query.
@@ -484,9 +484,6 @@ internal class MusicBrainzApi(
         private val TITLE_NUMBERS = Regex("\\p{N}+")
 
         private fun fuzzyTitleQuery(field: String, title: String, artist: String): String? {
-            if (artist.isNotBlank()) {
-                return encodeQueryValue("$field:${escapeLucene(title)}~ AND artistname:${escapeLucene(artist)}~")
-            }
             // MusicBrainz folds fuzzy terms' case and accents but does not split them into words.
             // Lowercasing keeps Boolean title words out of Lucene's grammar.
             val words = FUZZY_TITLE_WORDS.findAll(Normalizer.normalize(title, Normalizer.Form.NFC))
@@ -498,7 +495,8 @@ internal class MusicBrainzApi(
             val terms = words.joinToString(" AND ") {
                 "$field:${escapeLucene(it.lowercase(Locale.ROOT))}" + if (it in fuzzyWords) "~" else ""
             }
-            return encodeQueryValue(terms)
+            val artistClause = if (artist.isNotBlank()) " AND artistname:${escapeLucene(artist)}~" else ""
+            return encodeQueryValue(terms + artistClause)
         }
 
         /** Build a Lucene query with two fields and URL-encode the ENTIRE thing. */

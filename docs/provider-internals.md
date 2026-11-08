@@ -104,9 +104,9 @@ The two Deezer provider ids have separate breakers, even when they share the API
 For previews, a source skipped during cooldown remains an error when the fallback has no clip;
 it cannot establish a cacheable absence for the unavailable source.
 
-## Title-only fuzzy suggestions
+## Fuzzy title suggestions
 
-When a strict candidate search misses and the artist is blank, fuzzy recording and release
+When a strict candidate search misses, fuzzy recording and release
 queries normalize the title to NFC, then extract words starting with a Unicode letter or number.
 Letters, numbers and combining marks can continue a word. Internal apostrophes are kept, with
 `’` normalized to ASCII apostrophe; other punctuation separates words. Extracted words are
@@ -127,10 +127,14 @@ Combining marks can lift a short word over the floor even when upstream folds th
 `ज़ोर` (starting with U+095B) becomes four NFC code points and can return unrelated titles.
 Suggestions are not an identity claim or a guarantee of relevance across the search index.
 
-The queries omit the artist clause. Album enrichment uses the same fallback when its strict pool
-is empty, so misses without a qualifying word offer no fuzzy suggestions; track enrichment refuses
-a blank artist without searching. With an artist supplied, fuzzy search sends one unquoted
-title-and-artist query.
+With a blank artist, the queries omit the artist clause. With an artist supplied, they append
+`AND artistname:<escaped artist>~` without changing artist matching. For example, `Rokc AND Roll`
+by `Kiss` sends `recording:rokc~ AND recording:and AND recording:roll~ AND artistname:Kiss~`.
+An eligible title costs one fuzzy request on either endpoint; ineligible titles cost none even
+with an artist supplied, so short titles lose this typo rescue.
+Album enrichment uses the same fallback when its strict pool is empty; track enrichment refuses
+a blank artist without searching. Candidate search and enrichment suggestions share this query
+rule. Fuzzy rows remain choices for the caller; they do not resolve identity or change the fallback ladder.
 
 ## Resolving a track by name
 

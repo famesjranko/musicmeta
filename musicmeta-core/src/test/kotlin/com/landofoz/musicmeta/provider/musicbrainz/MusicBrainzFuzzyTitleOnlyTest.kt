@@ -75,16 +75,20 @@ class MusicBrainzFuzzyTitleOnlyTest(private val entity: String) {
     }
 
     @Test
-    fun `a supplied artist preserves the query and request count`() = runTest {
-        // Given - the captured response to the existing artist-qualified typo query
-        givenCapture("$entity:Karma Polise~ AND artistname:Radiohead~", "karma-polise-with-artist")
+    fun `a supplied artist uses title words and preserves the request count`() = runTest {
+        // Given - the captured response to the fielded artist-qualified typo query
+        val query = "$entity:karma~ AND $entity:polise~ AND artistname:Radiohead~"
+        val body = checkNotNull(
+            javaClass.getResourceAsStream("/pools/musicbrainz-fuzzy-supplied-artist/$entity-polise-words.json"),
+        ).bufferedReader().use { it.readText() }
+        httpClient.givenJsonResponse("query=${java.net.URLEncoder.encode(query, "UTF-8")}&", body)
 
         // When - searching with an artist and an explicit limit
         val titles = fuzzyTitles("Karma Polise", "Radiohead", limit = 3)
 
-        // Then - the same query returns the same three titles in one request
+        // Then - the fielded query returns the intended three titles in one request
         assertEquals(listOf("Karma Police", "Karma Police", "Karma Police"), titles)
-        assertEquals("$entity:Karma Polise~ AND artistname:Radiohead~", queries().single())
+        assertEquals(query, queries().single())
         assertEquals("fmt=json&limit=3", httpClient.requestedUrls.single().substringAfter("&"))
     }
 
@@ -319,6 +323,19 @@ class MusicBrainzFuzzyTitleOnlyTest(private val entity: String) {
         } finally {
             Locale.setDefault(originalLocale)
         }
+    }
+
+    @Test
+    fun `supplied artists cannot trigger fuzzy requests for ineligible titles`() = runTest {
+        // Given - short, numeric, punctuation and Unicode titles without a qualifying fuzzy word
+        val inputs = listOf("Hte", "U2", "AC/DC", "東凉", "2012", "sum41", "!!!", "\uD801\uDC00\uD801\uDC01", "İyi")
+
+        // When - attempting a supplied-artist fuzzy rescue for each title
+        val pools = inputs.map { fuzzyTitles(it, "Radiohead") }
+
+        // Then - no fuzzy query is sent and every result is empty
+        assertEquals(inputs.map { emptyList<String>() }, pools)
+        assertEquals(emptyList<String>(), httpClient.requestedUrls)
     }
 
     private suspend fun fuzzyTitles(title: String, artist: String, limit: Int = 3): List<String> =

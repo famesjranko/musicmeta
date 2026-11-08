@@ -171,8 +171,8 @@ class MusicBrainzTransientFailureTest {
         /** `release:"Dummy"` URL-encoded — the strict album search. */
         private const val STRICT_RELEASE_QUERY = "release%3A%22Dummy%22"
 
-        /** `release:Dummy~` URL-encoded — the fuzzy album search. */
-        private const val FUZZY_RELEASE_QUERY = "release%3ADummy%7E"
+        /** `release:dummy~` URL-encoded — the fuzzy album search. */
+        private const val FUZZY_RELEASE_QUERY = "release%3Adummy%7E"
 
         private const val RELEASE_MBID = "3a3a1a7e-1111-2222-3333-444455556666"
 
@@ -202,8 +202,8 @@ class MusicBrainzTransientFailureTest {
         /** `recording:"Enter Sandmanz Xyzqq" AND artistname:"Metallica"` URL-encoded — the strict track search. */
         private const val STRICT_TRACK_QUERY = "recording%3A%22Enter+Sandmanz+Xyzqq%22"
 
-        /** `recording:Enter Sandmanz Xyzqq~ AND artistname:Metallica~` URL-encoded — the fuzzy track search. */
-        private const val FUZZY_TRACK_QUERY = "recording%3AEnter+Sandmanz+Xyzqq%7E"
+        /** `recording:enter~ AND recording:sandmanz~ AND recording:xyzqq~ AND artistname:Metallica~` URL-encoded — the fuzzy track search. */
+        private const val FUZZY_TRACK_QUERY = "recording%3Aenter%7E+AND+recording%3Asandmanz%7E+AND+recording%3Axyzqq%7E"
 
         private val FUZZY_RECORDINGS_NEAR_MISS = """
             {"recordings":[
