@@ -106,4 +106,31 @@ class SearchEndpointTest {
         val decoded = json.decodeFromString(SearchResponse.serializer(), response.body())
         assertTrue(decoded.candidates.isEmpty())
     }
+
+    @Test
+    fun `search exposes each look-alike candidate's provider and identifier`() {
+        // Given - the existing stub provider returns a modelled Nirvana pair with distinct MBIDs.
+        val candidates = listOf(
+            SearchCandidate(
+                title = "Nirvana", provider = "musicbrainz",
+                identifiers = EnrichmentIdentifiers(musicBrainzId = "nirvana-a"), matchScore = 1f,
+            ),
+            SearchCandidate(
+                title = "Nirvana", provider = "musicbrainz",
+                identifiers = EnrichmentIdentifiers(musicBrainzId = "nirvana-b"), matchScore = 1f,
+            ),
+        )
+        val port = startTestServer(StubSearchProvider(candidates))
+
+        // When - GET requests an artist search for Nirvana.
+        val response = get(port, "/api/search?kind=artist&q=Nirvana")
+
+        // Then - the HTTP 200 body exposes both candidates with the provider and each own MBID.
+        assertEquals(200, response.statusCode())
+        val hits = Json.parseToJsonElement(response.body())
+            .jsonObject["candidates"]!!.jsonArray
+        assertEquals(2, hits.size)
+        assertEquals(listOf("musicbrainz", "musicbrainz"), hits.map { it.jsonObject["provider"]!!.jsonPrimitive.content })
+        assertEquals(listOf("nirvana-a", "nirvana-b"), hits.map { it.jsonObject["mbid"]!!.jsonPrimitive.content })
+    }
 }

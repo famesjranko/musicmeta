@@ -5,6 +5,8 @@ import com.landofoz.musicmeta.EnrichmentRequest
 import com.landofoz.musicmeta.http.RateLimiter
 import com.landofoz.musicmeta.testutil.FakeHttpClient
 import kotlinx.coroutines.test.runTest
+import org.json.JSONArray
+import org.json.JSONObject
 import org.junit.Assert.*
 import org.junit.Test
 
@@ -19,7 +21,7 @@ class MusicBrainzCandidateSelectionTest {
     private val track = EnrichmentRequest.forTrack("Karma Police", "Radiohead")
 
     @Test
-    fun `identical visible recordings collapse before the limit and retain a live choice`() = runTest {
+    fun `distinct look-alike recordings each take a slot before the live recording`() = runTest {
         // Given - two captured main recordings look identical and a third is a live performance.
         http.givenJsonResponse("comment", fixture("canonical"))
         http.givenJsonResponse("recording?query", fixture("duplicates"))
@@ -27,10 +29,14 @@ class MusicBrainzCandidateSelectionTest {
         // When - the caller requests two choices.
         val found = provider.searchCandidates(track, 2)
 
-        // Then - the best main identifier remains and the live performance gets the second slot.
-        assertEquals(2, found.size)
-        assertEquals("262bef76-1b10-4c8a-b2be-a9921a33b4fc", found[0].identifiers.musicBrainzId)
-        assertTrue(found[1].disambiguation?.startsWith("live") == true)
+        // Then - the two distinct look-alike recordings fill both slots before the live performance.
+        assertEquals(
+            listOf(
+                "262bef76-1b10-4c8a-b2be-a9921a33b4fc",
+                "b56697ff-f614-424b-8b50-3f92c9e11feb",
+            ),
+            found.map { it.identifiers.musicBrainzId },
+        )
     }
 
     @Test
@@ -70,17 +76,48 @@ class MusicBrainzCandidateSelectionTest {
 
     @Test
     fun `album choices preserve differences in year country and type`() = runTest {
-        // Given - modelled pressings contain one duplicate and three independently different visible fields.
+        // Given - modelled pressings contain a distinct release whose visible fields equal album-a and three differing fields.
         http.givenJsonResponse("release?query", fixture("album-variants"))
 
         // When - the caller searches for the album.
         val found = provider.searchCandidates(EnrichmentRequest.forAlbum("OK Computer", "Radiohead"), 8)
 
-        // Then - only the duplicate disappears and each distinct pressing remains selectable.
-        assertEquals(4, found.size)
+        // Then - the distinct duplicate remains selectable and each differing pressing remains selectable.
+        assertEquals(listOf("album-a", "album-country", "album-duplicate", "album-year", "album-type"), found.map { it.identifiers.musicBrainzId })
         assertTrue(found.any { it.year == 2001 })
         assertTrue(found.any { it.country == "US" })
         assertTrue(found.any { it.releaseType == "Single" })
+    }
+
+    @Test
+    fun `apostrophe variants retain both captured Journey recording identifiers`() = runTest {
+        // Given - a captured title-only MusicBrainz response is filtered to the unchanged straight and curly Journey recordings.
+        val capture = JSONObject(
+            requireNotNull(javaClass.getResource("/pools/search-entity-choices/apostrophe-live.json")).readText(),
+        )
+        val recordings = capture.getJSONArray("recordings")
+        val selected = JSONArray()
+        for (index in 0 until recordings.length()) {
+            val recording = recordings.getJSONObject(index)
+            if (recording.getString("id") in setOf(
+                    "2afe3092-9163-42b1-81e0-e7aa5d3566ec",
+                    "e7ddc9d7-1a21-47ec-aed8-bc42aad9c406",
+                )
+            ) selected.put(recording)
+        }
+        capture.put("recordings", selected)
+        http.givenJsonResponse("recording?query", capture.toString())
+
+        // When - the caller searches the captured title without an artist and requests two choices.
+        val found = provider.searchCandidates(EnrichmentRequest.forTrack("Don’t Stop Believin’", ""), 2)
+
+        // Then - both unchanged identifiers remain once and retain their original title spellings.
+        assertEquals(
+            listOf("2afe3092-9163-42b1-81e0-e7aa5d3566ec", "e7ddc9d7-1a21-47ec-aed8-bc42aad9c406"),
+            found.map { requireNotNull(it.identifiers.musicBrainzId) }.sorted(),
+        )
+        assertEquals("Don't Stop Believin'", found.single { it.identifiers.musicBrainzId == "2afe3092-9163-42b1-81e0-e7aa5d3566ec" }.title)
+        assertEquals("Don’t Stop Believin’", found.single { it.identifiers.musicBrainzId == "e7ddc9d7-1a21-47ec-aed8-bc42aad9c406" }.title)
     }
 
     @Test

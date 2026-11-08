@@ -218,9 +218,9 @@ limit may still omit them. This ordering spends no additional request and cannot
 original release outside the returned pool: release search supplies pressing dates, not the
 group's first-release date (checked on 2026-11-07).
 
-After ranking, candidates with identical title, artist, year, country, type, thumbnail,
-disambiguation and score collapse to the first row before the limit. Distinct visible editions
-remain choices. Artist search keeps its upstream order with the same collapse rule.
+Before ranking, recording and album pools merge duplicate MBIDs, keeping the best score. There is
+no visible-row collapse, so look-alike entities take separate slots. Artist search keeps its
+upstream order.
 A nonempty strict track search with a supplied artist adds one filtered canonical pool, unless
 the album-hinted broad query already answered. It reuses the broad fallback instead of repeating
 enrichment's shallow and variant queries. A fuzzy rescue does not repeat the empty strict query.

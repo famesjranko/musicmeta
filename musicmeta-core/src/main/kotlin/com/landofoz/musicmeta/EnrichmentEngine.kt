@@ -231,14 +231,13 @@ public interface EnrichmentEngine {
      * enrichment identity are unaffected.
      *
      * Asks the provider whose [EnrichmentProvider.isIdentityProvider] is true for up to
-     * [limit] candidates. Identical visible rows collapse before counting the remainder. Only if
-     * fewer remain does it also ask every other provider whose [EnrichmentProvider.isAvailable]
-     * is true for that same remainder. Supplemental title/artist matches are dropped unless their
-     * year, country, type or disambiguation identifies a distinct edition; absent year, country
-     * or type alone does not establish a difference. Scores and artwork do not identify editions.
-     * The combined list then collapses rows with identical title,
-     * artist, year, country, type, thumbnail, disambiguation and score, keeping the first provider's
-     * row. There is no paging to replace collapsed rows, so fewer than [limit] may remain.
+     * [limit] candidates. Rows are never merged because they look alike, so distinct entities that
+     * look alike each take a slot. Only if fewer remain does it also ask every other provider whose
+     * [EnrichmentProvider.isAvailable] is true for that same remainder. Supplemental title/artist
+     * matches are dropped when they repeat an identity-provider row unless their year, country,
+     * type or disambiguation identifies a distinct edition; absent year, country or type alone does
+     * not establish a difference. Scores and artwork do not identify editions. There is no paging
+     * to replace dropped rows, so fewer than [limit] may remain.
      * A provider that throws is logged and contributes no candidates rather than failing the call.
      */
     public suspend fun search(

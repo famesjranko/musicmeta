@@ -104,11 +104,11 @@ class MusicBrainzCanonicalRecordingSearchTest {
         // When - candidates are searched for the same track
         val candidates = provider.searchCandidates(EnrichmentRequest.forTrack(TITLE, ARTIST), 10)
 
-        // Then - the main take leads while both marked alternatives remain selectable.
+        // Then - the main take leads while the look-alike sampler recording and marked alternatives remain selectable.
         assertEquals(STUDIO_MBID, candidates.first().identifiers.musicBrainzId)
-        assertEquals(3, candidates.size)
+        assertEquals(4, candidates.size)
         assertEquals(
-            setOf(STUDIO_MBID, LIVE_MBID, "rec-demo"),
+            setOf(STUDIO_MBID, "rec-sampler", LIVE_MBID, "rec-demo"),
             candidates.map { it.identifiers.musicBrainzId }.toSet(),
         )
 

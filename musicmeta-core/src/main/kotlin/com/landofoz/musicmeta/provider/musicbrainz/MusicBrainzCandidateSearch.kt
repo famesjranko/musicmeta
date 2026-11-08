@@ -7,7 +7,6 @@ import com.landofoz.musicmeta.SearchCandidate
 import com.landofoz.musicmeta.engine.ArtistMatcher
 import com.landofoz.musicmeta.engine.ConfidenceCalculator
 import com.landofoz.musicmeta.engine.SearchTitleMatcher
-import com.landofoz.musicmeta.engine.displayKey
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
 
@@ -62,7 +61,7 @@ internal class MusicBrainzCandidateSearch(
                     .thenBy { it.value.identifiers.musicBrainzId },
             ).let { candidates ->
                 MusicBrainzAlbumCandidateOrder.order(candidates, title, artistTierOf = { it.artistTier }) { it.release }
-            }.map { it.value }.distinctBy { it.displayKey() }.take(limit)
+            }.map { it.value }.take(limit)
     }
 
     private fun artistRank(artists: List<String>, candidate: Candidate): Int =
@@ -140,7 +139,7 @@ internal class MusicBrainzCandidateSearch(
                 identifiers = EnrichmentIdentifiers(musicBrainzId = artist.id),
                 disambiguation = artist.disambiguation,
             )
-        }.distinctBy { it.displayKey() }.take(limit)
+        }.take(limit)
     }
 
     private suspend fun searchTrackCandidates(

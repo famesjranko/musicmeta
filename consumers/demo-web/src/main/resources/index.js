@@ -524,7 +524,10 @@ function clearCandidates() {
 }
 
 function candidateSubtitle(hit) {
-  return [hit.disambiguation, hit.artist, hit.releaseType, hit.year, hit.country].filter(Boolean).join(' \u00b7 ');
+  const details = [hit.disambiguation, hit.artist, hit.releaseType, hit.year, hit.country].filter(Boolean);
+  if (hit.mbid) details.push(hit.provider + ' ' + hit.mbid.slice(0, 8));
+  else if (hit.provider) details.push(hit.provider);
+  return details.join(' \u00b7 ');
 }
 
 function renderCandidates(query) {
@@ -538,7 +541,8 @@ function renderCandidates(query) {
       ? `<img src="${esc(hit.thumbnailUrl)}" alt="" onerror="this.remove()" />`
       : '';
     const subtitle = candidateSubtitle(hit);
-    return `<li><button type="button" data-index="${index}">${thumb}<span class="primary">${esc(hit.title)}${
+    const title = hit.mbid ? ` title="${esc(hit.mbid)}"` : '';
+    return `<li><button type="button" data-index="${index}"${title}>${thumb}<span class="primary">${esc(hit.title)}${
       subtitle ? ` <span class="secondary">${esc(subtitle)}</span>` : ''
     }</span><span class="score">score ${esc(hit.score.toFixed(2))}</span></button></li>`;
   }).join('');

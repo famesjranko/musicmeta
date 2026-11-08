@@ -185,8 +185,8 @@ class MusicBrainzAlbumCandidateOrderTest {
             listOf("Michael Jackson"), EnrichmentLogger.NoOp,
         )
 
-        // Then - all 98 distinct visible choices survive using exactly the original release-search request.
-        assertEquals(98, found.size)
+        // Then - every distinct release survives (100) using exactly the original release-search request.
+        assertEquals(100, found.size)
         assertEquals(listOf(MusicBrainzApi.releaseSearchUrl("Thriller", "", 100)), http.requestedUrls)
         assertTrue(found.any { it.releaseType == "Single" })
     }

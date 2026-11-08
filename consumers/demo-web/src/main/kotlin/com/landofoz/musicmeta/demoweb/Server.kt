@@ -1123,6 +1123,7 @@ private fun handleSearch(exchange: HttpExchange, engine: EnrichmentEngine) {
                         disambiguation = candidate.disambiguation,
                         mbid = candidate.identifiers.musicBrainzId,
                         country = candidate.country,
+                        provider = candidate.provider,
                     )
                 },
             ),

@@ -635,7 +635,7 @@ internal class DefaultEnrichmentEngine(
                 logger.warn(TAG, "Identity search failed: ${e.message}", e)
                 emptyList()
             }
-        } else emptyList()).distinctBy { it.displayKey() }
+        } else emptyList())
 
         if (primary.size >= limit) return primary.take(limit)
 
@@ -652,7 +652,7 @@ internal class DefaultEnrichmentEngine(
         }
 
         val unique = supplemental.filterNot { candidate -> primary.any { candidate.repeatsPrimary(it) } }
-        return (primary + unique).distinctBy { it.displayKey() }.take(limit)
+        return (primary + unique).take(limit)
     }
 
     override fun getProviders(): List<ProviderInfo> = registry.providerInfos()
