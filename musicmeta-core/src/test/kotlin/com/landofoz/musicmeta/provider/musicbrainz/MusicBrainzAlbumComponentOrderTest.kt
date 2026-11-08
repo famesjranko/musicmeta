@@ -94,8 +94,8 @@ class MusicBrainzAlbumComponentOrderTest {
     }
 
     @Test
-    fun `a common first artist alone does not connect different groups and credit sets`() = runTest {
-        // Given - a modelled duet and an older solo release share a first artist but neither relation key.
+    fun `first credited artist cannot merge a solo release across groups above a hinted collaborator`() = runTest {
+        // Given - a modelled duet and an older solo release share a first artist across different groups.
         val pool = modelPool("Album")
         val duet = pool.first()
         val solo = pool.last().apply {
@@ -104,12 +104,12 @@ class MusicBrainzAlbumComponentOrderTest {
             getJSONObject("release-group").put("id", pool[1].getJSONObject("release-group").getString("id"))
         }
         val provider = provider(listOf(duet, solo))
-        val request = EnrichmentRequest.forAlbum("Getz/Gilberto", "Stan Getz")
+        val request = EnrichmentRequest.forAlbum("Getz/Gilberto", "")
 
-        // When - the individual-artist query places both rows in the same artist tier.
-        val found = provider.searchCandidates(request, 2)
+        // When - the title-only query receives Gilberto as its only stubbed artist hint.
+        val found = provider.searchCandidates(request, 2, listOf("João Gilberto"), EnrichmentLogger.NoOp)
 
-        // Then - the unrelated solo release cannot use chronology to take the duet's higher-relevance slot.
+        // Then - the shared first artist cannot move the solo release above the hinted collaborator.
         assertEquals(listOf(A, C), found.map { it.identifiers.musicBrainzId })
     }
 

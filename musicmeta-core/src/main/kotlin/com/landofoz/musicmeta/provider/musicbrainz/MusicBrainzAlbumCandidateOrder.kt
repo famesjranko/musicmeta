@@ -3,7 +3,7 @@ package com.landofoz.musicmeta.provider.musicbrainz
 import com.landofoz.musicmeta.engine.SearchTitleMatcher
 
 /**
- * Orders each exact-title component once, joining artist sets or release-group/first-artist pairs
+ * Orders each exact-title component once, joining artist sets or first credited artists across groups
  * within a shared supplied-artist and hint tier.
  */
 internal object MusicBrainzAlbumCandidateOrder {
@@ -21,10 +21,9 @@ internal object MusicBrainzAlbumCandidateOrder {
             artistTierOf(candidates[it]) to artistKey(releases.getValue(it))
         }
         val editions = releases.keys.filter {
-            !releases.getValue(it).releaseGroupId.isNullOrBlank() && releases.getValue(it).artistCreditIds.isNotEmpty()
+            releases.getValue(it).artistCreditIds.isNotEmpty()
         }.groupBy {
-            val release = releases.getValue(it)
-            artistTierOf(candidates[it]) to (release.releaseGroupId to release.artistCreditIds.first())
+            artistTierOf(candidates[it]) to releases.getValue(it).artistCreditIds.first()
         }
         val parents = IntArray(candidates.size) { it }
         (artists.values + editions.values).forEach { related ->

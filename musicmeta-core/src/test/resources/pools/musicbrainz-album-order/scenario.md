@@ -73,5 +73,30 @@ The supplied and hinted Jobim tests use unchanged rows `1cb544a7` and `2dd57364`
 The completeness tests use unchanged Thriller rows for missing date and status;
 the missing-type case deliberately omits the original's primary type.
 A further two-row model selects the duet and a solo credit in a different group,
-with the same individual artist tier, to isolate the full artist-key relation
-from a first-credited-artist-only key.
+with Gilberto as a stubbed hint, to isolate the first-artist link across hint tiers.
+
+
+## Guest-credit single and full-credit tier captures
+
+Copied byte-for-byte from the reviewer's live MusicBrainz release-search responses,
+captured on 2026-11-08 around 06:09 UTC, before this rule change. Queries come from
+`/tmp/rv419/queries.txt`; timestamps below are the responses' MusicBrainz `created`
+values. Each file retains the full response envelope and returned release array.
+
+- `encore.json`: `2026-11-08T06:09:01.941Z`, 16 of 16 hits.
+  Query: `release:"Encore" AND artistname:"Eminem"`.
+  URL: `https://musicbrainz.org/ws/2/release?query=release%3A%22Encore%22+AND+artistname%3A%22Eminem%22&fmt=json&limit=100`
+  SHA-256: `74e4543ba7ffb097f884ea90938ab220121d68f0193cebaae3435134011f9966`
+- `ellalouis.json`: `2026-11-08T06:08:51.758Z`, 69 of 69 hits.
+  Query: `release:"Ella and Louis" AND artistname:""`.
+  URL: `https://musicbrainz.org/ws/2/release?query=release%3A%22Ella+and+Louis%22+AND+artistname%3A%22%22&fmt=json&limit=100`
+  SHA-256: `431291aaa9df7985d4929c1a40822b095b8f113ba6eb733caab7df1dc114bf53`
+
+Encore's single `e8d6a3b0` shares Eminem as its first artist with the albums,
+but adds Dr. Dre and 50 Cent in a different release group. The three request
+shapes replay this same artist-filtered pool; they do not claim that a live
+title-only query returns it. Ella and Louis includes `52486b56` with an ampersand
+credit and `3f1385f1` with a hyphen credit for the same two artist ids. The full
+ampersand request and stubbed hint must preserve the stronger matching tier.
+Hints are stubbed directly at the provider; no live iTunes response is asserted.
+No scheduled check revalidates these captures.

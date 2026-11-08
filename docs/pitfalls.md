@@ -582,8 +582,8 @@ without filtering them; retention in the pool does not promise a place inside ev
 
 One release group's credits can vary between pressings: Getz/Gilberto's 1964 original credits
 Jobim as well as Getz and Gilberto, while the captured 2011 reissue credits only the latter two.
-An exact artist-id set splits these editions. Linking by release group and first credited artist
-joins them, but that link says nothing about the requested artist: a Jobim edition must not give
+An exact artist-id set splits these editions. Linking by first credited artist across release
+groups joins them, but that link says nothing about the requested artist: a Jobim edition must not give
 its slot to a duet that does not credit Jobim. Both relation keys must include the comparator's
 supplied-artist match and ordered hint rank, computed once for the candidate.
 
