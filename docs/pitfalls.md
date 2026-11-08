@@ -600,12 +600,20 @@ while the word query retained `Not Afraid` by Eminem. The trailing-AND Metallica
 led with `For All and None` by other artists; the word query retained `…And Justice for All`.
 `Karma Radiohead` by Radiohead returned rows lacking `karma` under the unsplit query and none
 under the word query. `Krama Police` and `Hotle California` retained their intended top three.
-Use the same word builder with a supplied artist, then append the unchanged escaped
-`artistname:<artist>~` clause. Eligible titles cost one fuzzy request; ineligible titles cost none,
-including short titles that previously received a supplied-artist fuzzy request. Artist fuzziness,
-word reuse and ties still prevent a general relevance guarantee. Candidate search and enrichment
-suggestions use this rule without changing identity matching or the fallback ladder.
-The supplied-artist captures are in `pools/musicbrainz-fuzzy-supplied-artist/`.
+
+Build artist terms from the same NFC word extraction as title terms. Classify words by their NFC
+code points and Unicode numbers before lowercasing with `Locale.ROOT`; add `~` only to words with
+at least four NFC code points and no Unicode number. Short and numeric words stay exact. An eligible
+title sends one fuzzy request even when no artist word is eligible, and an artist with no words adds
+no clause. Captures recover the first-word typo
+`Micheal Jackson` and reject the constructed `Michael Radiohead` negative control in suggestion
+pools; they do not establish general artist exclusion. Captured AND cases retained their intended
+rows; OR/NOT have syntax coverage only. Aliases, repeated fuzzy matches and upstream ties can still
+affect results. Featured credits can miss: the captured Eminem feat. Rihanna query and its
+without-feat diagnostic both returned none, so the cause is not isolated. Candidate search and
+enrichment suggestions use this rule without changing identity matching or the fallback ladder.
+The supplied-artist captures are in `pools/musicbrainz-fuzzy-supplied-artist/` and
+`pools/musicbrainz-fuzzy-artist-words/`.
 
 The captures, timestamps and query comparisons are in `pools/musicbrainz-fuzzy-title-only/`
 under core's test resources. The scenario records capture timestamps and exact queries; only the

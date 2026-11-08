@@ -29,7 +29,15 @@ class MusicBrainzFuzzySuppliedArtistTest(private val entity: String, private val
     private val words = forms.single { it.getString("form") == "words" }
     private val title = words.getString("title")
     private val artist = words.getString("artist")
-    private val fuzzy = words.getString("query")
+    private val fuzzy = words.getString("query").substringBefore(" AND artistname") + " AND " + when (name) {
+        "kiss" -> "artistname:kiss~"
+        "halsey" -> "artistname:halsey~"
+        "eminem" -> "artistname:eminem~"
+        "metallica-leading", "metallica-trailing" -> "artistname:metallica~"
+        "negative", "radiohead", "polise" -> "artistname:radiohead~"
+        "eagles" -> "artistname:eagles~"
+        else -> error("No artist word query for $name")
+    }
     private val strict = forms.single { it.getString("form") == "strict" }.getString("query")
     private val request = if (entity == "recording") {
         EnrichmentRequest.forTrack(title, artist)
@@ -131,6 +139,11 @@ class MusicBrainzFuzzySuppliedArtistTest(private val entity: String, private val
                 resource(record.getString("file")),
             )
         }
+        // Reuse the pre-change capture rows as a parser and path compatibility fixture, not as live evidence.
+        client.givenJsonResponse(
+            "query=${URLEncoder.encode(fuzzy, "UTF-8")}&",
+            resource(words.getString("file")),
+        )
     }
 
     private fun queries() = client.requestedUrls.map {

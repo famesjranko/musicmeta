@@ -478,25 +478,31 @@ internal class MusicBrainzApi(
             value.replace(LUCENE_SPECIAL_CHARS) { "\\${it.value}" }
 
         private const val MIN_FUZZY_WORD_LENGTH = 4
-        private val FUZZY_TITLE_WORDS = Regex(
+        private val FUZZY_WORDS = Regex(
             "[\\p{L}\\p{N}][\\p{L}\\p{M}\\p{N}]*(?:['’][\\p{L}\\p{N}][\\p{L}\\p{M}\\p{N}]*)*",
         )
-        private val TITLE_NUMBERS = Regex("\\p{N}+")
+        private val WORD_NUMBERS = Regex("\\p{N}+")
+
+        private fun fuzzyWords(value: String): List<String> =
+            FUZZY_WORDS.findAll(Normalizer.normalize(value, Normalizer.Form.NFC))
+                .map { it.value.replace('’', '\'') }.toList()
+
+        private fun isFuzzyWord(word: String): Boolean =
+            word.codePointCount(0, word.length) >= MIN_FUZZY_WORD_LENGTH && !WORD_NUMBERS.containsMatchIn(word)
+
+        private fun fuzzyTerms(field: String, words: List<String>): String =
+            words.joinToString(" AND ") { word ->
+                "$field:${escapeLucene(word.lowercase(Locale.ROOT))}" + if (isFuzzyWord(word)) "~" else ""
+            }
 
         private fun fuzzyTitleQuery(field: String, title: String, artist: String): String? {
-            // MusicBrainz folds fuzzy terms' case and accents but does not split them into words.
-            // Lowercasing keeps Boolean title words out of Lucene's grammar.
-            val words = FUZZY_TITLE_WORDS.findAll(Normalizer.normalize(title, Normalizer.Form.NFC))
-                .map { it.value.replace('’', '\'') }.toList()
-            val fuzzyWords = words.filter {
-                it.codePointCount(0, it.length) >= MIN_FUZZY_WORD_LENGTH && !TITLE_NUMBERS.containsMatchIn(it)
-            }.distinct()
-            if (fuzzyWords.isEmpty()) return null
-            val terms = words.joinToString(" AND ") {
-                "$field:${escapeLucene(it.lowercase(Locale.ROOT))}" + if (it in fuzzyWords) "~" else ""
-            }
-            val artistClause = if (artist.isNotBlank()) " AND artistname:${escapeLucene(artist)}~" else ""
-            return encodeQueryValue(terms + artistClause)
+            val titleWords = fuzzyWords(title)
+            if (titleWords.none(::isFuzzyWord)) return null
+            val terms = fuzzyTerms(field, titleWords)
+            val artistWords = fuzzyWords(artist)
+            val artistTerms = fuzzyTerms("artistname", artistWords)
+            val combined = if (artistTerms.isEmpty()) terms else "$terms AND $artistTerms"
+            return encodeQueryValue(combined)
         }
 
         /** Build a Lucene query with two fields and URL-encode the ENTIRE thing. */

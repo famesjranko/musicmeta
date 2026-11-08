@@ -345,7 +345,7 @@ class MusicBrainzSymbolTitleFallbackTest {
         const val CALLER_TITLE_SEARCH_URL = "release%3A%22F%23+A%23"
         const val ARTIST_SEARCH_URL = "artist?query=artist%3A%22Godspeed"
 
-        /** `release:ok AND release:computr~ AND artistname:Godspeed You\!…~` URL-encoded — the suggestions search. */
+        /** `release:ok AND release:computr~ AND artistname:godspeed~ AND artistname:you` URL-encoded — the suggestions search. */
         const val TYPO_FUZZY_QUERY = "release%3Aok+AND+release%3Acomputr%7E"
 
         /** A real-shaped fuzzy release pool, as `MusicBrainzTransientFailureTest` already stubs one. */
