@@ -4,9 +4,10 @@ package com.landofoz.musicmeta.engine
 internal object SearchTitleMatcher {
     fun equivalent(a: String, b: String): Boolean = parse(a) == parse(b)
 
-    fun parse(title: String): TitleMatcher.Parts = TitleMatcher.parse(
-        title.replace('‘', '\'').replace('’', '\'').replace('′', '\'').replace('ʼ', '\'')
+    fun parse(title: String): TitleMatcher.Parts = TitleMatcher.parse(foldTypography(title))
+
+    fun foldTypography(value: String): String =
+        value.replace('‘', '\'').replace('’', '\'').replace('′', '\'').replace('ʼ', '\'')
             .replace('“', '"').replace('”', '"')
-            .replace('‐', '-').replace('‑', '-').replace("…", "..."),
-    )
+            .replace('‐', '-').replace('‑', '-').replace("…", "...")
 }

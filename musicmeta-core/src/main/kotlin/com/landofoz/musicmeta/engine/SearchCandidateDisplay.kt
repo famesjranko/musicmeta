@@ -9,7 +9,9 @@ internal fun SearchCandidate.displayKey(): List<Any?> =
 /** Scores and artwork differ by catalog; only explicit edition differences preserve a supplement. */
 internal fun SearchCandidate.repeatsPrimary(primary: SearchCandidate): Boolean =
     SearchTitleMatcher.equivalent(title, primary.title) &&
-        artist.orEmpty().trim().equals(primary.artist.orEmpty().trim(), ignoreCase = true) &&
+        SearchTitleMatcher.foldTypography(artist.orEmpty()).trim().equals(
+            SearchTitleMatcher.foldTypography(primary.artist.orEmpty()).trim(), ignoreCase = true,
+        ) &&
         (year == null || primary.year == null || year == primary.year) &&
         (country.isNullOrBlank() || primary.country.isNullOrBlank() || country == primary.country) &&
         (releaseType.isNullOrBlank() || primary.releaseType.isNullOrBlank() || releaseType == primary.releaseType) &&

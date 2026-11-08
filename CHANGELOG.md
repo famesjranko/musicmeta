@@ -33,7 +33,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The demo web UI marks a provider that refused this host at startup with a warning and explains it on hover (demo only)
 
 ### Fixed
-- MusicBrainz search keeps each recording or release ID once at its highest score before ranking, so repeated pool entries leave room for distinct choices.
 - Search prefers exact titles, requested artists and main recordings; title-only discovery uses iTunes artist hints, falling back to MusicBrainz ranking on signal failure.
 - Search collapses identical visible rows and drops cross-provider title/artist duplicates unless edition details differ; distinct editions remain selectable, and the demo shows release country.
 - Search folds typographic quotes, apostrophes, hyphens and ellipses without changing enrichment matching; fuzzy results keep relevance ahead of edition evidence.

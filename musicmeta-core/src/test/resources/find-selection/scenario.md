@@ -14,6 +14,7 @@ Live captures on 2026-11-07, before this change:
   `398bf241-7d57-4993-860b-1f9ef496c97f`, and an unmarked TEARY EYED FOX cover. Their release lists are omitted;
   this case tests artist and disambiguation order, not release evidence.
 - `marked-canonical.json`: the unmarked Kendrick object from that same capture.
+  The trimmed general-pool copy of Kendrick MBID `c4291490…` omits releases present in the canonical copy at the same score; the test does not depend on that release evidence.
 - `duplicates.json` and `canonical.json`: excerpts of the earlier captured Karma Police pools
   in `find-ranking/`, with two visibly identical main recordings and a marked live choice.
 
