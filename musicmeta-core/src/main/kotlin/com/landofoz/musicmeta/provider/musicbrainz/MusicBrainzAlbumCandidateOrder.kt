@@ -2,39 +2,51 @@ package com.landofoz.musicmeta.provider.musicbrainz
 
 import com.landofoz.musicmeta.engine.SearchTitleMatcher
 
-/** Orders exact-title pressings by artist-id set, then release group and first credited artist, before the limit. */
+/**
+ * Orders each exact-title component once, joining artist sets or release-group/first-artist pairs
+ * within a shared supplied-artist and hint tier.
+ */
 internal object MusicBrainzAlbumCandidateOrder {
     fun <T> order(
-        candidates: List<T>, title: String, releaseOf: (T) -> MusicBrainzRelease?,
+        candidates: List<T>,
+        title: String,
+        artistTierOf: (T) -> MusicBrainzCandidateArtistTier = { MusicBrainzCandidateArtistTier() },
+        releaseOf: (T) -> MusicBrainzRelease?,
     ): List<T> {
-        val keys = candidates.map { candidate ->
-            releaseOf(candidate)?.takeIf { SearchTitleMatcher.equivalent(title, it.title) }?.let { artistKey(it) }
-        }
-        val groups = candidates.indices.filter { keys[it] != null }.groupBy { keys[it] }
-        val result = candidates.toMutableList()
-        rankSlots(result, groups.values, releaseOf)
-        val editions = result.indices.mapNotNull { index ->
-            releaseOf(result[index])?.takeIf {
-                SearchTitleMatcher.equivalent(title, it.title) && !it.releaseGroupId.isNullOrBlank() &&
-                    it.artistCreditIds.isNotEmpty()
-            }?.let { index to it }
+        val releases = candidates.indices.mapNotNull { index ->
+            releaseOf(candidates[index])?.takeIf { SearchTitleMatcher.equivalent(title, it.title) }
+                ?.let { index to it }
         }.toMap()
-        val editionGroups = editions.keys.groupBy { index ->
-            val release = editions.getValue(index)
-            release.releaseGroupId to release.artistCreditIds.first()
+        val artists = releases.keys.filter { artistKey(releases.getValue(it)) != null }.groupBy {
+            artistTierOf(candidates[it]) to artistKey(releases.getValue(it))
         }
-        rankSlots(result, editionGroups.values, releaseOf)
+        val editions = releases.keys.filter {
+            !releases.getValue(it).releaseGroupId.isNullOrBlank() && releases.getValue(it).artistCreditIds.isNotEmpty()
+        }.groupBy {
+            val release = releases.getValue(it)
+            artistTierOf(candidates[it]) to (release.releaseGroupId to release.artistCreditIds.first())
+        }
+        val parents = IntArray(candidates.size) { it }
+        (artists.values + editions.values).forEach { related ->
+            related.drop(1).forEach { index -> parents[root(parents, index)] = root(parents, related.first()) }
+        }
+        val components = releases.keys.groupBy { root(parents, it) }
+        val result = candidates.toMutableList()
+        components.values.forEach { slots ->
+            val ordered = slots.map { candidates[it] }
+                .sortedWith(compareBy(releaseOrder) { checkNotNull(releaseOf(it)) })
+            slots.zip(ordered).forEach { (index, candidate) -> result[index] = candidate }
+        }
         return result
     }
 
-    private fun <T> rankSlots(
-        candidates: MutableList<T>, groups: Collection<List<Int>>, releaseOf: (T) -> MusicBrainzRelease?,
-    ) {
-        groups.forEach { slots ->
-            val ordered = slots.map { candidates[it] }
-                .sortedWith(compareBy(releaseOrder) { checkNotNull(releaseOf(it)) })
-            slots.sorted().zip(ordered).forEach { (index, candidate) -> candidates[index] = candidate }
+    private fun root(parents: IntArray, index: Int): Int {
+        var current = index
+        while (parents[current] != current) {
+            parents[current] = parents[parents[current]]
+            current = parents[current]
         }
+        return current
     }
 
     private fun artistKey(release: MusicBrainzRelease): List<String>? =

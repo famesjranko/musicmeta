@@ -60,3 +60,18 @@ release-group ids from captured rows to isolate grouping rules. These model
 boundary cases, not additional upstream observations. The date-policy unit test uses
 explicit boundary dates on a captured DTO; the live-pool date regressions use
 unchanged response bodies. No test claims the modelled cases were seen live.
+
+## Combined-group boundary models
+
+The component-order tests derive three rows from the unchanged Getz/Gilberto
+capture: A and B use the duet credit, C uses the guest credit. MBIDs and dates
+are modelled as A/1980, B/1990 and C/1970; B receives another release-group id
+and either Single or Album as its primary type. These are counterfactual pools,
+not captured combinations. The full duet-credit request puts C in a weaker
+supplied-artist tier; an individual Stan Getz request puts all three in one tier.
+The supplied and hinted Jobim tests use unchanged rows `1cb544a7` and `2dd57364`.
+The completeness tests use unchanged Thriller rows for missing date and status;
+the missing-type case deliberately omits the original's primary type.
+A further two-row model selects the duet and a solo credit in a different group,
+with the same individual artist tier, to isolate the full artist-key relation
+from a first-credited-artist-only key.

@@ -34,13 +34,20 @@ internal class MusicBrainzCandidateSearch(
         return (pool + extra)
             .groupBy { it.value.identifiers.musicBrainzId }.values
             .map { entries -> entries.maxBy { it.value.matchScore } }
+            .map { candidate ->
+                candidate.copy(
+                    artistTier = MusicBrainzCandidateArtistTier(
+                        sameArtist(suppliedArtist, candidate), artistRank(artists, candidate),
+                    ),
+                )
+            }
             .sortedWith(
                 compareByDescending<Candidate> { SearchTitleMatcher.equivalent(title, it.value.title) }
-                    .thenByDescending { sameArtist(suppliedArtist, it) }
+                    .thenByDescending { it.artistTier.suppliedArtistMatch }
                     .thenByDescending {
                         if (SearchTitleMatcher.equivalent(title, it.value.title)) 0f else it.value.matchScore
                     }
-                    .thenBy { artistRank(artists, it) }
+                    .thenBy { it.artistTier.hintRank }
                     .thenByDescending { it.value.disambiguation.isNullOrBlank() }
                     .thenByDescending { it.officialAlbumRecording }
                     .thenByDescending { it.value.matchScore }
@@ -48,7 +55,7 @@ internal class MusicBrainzCandidateSearch(
                     .thenBy { it.value.title.lowercase() }
                     .thenBy { it.value.identifiers.musicBrainzId },
             ).let { candidates ->
-                MusicBrainzAlbumCandidateOrder.order(candidates, title) { it.release }
+                MusicBrainzAlbumCandidateOrder.order(candidates, title, artistTierOf = { it.artistTier }) { it.release }
             }.map { it.value }.distinctBy { it.displayKey() }.take(limit)
     }
 
@@ -174,5 +181,6 @@ internal class MusicBrainzCandidateSearch(
         val artistCredits: List<String>,
         val officialAlbumRecording: Boolean = false,
         val release: MusicBrainzRelease? = null,
+        val artistTier: MusicBrainzCandidateArtistTier = MusicBrainzCandidateArtistTier(),
     )
 }

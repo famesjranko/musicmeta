@@ -56,40 +56,40 @@ class MusicBrainzAlbumCandidateOrderTest {
 
     @Test
     fun `missing date ranks below dated releases and remains selectable`() = runTest {
-        // Given - an unchanged captured album has a blank date and a lower MBID than a dated reissue.
-        stub(rows(NO_DATE, LATE_REISSUE))
+        // Given - an unchanged undated official album competes with a complete official single.
+        stub(rows(NO_DATE, SINGLE))
 
         // When - the caller requests both candidates.
         val found = search()
 
         // Then - the known date leads and the undated candidate is still returned.
-        assertEquals(listOf(LATE_REISSUE, NO_DATE), ids(found))
+        assertEquals(listOf(SINGLE, NO_DATE), ids(found))
         assertEquals(null, found.last().year)
     }
 
     @Test
     fun `missing status ranks below known status and remains selectable`() = runTest {
-        // Given - a captured 1982 album lacks status and competes with a known official single.
-        stub(rows(NO_STATUS, SINGLE))
+        // Given - a captured 1982 album lacks status and competes with a complete 2008 bootleg album.
+        stub(rows(NO_STATUS, BOOTLEG))
 
         // When - the caller requests both candidates.
         val found = search()
 
         // Then - known evidence leads even across types and the incomplete album is still returned.
-        assertEquals(listOf(SINGLE, NO_STATUS), ids(found))
+        assertEquals(listOf(BOOTLEG, NO_STATUS), ids(found))
     }
 
     @Test
     fun `missing type ranks below known type and remains selectable`() = runTest {
-        // Given - a field-omission probe removes a reissue's primary type before a known single.
-        val missing = row(REISSUE).apply { getJSONObject("release-group").remove("primary-type") }
+        // Given - a field-omission probe removes a 1982 original's primary type before a complete 1983 single.
+        val missing = row(ORIGINAL).apply { getJSONObject("release-group").remove("primary-type") }
         stub(listOf(missing, row(SINGLE)))
 
         // When - the caller requests both candidates.
         val found = search()
 
         // Then - the known type leads and the incomplete candidate is still returned.
-        assertEquals(listOf(SINGLE, REISSUE), ids(found))
+        assertEquals(listOf(SINGLE, ORIGINAL), ids(found))
         assertEquals(null, found.last().releaseType)
     }
 

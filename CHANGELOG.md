@@ -45,7 +45,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 - Deezer HTTP 403 now reports `ErrorKind.AUTH` on all routes, including similar albums, and counts as a provider breaker failure; blocked previews and preview cooldown produce uncached errors
 - The web demo preview endpoint distinguishes upstream blocks and failures (HTTP 502) from missing previews (404); the play button reports the failure (demo only)
-- Album search favours official albums and earlier pressings, groups editions by release group and first credited artist, and prefers fuller dates within a period; alternatives stay selectable (#413)
+- Album search orders connected editions once within supplied and hinted artist tiers, preferring complete evidence, official albums and earlier dates; distinct alternatives stay selectable (#413)
 - Search prefers exact titles, requested artists and main recordings; title-only discovery uses iTunes artist hints, falling back to MusicBrainz ranking on signal failure.
 - Search collapses identical visible rows and drops cross-provider title/artist duplicates unless edition details differ; distinct editions remain selectable, and the demo shows release country.
 - Search folds typographic quotes, apostrophes, hyphens and ellipses without changing enrichment matching; fuzzy results keep relevance ahead of edition evidence.

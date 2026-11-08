@@ -582,11 +582,22 @@ without filtering them; retention in the pool does not promise a place inside ev
 
 One release group's credits can vary between pressings: Getz/Gilberto's 1964 original credits
 Jobim as well as Getz and Gilberto, while the captured 2011 reissue credits only the latter two.
-An exact artist-id set splits these editions and leaves the reissue first. Compare editions by
-release group and first credited artist as well; a shared guest cannot bridge different first
-artists. Artist-id sets also do not
-preserve display-credit priority: `&`, `and` and `-` forms naming the same people may exchange
-places even when a supplied name or hint matches one form more closely.
+An exact artist-id set splits these editions. Linking by release group and first credited artist
+joins them, but that link says nothing about the requested artist: a Jobim edition must not give
+its slot to a duet that does not credit Jobim. Both relation keys must include the comparator's
+supplied-artist match and ordered hint rank, computed once for the candidate.
+
+Independent slot sorts over overlapping groups do not compose. Within one artist tier, moving
+a 1970 guest album into a 1980 album's slot can leave a 1990 single between the two albums;
+reversing the passes can instead break chronology. Find the connected components of both
+relations first, then order each component once. Exact-title rows have a constant relevance
+score tier between supplied-artist match and hint rank, so these artist tiers are contiguous.
+
+A completeness test must make later tiers favour the incomplete row when the completeness tier
+is absent. A missing-status album against an official single proves nothing by itself: the
+Official tier already prefers the single. Pair the missing-status original with a complete
+bootleg instead; pair an undated album with a complete single, and an older missing-type album
+with a later complete single, so each missing field has a discriminating case.
 
 ## 32. Normalizing an upstream's convention at one call site gives one entity two names
 

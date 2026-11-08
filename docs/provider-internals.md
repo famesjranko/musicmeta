@@ -162,12 +162,13 @@ enrichment's shared title matcher keeps its own policy.
 Before ranking, merged recording and release pools keep each MusicBrainz ID once at its highest
 upstream score.
 
-For album candidates, exact-title releases are first reordered within the same structured
-artist-id set. Different display-credit forms for those people can exchange places, even when
-a supplied artist or hint matched one form more closely. Releases without structured ids use
-the complete display credit; an absent credit is not grouped. A second pass orders editions
-of one release group together when their first credited artist id matches, including guest-credit
-variations; different first artists and different id sets stay separate.
+For album candidates, exact-title releases stay inside the existing supplied-artist-match and
+ordered artist-hint tiers. These tiers are contiguous before edition evidence is applied.
+Within a tier, rows are linked by the same structured artist-id set or by the same release-group
+and first credited artist id. Each connected component is ordered once inside its own slots;
+neither relation can move a row across an artist tier. Credits without ids use the complete
+display credit for the artist key; an absent credit makes no artist link. The release-group
+link requires a non-blank group id and a non-empty ordered credit-id list.
 
 Complete date/status/type evidence leads, then official status, Album primary type, no secondary
 types, earliest pressing date, blank disambiguation, score and MBID. Within a year or month,
