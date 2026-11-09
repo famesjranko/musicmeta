@@ -81,13 +81,13 @@ class MusicBrainzFeaturedCreditPathsTest(private val endpoint: String) {
         } else {
             route(entry("feat", "strict-current")); route(entry("feat", "strict-components"))
         }
+
+        // When - resolving the supplied featured credit directly
         val result = if (endpoint == "recording") {
             MusicBrainzTrackEnrichment(api, "musicbrainz", 80).enrichTrack(request() as EnrichmentRequest.ForTrack, EnrichmentType.GENRE)
         } else {
             MusicBrainzAlbumEnrichment(api, "musicbrainz", 80).enrichAlbum(request() as EnrichmentRequest.ForAlbum, EnrichmentType.GENRE)
         }
-
-        // When - resolving the supplied featured credit directly
 
         // Then - exact identity resolves from the component pool with no fuzzy request
         assertTrue(result is EnrichmentResult.Success)
