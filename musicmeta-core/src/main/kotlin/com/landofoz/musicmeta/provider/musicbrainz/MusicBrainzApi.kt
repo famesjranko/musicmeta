@@ -298,7 +298,7 @@ internal class MusicBrainzApi(
         album: String?,
         canonicalOnly: Boolean = false,
     ): String {
-        val base = "recording:\"${escapeLucene(title)}\" AND artistname:\"${escapeLucene(artist)}\""
+        val base = "recording:\"${escapeLucene(title)}\" AND ${strictArtistClause(artist)}"
         val withAlbum = if (album.isNullOrBlank()) base else "$base AND release:\"${escapeLucene(album)}\""
         return encodeQueryValue(if (canonicalOnly) "$withAlbum AND -comment:*" else withAlbum)
     }
@@ -477,6 +477,26 @@ internal class MusicBrainzApi(
         fun escapeLucene(value: String): String =
             value.replace(LUCENE_SPECIAL_CHARS) { "\\${it.value}" }
 
+        private val FEATURE_MARKER = Regex(
+            """(?<!\S)(?:feat\.|ft\.|featuring)(?!\S)""",
+            RegexOption.IGNORE_CASE,
+        )
+
+        private fun featuredArtistParts(artist: String): List<String>? {
+            val markers = FEATURE_MARKER.findAll(artist).toList()
+            if (markers.size != 1) return null
+            val marker = markers.single()
+            val primary = artist.substring(0, marker.range.first).trim()
+            val guest = artist.substring(marker.range.last + 1).trim()
+            return if (primary.isNotBlank() && guest.isNotBlank()) listOf(primary, guest) else null
+        }
+
+        /** `artistname` matches credited names individually, so a featured credit becomes one phrase per side. */
+        private fun strictArtistClause(artist: String): String =
+            (featuredArtistParts(artist) ?: listOf(artist)).joinToString(" AND ") {
+                "artistname:\"${escapeLucene(it)}\""
+            }
+
         private const val MIN_FUZZY_WORD_LENGTH = 4
         private val FUZZY_WORDS = Regex(
             "[\\p{L}\\p{N}][\\p{L}\\p{M}\\p{N}]*(?:['’][\\p{L}\\p{N}][\\p{L}\\p{M}\\p{N}]*)*",
@@ -499,23 +519,28 @@ internal class MusicBrainzApi(
             val titleWords = fuzzyWords(title)
             if (titleWords.none(::isFuzzyWord)) return null
             val terms = fuzzyTerms(field, titleWords)
-            val artistWords = fuzzyWords(artist)
-            val artistTerms = when {
-                artistWords.isNotEmpty() -> fuzzyTerms("artistname", artistWords)
-                artist.isNotBlank() -> "artistname:\"${escapeLucene(artist)}\""
-                else -> ""
-            }
+            val artistTerms = (featuredArtistParts(artist) ?: listOf(artist))
+                .map(::fuzzyArtistClause).filter { it.isNotEmpty() }.joinToString(" AND ")
             val combined = if (artistTerms.isEmpty()) terms else "$terms AND $artistTerms"
             return encodeQueryValue(combined)
         }
 
-        /** Build a Lucene query with two fields and URL-encode the ENTIRE thing. */
-        private fun buildQuery(field1: String, value1: String, field2: String, value2: String): String =
-            encodeQueryValue("$field1:\"${escapeLucene(value1)}\" AND $field2:\"${escapeLucene(value2)}\"")
+        private fun fuzzyArtistClause(artist: String): String {
+            val words = fuzzyWords(artist)
+            return when {
+                words.isNotEmpty() -> fuzzyTerms("artistname", words)
+                artist.isNotBlank() -> "artistname:\"${escapeLucene(artist)}\""
+                else -> ""
+            }
+        }
+
+        /** The URL-encoded strict release query: quoted title and [strictArtistClause]. */
+        private fun buildQuery(title: String, artist: String): String =
+            encodeQueryValue("release:\"${escapeLucene(title)}\" AND ${strictArtistClause(artist)}")
 
         /** The URL [searchReleases] requests. */
         fun releaseSearchUrl(title: String, artist: String, limit: Int): String =
-            "$BASE_URL/release?query=${buildQuery("release", title, "artistname", artist)}&fmt=json&limit=$limit"
+            "$BASE_URL/release?query=${buildQuery(title, artist)}&fmt=json&limit=$limit"
 
         /** The URL [searchArtists] requests. */
         fun artistSearchUrl(name: String, limit: Int): String {
