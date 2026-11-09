@@ -1,0 +1,710 @@
+[
+  {
+    "file": "recording-plus-minus-discovery-discovery.json",
+    "endpoint": "recording",
+    "case": "plus-minus-discovery",
+    "title": "",
+    "artist": "+/-",
+    "arm": "discovery",
+    "query": "artistname:\"\\+\\/\\-\"",
+    "url": "https://musicbrainz.org/ws/2/recording?query=artistname%3A%22%5C%2B%5C%2F%5C-%22&fmt=json&limit=3",
+    "receivedAt": "2026-11-09T10:13:21.560112+00:00",
+    "sha256": "427de3bb3d6a9f71ad430cc9f87f2139cab9c779c64ec148095eb0b1dd335a25",
+    "count": 164,
+    "rows": [
+      {
+        "id": "a497ba2e-38fb-4b06-a70d-7527c0e9a955",
+        "title": "Banging the Drum",
+        "artist": "+/-",
+        "parsedArtist": "+/-"
+      },
+      {
+        "id": "eee6bbf5-47cf-4bef-9627-b0a3f4948c9d",
+        "title": "Surprise!",
+        "artist": "+/-",
+        "parsedArtist": "+/-"
+      },
+      {
+        "id": "495ca4f2-a994-4cf6-a78b-a6c9f511cf2f",
+        "title": "Making the Horse Drink",
+        "artist": "+/-",
+        "parsedArtist": "+/-"
+      }
+    ]
+  },
+  {
+    "file": "release-plus-minus-discovery-discovery.json",
+    "endpoint": "release",
+    "case": "plus-minus-discovery",
+    "title": "",
+    "artist": "+/-",
+    "arm": "discovery",
+    "query": "artistname:\"\\+\\/\\-\"",
+    "url": "https://musicbrainz.org/ws/2/release?query=artistname%3A%22%5C%2B%5C%2F%5C-%22&fmt=json&limit=3",
+    "receivedAt": "2026-11-09T10:13:23.966119+00:00",
+    "sha256": "cc9a17579ef1a50f72fa4163b6ab425699620cbd4f1910a29ac01d8f3bc63602",
+    "count": 24,
+    "rows": [
+      {
+        "id": "d9816797-946e-4d4e-beea-7940fdef57cc",
+        "title": "You Are Here",
+        "artist": "+/-",
+        "parsedArtist": "+/-"
+      },
+      {
+        "id": "cfbc17d9-f83d-49f8-a860-f94683f89b22",
+        "title": "As Seen on Television",
+        "artist": "+/-",
+        "parsedArtist": "+/-"
+      },
+      {
+        "id": "219fd426-d871-4f5f-bb54-5a30dab5d9e5",
+        "title": "Holding Patterns",
+        "artist": "+/-",
+        "parsedArtist": "+/-"
+      }
+    ]
+  },
+  {
+    "file": "recording-bang-correct.json",
+    "endpoint": "recording",
+    "case": "bang",
+    "title": "Heart of Hearst",
+    "artist": "!!!",
+    "arm": "correct",
+    "query": "recording:\"Heart of Hearts\" AND artistname:\"\\!\\!\\!\"",
+    "url": "https://musicbrainz.org/ws/2/recording?query=recording%3A%22Heart+of+Hearts%22+AND+artistname%3A%22%5C%21%5C%21%5C%21%22&fmt=json&limit=3",
+    "receivedAt": "2026-11-09T10:13:50.269521+00:00",
+    "sha256": "dfcae1c300c88b1611f25ea49f694fb214b921aaa3e65197fb44a37cccaeaba5",
+    "count": 11,
+    "rows": [
+      {
+        "id": "333ad18f-087b-4100-810d-2ab620985dbe",
+        "title": "Heart of Hearts",
+        "artist": "!!!",
+        "parsedArtist": "!!!"
+      },
+      {
+        "id": "297b3089-1a5f-449e-bd54-0b86a09c8287",
+        "title": "Heart of Hearts",
+        "artist": "!!!",
+        "parsedArtist": "!!!"
+      },
+      {
+        "id": "27f69e4f-ec18-4985-a486-a2a85de289da",
+        "title": "Heart of Hearts",
+        "artist": "!!!",
+        "parsedArtist": "!!!"
+      }
+    ]
+  },
+  {
+    "file": "recording-bang-strict.json",
+    "endpoint": "recording",
+    "case": "bang",
+    "title": "Heart of Hearst",
+    "artist": "!!!",
+    "arm": "strict",
+    "query": "recording:\"Heart of Hearst\" AND artistname:\"\\!\\!\\!\"",
+    "url": "https://musicbrainz.org/ws/2/recording?query=recording%3A%22Heart+of+Hearst%22+AND+artistname%3A%22%5C%21%5C%21%5C%21%22&fmt=json&limit=3",
+    "receivedAt": "2026-11-09T10:13:55.103174+00:00",
+    "sha256": "78989cad8ccac25ab7d04468be2c5058f4778aed77c168156bcd82331fb2756c",
+    "count": 0,
+    "rows": []
+  },
+  {
+    "file": "recording-bang-current.json",
+    "endpoint": "recording",
+    "case": "bang",
+    "title": "Heart of Hearst",
+    "artist": "!!!",
+    "arm": "current",
+    "query": "recording:heart~ AND recording:of AND recording:hearst~",
+    "url": "https://musicbrainz.org/ws/2/recording?query=recording%3Aheart~+AND+recording%3Aof+AND+recording%3Ahearst~&fmt=json&limit=3",
+    "receivedAt": "2026-11-09T10:14:00.106954+00:00",
+    "sha256": "b288e364c0dd37c1bf427bd078c068f6c46441394b2ad41d66442318584c65a9",
+    "count": 32259,
+    "rows": [
+      {
+        "id": "244bf183-ec77-4bf1-a9a4-3857f64316c4",
+        "title": "Heart of Heart of Hearts",
+        "artist": "Deep Color",
+        "parsedArtist": "Deep Color"
+      },
+      {
+        "id": "c1a4945b-3c80-490f-b4a4-476564f25053",
+        "title": "Heart of Hearts",
+        "artist": "Dan Siegel",
+        "parsedArtist": "Dan Siegel"
+      },
+      {
+        "id": "e8b87118-ca5f-43b4-8b69-1a700ee91f38",
+        "title": "Heart of Hearts",
+        "artist": "Kevin Coyne",
+        "parsedArtist": "Kevin Coyne"
+      }
+    ]
+  },
+  {
+    "file": "recording-bang-term.json",
+    "endpoint": "recording",
+    "case": "bang",
+    "title": "Heart of Hearst",
+    "artist": "!!!",
+    "arm": "term",
+    "query": "recording:heart~ AND recording:of AND recording:hearst~ AND artistname:\\!\\!\\!~",
+    "url": "https://musicbrainz.org/ws/2/recording?query=recording%3Aheart~+AND+recording%3Aof+AND+recording%3Ahearst~+AND+artistname%3A%5C%21%5C%21%5C%21~&fmt=json&limit=3",
+    "receivedAt": "2026-11-09T10:14:05.876520+00:00",
+    "sha256": "7f5156d5ad2242d9e5637532c798e1327d87d56b518ef608f070913e0e507957",
+    "count": 12,
+    "rows": [
+      {
+        "id": "333ad18f-087b-4100-810d-2ab620985dbe",
+        "title": "Heart of Hearts",
+        "artist": "!!!",
+        "parsedArtist": "!!!"
+      },
+      {
+        "id": "1e56c6f9-f73b-42ee-a590-4916182c188f",
+        "title": "Heart of Hearts",
+        "artist": "!!!",
+        "parsedArtist": "!!!"
+      },
+      {
+        "id": "297b3089-1a5f-449e-bd54-0b86a09c8287",
+        "title": "Heart of Hearts",
+        "artist": "!!!",
+        "parsedArtist": "!!!"
+      }
+    ]
+  },
+  {
+    "file": "recording-bang-phrase.json",
+    "endpoint": "recording",
+    "case": "bang",
+    "title": "Heart of Hearst",
+    "artist": "!!!",
+    "arm": "phrase",
+    "query": "recording:heart~ AND recording:of AND recording:hearst~ AND artistname:\"\\!\\!\\!\"",
+    "url": "https://musicbrainz.org/ws/2/recording?query=recording%3Aheart~+AND+recording%3Aof+AND+recording%3Ahearst~+AND+artistname%3A%22%5C%21%5C%21%5C%21%22&fmt=json&limit=3",
+    "receivedAt": "2026-11-09T10:14:23.824535+00:00",
+    "sha256": "34fcb952f8c0fa01c0ee84b07b597b972acf1c10351d6f49ccc83a99e8d991bb",
+    "count": 11,
+    "rows": [
+      {
+        "id": "333ad18f-087b-4100-810d-2ab620985dbe",
+        "title": "Heart of Hearts",
+        "artist": "!!!",
+        "parsedArtist": "!!!"
+      },
+      {
+        "id": "1e56c6f9-f73b-42ee-a590-4916182c188f",
+        "title": "Heart of Hearts",
+        "artist": "!!!",
+        "parsedArtist": "!!!"
+      },
+      {
+        "id": "297b3089-1a5f-449e-bd54-0b86a09c8287",
+        "title": "Heart of Hearts",
+        "artist": "!!!",
+        "parsedArtist": "!!!"
+      }
+    ]
+  },
+  {
+    "file": "release-bang-correct.json",
+    "endpoint": "release",
+    "case": "bang",
+    "title": "Myht Takes",
+    "artist": "!!!",
+    "arm": "correct",
+    "query": "release:\"Myth Takes\" AND artistname:\"\\!\\!\\!\"",
+    "url": "https://musicbrainz.org/ws/2/release?query=release%3A%22Myth+Takes%22+AND+artistname%3A%22%5C%21%5C%21%5C%21%22&fmt=json&limit=3",
+    "receivedAt": "2026-11-09T10:14:33.468496+00:00",
+    "sha256": "e2a386db3e36d8e0b64ec775cf2b3669771c3a663fe6af1c3551b32bc3107ba9",
+    "count": 6,
+    "rows": [
+      {
+        "id": "64784118-9b4f-3765-99f4-381b6d3a9a51",
+        "title": "Myth Takes",
+        "artist": "!!!",
+        "parsedArtist": "!!!"
+      },
+      {
+        "id": "18da429b-947b-41a6-883f-1f40631d5b06",
+        "title": "Myth Takes",
+        "artist": "!!!",
+        "parsedArtist": "!!!"
+      },
+      {
+        "id": "9d5de423-96e2-4e41-8fa5-d76e53e8c476",
+        "title": "Myth Takes",
+        "artist": "!!!",
+        "parsedArtist": "!!!"
+      }
+    ]
+  },
+  {
+    "file": "release-bang-strict.json",
+    "endpoint": "release",
+    "case": "bang",
+    "title": "Myht Takes",
+    "artist": "!!!",
+    "arm": "strict",
+    "query": "release:\"Myht Takes\" AND artistname:\"\\!\\!\\!\"",
+    "url": "https://musicbrainz.org/ws/2/release?query=release%3A%22Myht+Takes%22+AND+artistname%3A%22%5C%21%5C%21%5C%21%22&fmt=json&limit=3",
+    "receivedAt": "2026-11-09T10:14:54.628481+00:00",
+    "sha256": "f5fb2b5269c370eba4df609287b208abf842a68ba814ffa4efb2df17ec726a11",
+    "count": 0,
+    "rows": []
+  },
+  {
+    "file": "release-bang-current.json",
+    "endpoint": "release",
+    "case": "bang",
+    "title": "Myht Takes",
+    "artist": "!!!",
+    "arm": "current",
+    "query": "release:myht~ AND release:takes~",
+    "url": "https://musicbrainz.org/ws/2/release?query=release%3Amyht~+AND+release%3Atakes~&fmt=json&limit=3",
+    "receivedAt": "2026-11-09T10:14:59.533970+00:00",
+    "sha256": "03eecb0e6c17e8de14b13c997c5cf523a4eb92cd446efbb029d6fc5ac6838606",
+    "count": 10,
+    "rows": [
+      {
+        "id": "64784118-9b4f-3765-99f4-381b6d3a9a51",
+        "title": "Myth Takes",
+        "artist": "!!!",
+        "parsedArtist": "!!!"
+      },
+      {
+        "id": "18da429b-947b-41a6-883f-1f40631d5b06",
+        "title": "Myth Takes",
+        "artist": "!!!",
+        "parsedArtist": "!!!"
+      },
+      {
+        "id": "9d5de423-96e2-4e41-8fa5-d76e53e8c476",
+        "title": "Myth Takes",
+        "artist": "!!!",
+        "parsedArtist": "!!!"
+      }
+    ]
+  },
+  {
+    "file": "release-bang-term.json",
+    "endpoint": "release",
+    "case": "bang",
+    "title": "Myht Takes",
+    "artist": "!!!",
+    "arm": "term",
+    "query": "release:myht~ AND release:takes~ AND artistname:\\!\\!\\!~",
+    "url": "https://musicbrainz.org/ws/2/release?query=release%3Amyht~+AND+release%3Atakes~+AND+artistname%3A%5C%21%5C%21%5C%21~&fmt=json&limit=3",
+    "receivedAt": "2026-11-09T10:15:05.799259+00:00",
+    "sha256": "20685cb649cb64e9c25c872aec5baf3e7e70cae9ecaf0a843b04999d7019de87",
+    "count": 6,
+    "rows": [
+      {
+        "id": "64784118-9b4f-3765-99f4-381b6d3a9a51",
+        "title": "Myth Takes",
+        "artist": "!!!",
+        "parsedArtist": "!!!"
+      },
+      {
+        "id": "18da429b-947b-41a6-883f-1f40631d5b06",
+        "title": "Myth Takes",
+        "artist": "!!!",
+        "parsedArtist": "!!!"
+      },
+      {
+        "id": "9d5de423-96e2-4e41-8fa5-d76e53e8c476",
+        "title": "Myth Takes",
+        "artist": "!!!",
+        "parsedArtist": "!!!"
+      }
+    ]
+  },
+  {
+    "file": "release-bang-phrase.json",
+    "endpoint": "release",
+    "case": "bang",
+    "title": "Myht Takes",
+    "artist": "!!!",
+    "arm": "phrase",
+    "query": "release:myht~ AND release:takes~ AND artistname:\"\\!\\!\\!\"",
+    "url": "https://musicbrainz.org/ws/2/release?query=release%3Amyht~+AND+release%3Atakes~+AND+artistname%3A%22%5C%21%5C%21%5C%21%22&fmt=json&limit=3",
+    "receivedAt": "2026-11-09T10:15:11.484550+00:00",
+    "sha256": "f5880c3bf581e38be60ec89ee051ef16b1219f00cfc06dbd817f363d785e717c",
+    "count": 6,
+    "rows": [
+      {
+        "id": "64784118-9b4f-3765-99f4-381b6d3a9a51",
+        "title": "Myth Takes",
+        "artist": "!!!",
+        "parsedArtist": "!!!"
+      },
+      {
+        "id": "18da429b-947b-41a6-883f-1f40631d5b06",
+        "title": "Myth Takes",
+        "artist": "!!!",
+        "parsedArtist": "!!!"
+      },
+      {
+        "id": "9d5de423-96e2-4e41-8fa5-d76e53e8c476",
+        "title": "Myth Takes",
+        "artist": "!!!",
+        "parsedArtist": "!!!"
+      }
+    ]
+  },
+  {
+    "file": "recording-plus-minus-correct.json",
+    "endpoint": "recording",
+    "case": "plus-minus",
+    "title": "Bangign the Drum",
+    "artist": "+/-",
+    "arm": "correct",
+    "query": "recording:\"Banging the Drum\" AND artistname:\"\\+\\/\\-\"",
+    "url": "https://musicbrainz.org/ws/2/recording?query=recording%3A%22Banging+the+Drum%22+AND+artistname%3A%22%5C%2B%5C%2F%5C-%22&fmt=json&limit=3",
+    "receivedAt": "2026-11-09T10:15:17.970600+00:00",
+    "sha256": "29642d61dd4d1ac5093703bbc542d3b5ff62acccdf330feab7a4c1a890304148",
+    "count": 2,
+    "rows": [
+      {
+        "id": "a497ba2e-38fb-4b06-a70d-7527c0e9a955",
+        "title": "Banging the Drum",
+        "artist": "+/-",
+        "parsedArtist": "+/-"
+      },
+      {
+        "id": "4507a0dc-9024-47e0-b82a-a5370676275b",
+        "title": "Banging the Drum",
+        "artist": "+/- {PLUS/MINUS} vs. Bloodthirsty Butchers",
+        "parsedArtist": "+/- vs. bloodthirsty butchers"
+      }
+    ]
+  },
+  {
+    "file": "recording-plus-minus-strict.json",
+    "endpoint": "recording",
+    "case": "plus-minus",
+    "title": "Bangign the Drum",
+    "artist": "+/-",
+    "arm": "strict",
+    "query": "recording:\"Bangign the Drum\" AND artistname:\"\\+\\/\\-\"",
+    "url": "https://musicbrainz.org/ws/2/recording?query=recording%3A%22Bangign+the+Drum%22+AND+artistname%3A%22%5C%2B%5C%2F%5C-%22&fmt=json&limit=3",
+    "receivedAt": "2026-11-09T10:15:23.385277+00:00",
+    "sha256": "a17f840d4f9093ba3c16255bcc69724cc41ec9f3eb2f79c19898519639353cd2",
+    "count": 0,
+    "rows": []
+  },
+  {
+    "file": "recording-plus-minus-current.json",
+    "endpoint": "recording",
+    "case": "plus-minus",
+    "title": "Bangign the Drum",
+    "artist": "+/-",
+    "arm": "current",
+    "query": "recording:bangign~ AND recording:the AND recording:drum~",
+    "url": "https://musicbrainz.org/ws/2/recording?query=recording%3Abangign~+AND+recording%3Athe+AND+recording%3Adrum~&fmt=json&limit=3",
+    "receivedAt": "2026-11-09T10:15:28.387491+00:00",
+    "sha256": "6a75c49937476815ab81723b86d067bd74911cc7f591eb519ba59c72e22b48ba",
+    "count": 23,
+    "rows": [
+      {
+        "id": "5e70524c-9001-4810-a141-4f5cd714aeb0",
+        "title": "Banging the Drum'",
+        "artist": "The Tribe",
+        "parsedArtist": "The Tribe"
+      },
+      {
+        "id": "a497ba2e-38fb-4b06-a70d-7527c0e9a955",
+        "title": "Banging the Drum",
+        "artist": "+/-",
+        "parsedArtist": "+/-"
+      },
+      {
+        "id": "3edc79a7-be15-4dc3-b015-69214dc7823d",
+        "title": "Banging the Drum",
+        "artist": "Scream",
+        "parsedArtist": "Scream"
+      }
+    ]
+  },
+  {
+    "file": "recording-plus-minus-term.json",
+    "endpoint": "recording",
+    "case": "plus-minus",
+    "title": "Bangign the Drum",
+    "artist": "+/-",
+    "arm": "term",
+    "query": "recording:bangign~ AND recording:the AND recording:drum~ AND artistname:\\+\\/\\-~",
+    "url": "https://musicbrainz.org/ws/2/recording?query=recording%3Abangign~+AND+recording%3Athe+AND+recording%3Adrum~+AND+artistname%3A%5C%2B%5C%2F%5C-~&fmt=json&limit=3",
+    "receivedAt": "2026-11-09T10:15:33.972947+00:00",
+    "sha256": "08218716cc9abca4d5c257a577c1106d27ab6508db7a2fb2aa3455fc55b0a074",
+    "count": 2,
+    "rows": [
+      {
+        "id": "a497ba2e-38fb-4b06-a70d-7527c0e9a955",
+        "title": "Banging the Drum",
+        "artist": "+/-",
+        "parsedArtist": "+/-"
+      },
+      {
+        "id": "4507a0dc-9024-47e0-b82a-a5370676275b",
+        "title": "Banging the Drum",
+        "artist": "+/- {PLUS/MINUS} vs. Bloodthirsty Butchers",
+        "parsedArtist": "+/- vs. bloodthirsty butchers"
+      }
+    ]
+  },
+  {
+    "file": "recording-plus-minus-phrase.json",
+    "endpoint": "recording",
+    "case": "plus-minus",
+    "title": "Bangign the Drum",
+    "artist": "+/-",
+    "arm": "phrase",
+    "query": "recording:bangign~ AND recording:the AND recording:drum~ AND artistname:\"\\+\\/\\-\"",
+    "url": "https://musicbrainz.org/ws/2/recording?query=recording%3Abangign~+AND+recording%3Athe+AND+recording%3Adrum~+AND+artistname%3A%22%5C%2B%5C%2F%5C-%22&fmt=json&limit=3",
+    "receivedAt": "2026-11-09T10:15:39.931859+00:00",
+    "sha256": "6402994101055d3667fda606acaa3600578726914a30c8ad72a1676a3b7d4742",
+    "count": 2,
+    "rows": [
+      {
+        "id": "a497ba2e-38fb-4b06-a70d-7527c0e9a955",
+        "title": "Banging the Drum",
+        "artist": "+/-",
+        "parsedArtist": "+/-"
+      },
+      {
+        "id": "4507a0dc-9024-47e0-b82a-a5370676275b",
+        "title": "Banging the Drum",
+        "artist": "+/- {PLUS/MINUS} vs. Bloodthirsty Butchers",
+        "parsedArtist": "+/- vs. bloodthirsty butchers"
+      }
+    ]
+  },
+  {
+    "file": "release-plus-minus-correct.json",
+    "endpoint": "release",
+    "case": "plus-minus",
+    "title": "Holdign Patterns",
+    "artist": "+/-",
+    "arm": "correct",
+    "query": "release:\"Holding Patterns\" AND artistname:\"\\+\\/\\-\"",
+    "url": "https://musicbrainz.org/ws/2/release?query=release%3A%22Holding+Patterns%22+AND+artistname%3A%22%5C%2B%5C%2F%5C-%22&fmt=json&limit=3",
+    "receivedAt": "2026-11-09T10:15:45.850233+00:00",
+    "sha256": "07798090e3ab069474f90d5d42ac724b054ccbd7b9a00a3ffb53618ca7486dcb",
+    "count": 2,
+    "rows": [
+      {
+        "id": "219fd426-d871-4f5f-bb54-5a30dab5d9e5",
+        "title": "Holding Patterns",
+        "artist": "+/-",
+        "parsedArtist": "+/-"
+      },
+      {
+        "id": "7bad8a96-a057-493e-9f1e-73533e4dd835",
+        "title": "Holding Patterns",
+        "artist": "+/-",
+        "parsedArtist": "+/-"
+      }
+    ]
+  },
+  {
+    "file": "release-plus-minus-strict.json",
+    "endpoint": "release",
+    "case": "plus-minus",
+    "title": "Holdign Patterns",
+    "artist": "+/-",
+    "arm": "strict",
+    "query": "release:\"Holdign Patterns\" AND artistname:\"\\+\\/\\-\"",
+    "url": "https://musicbrainz.org/ws/2/release?query=release%3A%22Holdign+Patterns%22+AND+artistname%3A%22%5C%2B%5C%2F%5C-%22&fmt=json&limit=3",
+    "receivedAt": "2026-11-09T10:15:51.151090+00:00",
+    "sha256": "dd665b70e203168a7fcfaa0b36b224adbc62ca66302a49535201c9b71c784d72",
+    "count": 0,
+    "rows": []
+  },
+  {
+    "file": "release-plus-minus-current.json",
+    "endpoint": "release",
+    "case": "plus-minus",
+    "title": "Holdign Patterns",
+    "artist": "+/-",
+    "arm": "current",
+    "query": "release:holdign~ AND release:patterns~",
+    "url": "https://musicbrainz.org/ws/2/release?query=release%3Aholdign~+AND+release%3Apatterns~&fmt=json&limit=3",
+    "receivedAt": "2026-11-09T10:15:56.157905+00:00",
+    "sha256": "38dd93276d34b13d278d3e148cb33f7b7be1e38f290d98688c9e1db155232d09",
+    "count": 33,
+    "rows": [
+      {
+        "id": "e2c2dc31-b77c-4fed-a439-371eb1a79be8",
+        "title": "Holding Patterns",
+        "artist": "Amanda Rheaume",
+        "parsedArtist": "Amanda Rheaume"
+      },
+      {
+        "id": "ae4f9c47-8aa1-4655-b4ee-604f42bf31d8",
+        "title": "Holding Patterns",
+        "artist": "Tangled Memories",
+        "parsedArtist": "Tangled Memories"
+      },
+      {
+        "id": "2168b42d-9277-44f0-8aac-0af290d43249",
+        "title": "Holding Patterns",
+        "artist": "Parallel Lions",
+        "parsedArtist": "Parallel Lions"
+      }
+    ]
+  },
+  {
+    "file": "release-plus-minus-term.json",
+    "endpoint": "release",
+    "case": "plus-minus",
+    "title": "Holdign Patterns",
+    "artist": "+/-",
+    "arm": "term",
+    "query": "release:holdign~ AND release:patterns~ AND artistname:\\+\\/\\-~",
+    "url": "https://musicbrainz.org/ws/2/release?query=release%3Aholdign~+AND+release%3Apatterns~+AND+artistname%3A%5C%2B%5C%2F%5C-~&fmt=json&limit=3",
+    "receivedAt": "2026-11-09T10:16:01.332648+00:00",
+    "sha256": "7b2533d52d5ccb6842355a28d88e9bfd9d86bf4832d1de2af0eba24d44c4e06b",
+    "count": 2,
+    "rows": [
+      {
+        "id": "219fd426-d871-4f5f-bb54-5a30dab5d9e5",
+        "title": "Holding Patterns",
+        "artist": "+/-",
+        "parsedArtist": "+/-"
+      },
+      {
+        "id": "7bad8a96-a057-493e-9f1e-73533e4dd835",
+        "title": "Holding Patterns",
+        "artist": "+/-",
+        "parsedArtist": "+/-"
+      }
+    ]
+  },
+  {
+    "file": "release-plus-minus-phrase.json",
+    "endpoint": "release",
+    "case": "plus-minus",
+    "title": "Holdign Patterns",
+    "artist": "+/-",
+    "arm": "phrase",
+    "query": "release:holdign~ AND release:patterns~ AND artistname:\"\\+\\/\\-\"",
+    "url": "https://musicbrainz.org/ws/2/release?query=release%3Aholdign~+AND+release%3Apatterns~+AND+artistname%3A%22%5C%2B%5C%2F%5C-%22&fmt=json&limit=3",
+    "receivedAt": "2026-11-09T10:16:08.565834+00:00",
+    "sha256": "719aabaeee88d7279f7804fd44ec4912b33850c43d859f0071d26c51e62fb924",
+    "count": 2,
+    "rows": [
+      {
+        "id": "219fd426-d871-4f5f-bb54-5a30dab5d9e5",
+        "title": "Holding Patterns",
+        "artist": "+/-",
+        "parsedArtist": "+/-"
+      },
+      {
+        "id": "7bad8a96-a057-493e-9f1e-73533e4dd835",
+        "title": "Holding Patterns",
+        "artist": "+/-",
+        "parsedArtist": "+/-"
+      }
+    ]
+  },
+  {
+    "file": "recording-radiohead-strict.json",
+    "endpoint": "recording",
+    "case": "radiohead",
+    "title": "Krama Police",
+    "artist": "Radiohead",
+    "arm": "strict",
+    "query": "recording:\"Krama Police\" AND artistname:\"Radiohead\"",
+    "url": "https://musicbrainz.org/ws/2/recording?query=recording%3A%22Krama+Police%22+AND+artistname%3A%22Radiohead%22&fmt=json&limit=3",
+    "receivedAt": "2026-11-09T10:16:13.428780+00:00",
+    "sha256": "09ea3ed9e4e73d9483450ff01c898b4190f56722f741e5b05a52d23874d0a7f4",
+    "count": 0,
+    "rows": []
+  },
+  {
+    "file": "recording-radiohead-words.json",
+    "endpoint": "recording",
+    "case": "radiohead",
+    "title": "Krama Police",
+    "artist": "Radiohead",
+    "arm": "words",
+    "query": "recording:krama~ AND recording:police~ AND artistname:radiohead~",
+    "url": "https://musicbrainz.org/ws/2/recording?query=recording%3Akrama~+AND+recording%3Apolice~+AND+artistname%3Aradiohead~&fmt=json&limit=3",
+    "receivedAt": "2026-11-09T10:16:18.836242+00:00",
+    "sha256": "585fd8215736173b1865d0f52d8499a8835335037ffaf7d46fbb00727ce705f3",
+    "count": 281,
+    "rows": [
+      {
+        "id": "262bef76-1b10-4c8a-b2be-a9921a33b4fc",
+        "title": "Karma Police",
+        "artist": "Radiohead",
+        "parsedArtist": "Radiohead"
+      },
+      {
+        "id": "9f69104f-9a8f-45e5-ba5b-6a5df3a963d9",
+        "title": "Karma Police",
+        "artist": "Radiohead",
+        "parsedArtist": "Radiohead"
+      },
+      {
+        "id": "3b3bdbaa-e502-43e3-9ad0-bc3ca2860c30",
+        "title": "Karma Police",
+        "artist": "Radiohead",
+        "parsedArtist": "Radiohead"
+      }
+    ]
+  },
+  {
+    "file": "release-radiohead-strict.json",
+    "endpoint": "release",
+    "case": "radiohead",
+    "title": "Krama Police",
+    "artist": "Radiohead",
+    "arm": "strict",
+    "query": "release:\"Krama Police\" AND artistname:\"Radiohead\"",
+    "url": "https://musicbrainz.org/ws/2/release?query=release%3A%22Krama+Police%22+AND+artistname%3A%22Radiohead%22&fmt=json&limit=3",
+    "receivedAt": "2026-11-09T10:16:23.794781+00:00",
+    "sha256": "f07247ee4609f1da64ea04af577dd89bd7676f355517c905bc186d9b71ac6c35",
+    "count": 0,
+    "rows": []
+  },
+  {
+    "file": "release-radiohead-words.json",
+    "endpoint": "release",
+    "case": "radiohead",
+    "title": "Krama Police",
+    "artist": "Radiohead",
+    "arm": "words",
+    "query": "release:krama~ AND release:police~ AND artistname:radiohead~",
+    "url": "https://musicbrainz.org/ws/2/release?query=release%3Akrama~+AND+release%3Apolice~+AND+artistname%3Aradiohead~&fmt=json&limit=3",
+    "receivedAt": "2026-11-09T10:16:34.376861+00:00",
+    "sha256": "0db1fb99fc5134f6cde8243f5a6d253d8678724dc30f5537ce6242e115ff58da",
+    "count": 9,
+    "rows": [
+      {
+        "id": "4dbc3e39-a89e-4433-a50a-3a4e7d072da2",
+        "title": "Karma Police",
+        "artist": "Radiohead",
+        "parsedArtist": "Radiohead"
+      },
+      {
+        "id": "6251277a-64f7-46ac-b701-4545db74aced",
+        "title": "Karma Police",
+        "artist": "Radiohead",
+        "parsedArtist": "Radiohead"
+      },
+      {
+        "id": "2c96e80f-c68b-40fd-abba-c274e6463e38",
+        "title": "Karma Police",
+        "artist": "Radiohead",
+        "parsedArtist": "Radiohead"
+      }
+    ]
+  }
+]
