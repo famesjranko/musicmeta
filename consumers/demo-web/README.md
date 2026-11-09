@@ -56,7 +56,9 @@ a probe still out then stays `UNCHECKED`. It logs one `host reachability:` line 
 403 marks the provider `REFUSED`, no answer marks it `UNREACHABLE`, and any other status (404, 429 and 5xx included) marks
 it `REACHABLE`. The verdict is kept for the life of the instance and appears in `/api/providers`.
 The settings table shows an amber warning beside a refused or unreachable provider, and the results
-table shows it after a `not_found` whose every capable provider was refused. This is a notice about
+table shows it after a `not_found` whose every capable provider was refused. A preview that fails at
+Deezer reports the block when Deezer was refused at startup, including while the engine's circuit
+breaker skips Deezer. This is a notice about
 where the demo runs (a host's egress can be turned away while the library is fine), not library
 behaviour: the check reads no licence or rights data, changes no result, and bypasses the engine's
 rate limiters and circuit breakers. It runs the same under `DEMO_PUBLIC`.

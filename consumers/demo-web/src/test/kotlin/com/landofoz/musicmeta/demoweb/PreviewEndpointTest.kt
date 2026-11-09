@@ -11,11 +11,13 @@ import com.landofoz.musicmeta.EnrichmentType
 import com.landofoz.musicmeta.ErrorKind
 import com.landofoz.musicmeta.ProviderCapability
 import com.landofoz.musicmeta.cache.CacheMode
+import com.sun.net.httpserver.HttpServer
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import org.junit.Assert.assertEquals
 import org.junit.Test
+import java.net.InetSocketAddress
 import java.net.URI
 import java.net.http.HttpClient
 import java.net.http.HttpRequest
@@ -29,6 +31,7 @@ class PreviewEndpointTest {
         result: EnrichmentResult,
         fallback: EnrichmentResult? = null,
         publicMode: Boolean = false,
+        deezerRefusedAtStartup: Boolean = false,
     ): HttpResponse<String> {
         val provider = object : EnrichmentProvider {
             override val id = "deezer"
@@ -48,8 +51,13 @@ class PreviewEndpointTest {
         })
         val built = builder.build()
         val engine = if (publicMode) PublicPostureEngine(built) else built
+        val refusingHost = if (deezerRefusedAtStartup) refusingHost() else null
+        val reachability = refusingHost
+            ?.let { HostReachability(targets = mapOf("deezer" to "http://127.0.0.1:${it.address.port}/")) }
+            ?: HostReachability()
         val port = startServer(
             AtomicReference(engine), AtomicReference(CacheMode.NETWORK_FIRST), { engine }, ApiKeyConfig(), 0,
+            hostReachability = reachability,
         )
         return try {
             HttpClient.newHttpClient().send(
@@ -60,7 +68,17 @@ class PreviewEndpointTest {
             )
         } finally {
             engine.close()
+            refusingHost?.stop(0)
         }
+    }
+
+    // Stands in for api.deezer.com turning this host away, so the startup check records REFUSED.
+    private fun refusingHost(): HttpServer = HttpServer.create(InetSocketAddress("127.0.0.1", 0), 0).apply {
+        createContext("/") { exchange ->
+            exchange.sendResponseHeaders(403, -1)
+            exchange.close()
+        }
+        start()
     }
 
     private fun field(response: HttpResponse<String>, name: String): String =
@@ -154,6 +172,24 @@ class PreviewEndpointTest {
         val response = preview(block, miss)
 
         // Then - the failure reports the block without claiming that the track has no preview.
+        assertEquals(502, response.statusCode())
+        assertEquals("Preview provider blocked access from this host (deezer). No fallback preview is available.",
+            field(response, "error"))
+    }
+
+    @Test
+    fun `a Deezer cooldown on a host Deezer refused at startup still reports the block`() {
+        // Given - Deezer refused this host at startup, its lookup is now skipped in cooldown, and iTunes has no match.
+        val cooldown = EnrichmentResult.Error(
+            type, "deezer", "Preview provider is in circuit-breaker cooldown; data was not looked up",
+            errorKind = ErrorKind.NETWORK,
+        )
+        val miss = EnrichmentResult.NotFound(type, "itunes")
+
+        // When - the page requests the preview.
+        val response = preview(cooldown, miss, deezerRefusedAtStartup = true)
+
+        // Then - the page is told that Deezer blocked this host rather than to try again later.
         assertEquals(502, response.statusCode())
         assertEquals("Preview provider blocked access from this host (deezer). No fallback preview is available.",
             field(response, "error"))

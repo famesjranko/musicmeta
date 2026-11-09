@@ -252,7 +252,7 @@ fun startServer(
     upstreamContext("/api/enrich-stream") { exchange -> handleEnrichStream(exchange, engineRef.get()) }
     upstreamContext("/api/invalidate") { exchange -> handleInvalidate(exchange, engineRef.get()) }
     upstreamContext("/api/search") { exchange -> handleSearch(exchange, engineRef.get()) }
-    upstreamContext("/api/preview") { exchange -> handlePreview(exchange, engineRef.get()) }
+    upstreamContext("/api/preview") { exchange -> handlePreview(exchange, engineRef.get(), hostReachability) }
     registerContext("/api/providers") { exchange ->
         handleProviders(exchange, engineRef.get(), apiKeys, unregisteredProviderIds, hostReachability)
     }
@@ -1135,7 +1135,7 @@ private fun handleSearch(exchange: HttpExchange, engine: EnrichmentEngine) {
     }
 }
 
-private fun handlePreview(exchange: HttpExchange, engine: EnrichmentEngine) {
+private fun handlePreview(exchange: HttpExchange, engine: EnrichmentEngine, hostReachability: HostReachability) {
     if (exchange.requestMethod != "GET") {
         exchange.respondJson(405, ApiError("GET required"))
         return
@@ -1181,7 +1181,11 @@ private fun handlePreview(exchange: HttpExchange, engine: EnrichmentEngine) {
             is EnrichmentResult.NotFound ->
                 exchange.respondJson(404, ApiError("No preview available for \"$title\" by $artist"))
             is EnrichmentResult.Error -> {
-                val message = if (result.provider == "deezer" && result.errorKind == ErrorKind.AUTH) {
+                // Once enough 403s open Deezer's breaker, the skipped lookup reads as NETWORK, so the
+                // startup check's refusal is what still names the block while the breaker stays open.
+                val blocked = result.errorKind == ErrorKind.AUTH ||
+                    hostReachability.verdictFor(result.provider).verdict == ReachabilityVerdict.REFUSED
+                val message = if (result.provider == "deezer" && blocked) {
                     "Preview provider blocked access from this host (deezer). No fallback preview is available."
                 } else {
                     "Preview lookup failed (${result.provider}). Try again later."
