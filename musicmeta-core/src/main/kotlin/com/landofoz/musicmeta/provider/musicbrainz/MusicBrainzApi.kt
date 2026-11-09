@@ -500,7 +500,11 @@ internal class MusicBrainzApi(
             if (titleWords.none(::isFuzzyWord)) return null
             val terms = fuzzyTerms(field, titleWords)
             val artistWords = fuzzyWords(artist)
-            val artistTerms = fuzzyTerms("artistname", artistWords)
+            val artistTerms = when {
+                artistWords.isNotEmpty() -> fuzzyTerms("artistname", artistWords)
+                artist.isNotBlank() -> "artistname:\"${escapeLucene(artist)}\""
+                else -> ""
+            }
             val combined = if (artistTerms.isEmpty()) terms else "$terms AND $artistTerms"
             return encodeQueryValue(combined)
         }
