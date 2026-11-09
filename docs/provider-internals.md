@@ -127,7 +127,9 @@ Combining marks can lift a short word over the floor even when upstream folds th
 `ज़ोर` (starting with U+095B) becomes four NFC code points and can return unrelated titles.
 Suggestions are not an identity claim or a guarantee of relevance across the search index.
 
-With a blank artist, the queries omit the artist clause. With an artist supplied, they extract NFC
+With a blank artist, the queries omit the artist clause. A nonblank artist with no extracted words
+uses one escaped exact `artistname:` phrase, such as `artistname:"\!\!\!"` or
+`artistname:"\+\/\-"`. Otherwise, the queries extract NFC
 artist words, classify them by NFC code-point length and Unicode numbers before lowercasing with
 `Locale.ROOT`, then add one `artistname:` term per word joined by `AND`. Only words with at least
 four NFC code points and no Unicode number get `~`; short and numeric words stay exact. For example,

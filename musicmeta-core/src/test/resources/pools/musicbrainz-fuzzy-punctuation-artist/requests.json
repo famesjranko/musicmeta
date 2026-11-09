@@ -1,0 +1,167 @@
+[
+  {
+    "file": "recording-plus-minus-discovery-discovery.json",
+    "status": 200,
+    "receivedAt": "2026-11-09T10:13:21.560112+00:00"
+  },
+  {
+    "file": "release-plus-minus-discovery-discovery.json",
+    "status": 200,
+    "receivedAt": "2026-11-09T10:13:23.966119+00:00"
+  },
+  {
+    "file": "recording-bang-correct.json",
+    "status": 200,
+    "receivedAt": "2026-11-09T10:13:50.269521+00:00"
+  },
+  {
+    "file": "recording-bang-strict.json",
+    "status": 200,
+    "receivedAt": "2026-11-09T10:13:55.103174+00:00"
+  },
+  {
+    "file": "recording-bang-current.json",
+    "status": 200,
+    "receivedAt": "2026-11-09T10:14:00.106954+00:00"
+  },
+  {
+    "file": "recording-bang-term.json",
+    "status": 200,
+    "receivedAt": "2026-11-09T10:14:05.876520+00:00"
+  },
+  {
+    "file": "recording-bang-phrase.json",
+    "status": 503,
+    "receivedAt": "2026-11-09T10:14:10.684127+00:00"
+  },
+  {
+    "file": "recording-bang-phrase.json",
+    "status": 503,
+    "receivedAt": "2026-11-09T10:14:18.614871+00:00"
+  },
+  {
+    "file": "recording-bang-phrase.json",
+    "status": 200,
+    "receivedAt": "2026-11-09T10:14:23.824535+00:00"
+  },
+  {
+    "file": "release-bang-correct.json",
+    "status": 503,
+    "receivedAt": "2026-11-09T10:14:28.626369+00:00"
+  },
+  {
+    "file": "release-bang-correct.json",
+    "status": 200,
+    "receivedAt": "2026-11-09T10:14:33.468496+00:00"
+  },
+  {
+    "file": "release-bang-strict.json",
+    "status": 503,
+    "receivedAt": "2026-11-09T10:14:38.704225+00:00"
+  },
+  {
+    "file": "release-bang-strict.json",
+    "status": 503,
+    "receivedAt": "2026-11-09T10:14:43.583297+00:00"
+  },
+  {
+    "file": "release-bang-strict.json",
+    "status": 503,
+    "receivedAt": "2026-11-09T10:14:49.748890+00:00"
+  },
+  {
+    "file": "release-bang-strict.json",
+    "status": 200,
+    "receivedAt": "2026-11-09T10:14:54.628481+00:00"
+  },
+  {
+    "file": "release-bang-current.json",
+    "status": 200,
+    "receivedAt": "2026-11-09T10:14:59.533970+00:00"
+  },
+  {
+    "file": "release-bang-term.json",
+    "status": 200,
+    "receivedAt": "2026-11-09T10:15:05.799259+00:00"
+  },
+  {
+    "file": "release-bang-phrase.json",
+    "status": 200,
+    "receivedAt": "2026-11-09T10:15:11.484550+00:00"
+  },
+  {
+    "file": "recording-plus-minus-correct.json",
+    "status": 200,
+    "receivedAt": "2026-11-09T10:15:17.970600+00:00"
+  },
+  {
+    "file": "recording-plus-minus-strict.json",
+    "status": 200,
+    "receivedAt": "2026-11-09T10:15:23.385277+00:00"
+  },
+  {
+    "file": "recording-plus-minus-current.json",
+    "status": 200,
+    "receivedAt": "2026-11-09T10:15:28.387491+00:00"
+  },
+  {
+    "file": "recording-plus-minus-term.json",
+    "status": 200,
+    "receivedAt": "2026-11-09T10:15:33.972947+00:00"
+  },
+  {
+    "file": "recording-plus-minus-phrase.json",
+    "status": 200,
+    "receivedAt": "2026-11-09T10:15:39.931859+00:00"
+  },
+  {
+    "file": "release-plus-minus-correct.json",
+    "status": 200,
+    "receivedAt": "2026-11-09T10:15:45.850233+00:00"
+  },
+  {
+    "file": "release-plus-minus-strict.json",
+    "status": 200,
+    "receivedAt": "2026-11-09T10:15:51.151090+00:00"
+  },
+  {
+    "file": "release-plus-minus-current.json",
+    "status": 200,
+    "receivedAt": "2026-11-09T10:15:56.157905+00:00"
+  },
+  {
+    "file": "release-plus-minus-term.json",
+    "status": 200,
+    "receivedAt": "2026-11-09T10:16:01.332648+00:00"
+  },
+  {
+    "file": "release-plus-minus-phrase.json",
+    "status": 200,
+    "receivedAt": "2026-11-09T10:16:08.565834+00:00"
+  },
+  {
+    "file": "recording-radiohead-strict.json",
+    "status": 200,
+    "receivedAt": "2026-11-09T10:16:13.428780+00:00"
+  },
+  {
+    "file": "recording-radiohead-words.json",
+    "status": 200,
+    "receivedAt": "2026-11-09T10:16:18.836242+00:00"
+  },
+  {
+    "file": "release-radiohead-strict.json",
+    "status": 200,
+    "receivedAt": "2026-11-09T10:16:23.794781+00:00"
+  },
+  {
+    "file": "release-radiohead-words.json",
+    "status": 503,
+    "receivedAt": "2026-11-09T10:16:28.933418+00:00"
+  },
+  {
+    "file": "release-radiohead-words.json",
+    "status": 200,
+    "receivedAt": "2026-11-09T10:16:34.376861+00:00"
+  }
+]

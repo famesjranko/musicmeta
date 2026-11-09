@@ -29,6 +29,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- MusicBrainz typo suggestions retain punctuation-only artists such as !!! and +/-, so title-only results no longer displace their matches (#442)
+
 ## [0.15.0] - 2026-11-09
 
 ### Breaking Changes
