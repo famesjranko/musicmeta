@@ -604,16 +604,17 @@ under the word query. `Krama Police` and `Hotle California` retained their inten
 Build artist terms from the same NFC word extraction as title terms. Classify words by their NFC
 code points and Unicode numbers before lowercasing with `Locale.ROOT`; add `~` only to words with
 at least four NFC code points and no Unicode number. Short and numeric words stay exact. An eligible
-title sends one fuzzy request even when no artist word is eligible, and an artist with no words adds
-no clause. Captures recover the first-word typo
+title sends one fuzzy request even when no artist word is eligible. A blank artist adds no clause.
+A nonblank artist with no extracted words uses one escaped exact `artistname:` phrase, such as
+`artistname:"\!\!\!"` or `artistname:"\+\/\-"`. Captures recover the first-word typo
 `Micheal Jackson` and reject the constructed `Michael Radiohead` negative control in suggestion
 pools; they do not establish general artist exclusion. Captured AND cases retained their intended
 rows; OR/NOT have syntax coverage only. Aliases, repeated fuzzy matches and upstream ties can still
 affect results. Featured credits can miss: the captured Eminem feat. Rihanna query and its
 without-feat diagnostic both returned none, so the cause is not isolated. Candidate search and
 enrichment suggestions use this rule without changing identity matching or the fallback ladder.
-The supplied-artist captures are in `pools/musicbrainz-fuzzy-supplied-artist/` and
-`pools/musicbrainz-fuzzy-artist-words/`.
+The supplied-artist captures are in `pools/musicbrainz-fuzzy-supplied-artist/`,
+`pools/musicbrainz-fuzzy-artist-words/` and `pools/musicbrainz-fuzzy-punctuation-artist/`.
 
 The captures, timestamps and query comparisons are in `pools/musicbrainz-fuzzy-title-only/`
 under core's test resources. The scenario records capture timestamps and exact queries; only the
