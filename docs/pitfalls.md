@@ -610,11 +610,18 @@ A nonblank artist with no extracted words uses one escaped exact `artistname:` p
 `Micheal Jackson` and reject the constructed `Michael Radiohead` negative control in suggestion
 pools; they do not establish general artist exclusion. Captured AND cases retained their intended
 rows; OR/NOT have syntax coverage only. Aliases, repeated fuzzy matches and upstream ties can still
-affect results. Featured credits can miss: the captured Eminem feat. Rihanna query and its
-without-feat diagnostic both returned none, so the cause is not isolated. Candidate search and
-enrichment suggestions use this rule without changing identity matching or the fallback ladder.
+affect results.
+`artistname` matches credited names individually: `artistname:"Eminem feat. Rihanna"` found
+nothing on either endpoint, while separate `Eminem` and `Rihanna` clauses found the song
+(2026-11-09). Exactly one whitespace-delimited `feat.`, `ft.` or `featuring` marker, any case,
+with text on both sides, splits the artist. Strict queries require each side as an escaped phrase.
+Fuzzy queries keep both sides' words without the marker. `&`, `and` and commas never split; any
+other artist keeps the whole-artist rule.
+Candidate search and enrichment suggestions use this rule without changing identity matching or
+the fallback ladder.
 The supplied-artist captures are in `pools/musicbrainz-fuzzy-supplied-artist/`,
-`pools/musicbrainz-fuzzy-artist-words/` and `pools/musicbrainz-fuzzy-punctuation-artist/`.
+`pools/musicbrainz-fuzzy-artist-words/`, `pools/musicbrainz-fuzzy-punctuation-artist/` and
+`pools/musicbrainz-featured-credit/`.
 
 The captures, timestamps and query comparisons are in `pools/musicbrainz-fuzzy-title-only/`
 under core's test resources. The scenario records capture timestamps and exact queries; only the

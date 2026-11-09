@@ -138,9 +138,12 @@ four NFC code points and no Unicode number get `~`; short and numeric words stay
 An eligible title costs one fuzzy request on either endpoint; ineligible titles cost none even
 with an artist supplied. Artist words do not add an eligibility guard or a request. On an empty
 strict release pool, album enrichment may still make its symbol-fallback artist lookup before the
-fuzzy request. Track enrichment refuses a blank artist without searching. Featured credits may
-still miss: the captured Eminem feat. Rihanna query and its without-feat diagnostic both returned
-none, so the cause is not isolated. These terms do not promise general alias/article equivalence or
+fuzzy request. Track enrichment refuses a blank artist without searching. An artist with exactly
+one whitespace-delimited `feat.`, `ft.` or `featuring` marker, any case, with text on both sides,
+splits into two components. Strict recording and release queries require each as an escaped
+`artistname:` phrase, and fuzzy queries keep both components' words without the marker. `&`, `and`
+and commas never split; any other artist keeps the whole-artist rule. These terms do not promise
+general alias/article equivalence or
 artist exclusivity. Fuzzy rows remain choices for the caller; they do not resolve identity or
 change the fallback ladder.
 
