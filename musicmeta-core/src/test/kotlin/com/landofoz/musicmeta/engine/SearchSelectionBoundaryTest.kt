@@ -158,5 +158,35 @@ class SearchSelectionBoundaryTest {
         engine.close()
     }
 
+    @Test
+    fun `engine search reports a canonical supplement failure and retains candidates`() = runTest {
+        // Given - the general MusicBrainz pool succeeds and its canonical supplement fails.
+        http.givenIoException("comment")
+        http.givenJsonResponse("recording?query", fixture("duplicates"))
+        val engine = EnrichmentEngine.Builder()
+            .httpClient(http)
+            .addProvider(MusicBrainzProvider(http, RateLimiter(0)))
+            .logger(logger)
+            .build()
+
+        try {
+            // When - the caller searches through the engine with a supplied artist.
+            val found = engine.search(EnrichmentRequest.forTrack("Karma Police", "Radiohead"), 8)
+
+            // Then - both expected general candidates survive and the engine logger reports the failed supplement.
+            assertTrue(
+                found.map { it.identifiers.musicBrainzId }.containsAll(
+                    listOf(
+                        "262bef76-1b10-4c8a-b2be-a9921a33b4fc",
+                        "32d643f1-5650-434b-89fc-6aafc058c529",
+                    ),
+                ),
+            )
+            assertTrue(warnings.any { it.contains("Canonical candidate search failed") })
+        } finally {
+            engine.close()
+        }
+    }
+
     private fun fixture(name: String): String = requireNotNull(javaClass.getResource("/find-selection/$name.json")).readText()
 }
