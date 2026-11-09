@@ -18,7 +18,8 @@ import java.util.concurrent.TimeUnit
 /**
  * What one startup request to a provider's host told this instance. It describes where the demo
  * runs, not the library: the engine's own results are never read to fill it, and it changes none of
- * them. A page uses it only to explain a `not_found` that a refused host would explain.
+ * them. A page uses it to explain a `not_found` that a refused host would explain, and the preview
+ * endpoint uses it to name a Deezer block that the engine's breaker now reports as a skipped lookup.
  */
 @Serializable
 enum class ReachabilityVerdict {
