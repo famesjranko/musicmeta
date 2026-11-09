@@ -29,6 +29,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.15.0] - 2026-11-09
+
 ### Breaking Changes
 - Android minSdk is now 24 (was 21): raise your app's minSdk; 0.12.0–0.14.0 already needed API 24 at runtime and could throw NoSuchMethodError on API 21–23 (#427)
 
