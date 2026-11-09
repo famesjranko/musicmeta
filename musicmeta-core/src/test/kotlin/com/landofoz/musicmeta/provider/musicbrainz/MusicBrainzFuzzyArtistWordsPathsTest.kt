@@ -56,7 +56,7 @@ class MusicBrainzFuzzyArtistWordsPathsTest(private val entity: String, private v
         val expected = buildList {
             if (entity == "recording") add(entry("canonical").getString("query"))
             add(entry("strict").getString("query"))
-            if (entity == "release" && case != "featured") add("artist:\"$artist\" OR alias:\"$artist\"")
+            if (entity == "release") add("artist:\"$artist\" OR alias:\"$artist\"")
             add(entry("words").getString("query"))
         }
 
@@ -75,7 +75,7 @@ class MusicBrainzFuzzyArtistWordsPathsTest(private val entity: String, private v
         @JvmStatic
         @Parameterized.Parameters(name = "{0}/{1}")
         fun cases() = listOf("recording", "release").flatMap { endpoint ->
-            listOf("micheal", "negative", "featured").map { arrayOf(endpoint, it) }
+            listOf("micheal", "negative").map { arrayOf(endpoint, it) }
         }
     }
 }

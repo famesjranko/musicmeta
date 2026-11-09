@@ -109,15 +109,15 @@ class MusicBrainzFuzzyArtistWordsTest(private val entity: String) {
 
     @Test
     fun `featured credit miss sends no rescue query`() = runTest {
-        // Given - the captured empty response for the complete featured artist words query
-        route("featured", "words")
+        // Given - the captured empty response for the featured title without the marker
+        route("featured", "without-feat")
 
         // When - searching for the featured artist credit
         val result = search("Love the Way You Liee", "Eminem feat. Rihanna")
 
-        // Then - feat remains a required fuzzy artist word in one request
+        // Then - the marker is omitted and the miss stays empty in one request
         assertTrue(result.isEmpty())
-        assertEquals(listOf(entry("featured", "words").getString("query")), queries())
+        assertEquals(listOf(entry("featured", "without-feat").getString("query")), queries())
     }
 
     @Test
