@@ -28,7 +28,7 @@ function stubElement() {
   return el;
 }
 
-async function loadRender() {
+async function loadRender(seed = []) {
   const elements = new Map();
   const byId = (id) => {
     if (!elements.has(id)) elements.set(id, stubElement());
@@ -47,11 +47,19 @@ async function loadRender() {
     setTimeout: (fn, ms, ...args) => realSetTimeout(fn, ms, ...args).unref(),
   });
   const source = readFileSync(new URL('index.js', resources), 'utf8')
-    .replace(/from '\/([\w-]+\.js)'/g, (_, file) => `from '${new URL(file, resources).href}'`) + '\nexport { candidateSubtitle };';
+    .replace(/from '\/([\w-]+\.js)'/g, (_, file) => `from '${new URL(file, resources).href}'`)
+    .replace('let candidates = [];', `let candidates = ${JSON.stringify(seed)};`) +
+    '\nexport { candidateSubtitle, renderCandidates };';
   const file = join(mkdtempSync(join(tmpdir(), 'render-test-')), 'index.mjs');
   writeFileSync(file, source);
-  const { render, candidateSubtitle } = await import(pathToFileURL(file).href);
-  return { render, subtitle: candidateSubtitle, painted: () => byId('result').innerHTML };
+  const { render, candidateSubtitle, renderCandidates } = await import(pathToFileURL(file).href);
+  return {
+    render,
+    renderCandidates,
+    subtitle: candidateSubtitle,
+    painted: () => byId('result').innerHTML,
+    candidatePainted: () => byId('search-results').innerHTML,
+  };
 }
 
 const WIKI_TEXT_CREDIT = { provider: 'wikipedia', url: 'https://en.wikipedia.org/wiki/Radiohead' };
@@ -109,4 +117,28 @@ test('candidate subtitles distinguish countries on otherwise identical album cho
   assert.match(british, /GB/);
   assert.match(american, /US/);
   assert.notEqual(british, american);
+});
+
+test('look-alike rows show provider and a distinct short identifier', async () => {
+  // Given - a modelled pair of look-alike hits shares visible fields and provider but has distinct MBID prefixes.
+  const hits = [
+    { title: 'Nirvana', artist: 'Nirvana', releaseType: 'Group', country: 'US', score: 1, provider: 'musicbrainz', mbid: '5b11f4ce-a62d-471e-81fc-a69a8278c7da' },
+    { title: 'Nirvana', artist: 'Nirvana', releaseType: 'Group', country: 'US', score: 1, provider: 'musicbrainz', mbid: '9282c8b4-ca0b-4c6b-b7e3-4f7762dfc4d6' },
+  ];
+  const { renderCandidates, candidatePainted } = await loadRender(hits);
+
+  // When - the real renderCandidates renders the seeded candidates.
+  renderCandidates('Nirvana');
+
+  // Then - each visible subtitle shows its provider and only its own prefix, and each row has its full MBID and distinct index.
+  const rows = candidatePainted().match(/<li>[\s\S]*?<\/li>/g) || [];
+  assert.equal(rows.length, hits.length);
+  for (const [index, hit] of hits.entries()) {
+    const row = rows[index];
+    const subtitle = row.match(/<span class="secondary">([^<]*)<\/span>/)?.[1];
+    assert.ok(subtitle?.includes(`musicbrainz ${hit.mbid.slice(0, 8)}`));
+    assert.ok(!subtitle.includes(hits[1 - index].mbid.slice(0, 8)));
+    assert.equal(row.match(/\btitle="([^"]*)"/)?.[1], hit.mbid);
+    assert.equal(row.match(/\bdata-index="([^"]*)"/)?.[1], String(index));
+  }
 });

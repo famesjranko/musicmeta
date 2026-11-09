@@ -289,7 +289,8 @@ data class SearchResponse(val candidates: List<CandidateHit>)
 /**
  * One `SearchCandidate` on the wire. [mbid] is the candidate's `identifiers.musicBrainzId`: when
  * it is present the page enriches by identifier instead of by name. [score] carries the
- * candidate's `matchScore`, 0.0-1.0.
+ * candidate's `matchScore`, 0.0-1.0. The page shows [provider] with the MBID prefix so look-alike
+ * rows stay distinct.
  */
 @Serializable
 data class CandidateHit(
@@ -302,6 +303,7 @@ data class CandidateHit(
     val disambiguation: String? = null,
     val mbid: String? = null,
     val country: String? = null,
+    val provider: String,
 )
 
 @Serializable

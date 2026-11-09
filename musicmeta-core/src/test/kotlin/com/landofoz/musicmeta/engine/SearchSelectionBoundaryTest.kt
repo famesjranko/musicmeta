@@ -39,6 +39,62 @@ class SearchSelectionBoundaryTest {
         .build()
 
     @Test
+    fun `distinct Nirvana identifiers survive primary search`() = runTest {
+        // Given - an identity FakeProvider returns a modelled Nirvana pair with distinct MBIDs and equal visible fields.
+        val candidates = listOf(
+            SearchCandidate(
+                title = "Nirvana", provider = "identity",
+                identifiers = EnrichmentIdentifiers(musicBrainzId = "nirvana-a"),
+                matchScore = 1f, artist = null, year = 1990, country = "US", releaseType = "Group",
+            ),
+            SearchCandidate(
+                title = "Nirvana", provider = "identity",
+                identifiers = EnrichmentIdentifiers(musicBrainzId = "nirvana-b"),
+                matchScore = 1f, artist = null, year = 1990, country = "US", releaseType = "Group",
+            ),
+        )
+        val identity = object : FakeProvider(id = "identity", isIdentityProvider = true) {
+            override suspend fun searchCandidates(request: EnrichmentRequest, limit: Int) = candidates
+        }
+        val engine = EnrichmentEngine.Builder().addProvider(identity).build()
+
+        // When - the caller searches for Nirvana with a limit of two.
+        val found = engine.search(EnrichmentRequest.forArtist("Nirvana"), 2)
+
+        // Then - both modelled MBIDs are returned once each.
+        assertEquals(listOf("nirvana-a", "nirvana-b"), found.map { it.identifiers.musicBrainzId })
+        engine.close()
+    }
+
+    @Test
+    fun `distinct Nirvana identifiers survive supplemental search`() = runTest {
+        // Given - no identity provider exists and a supplemental FakeProvider returns a modelled Nirvana pair with distinct MBIDs.
+        val candidates = listOf(
+            SearchCandidate(
+                title = "Nirvana", provider = "supplemental",
+                identifiers = EnrichmentIdentifiers(musicBrainzId = "nirvana-a"),
+                matchScore = 1f, artist = null, year = 1990, country = "US", releaseType = "Group",
+            ),
+            SearchCandidate(
+                title = "Nirvana", provider = "supplemental",
+                identifiers = EnrichmentIdentifiers(musicBrainzId = "nirvana-b"),
+                matchScore = 1f, artist = null, year = 1990, country = "US", releaseType = "Group",
+            ),
+        )
+        val supplemental = object : FakeProvider(id = "supplemental") {
+            override suspend fun searchCandidates(request: EnrichmentRequest, limit: Int) = candidates
+        }
+        val engine = EnrichmentEngine.Builder().addProvider(supplemental).build()
+
+        // When - the caller searches for Nirvana with a limit of two.
+        val found = engine.search(EnrichmentRequest.forArtist("Nirvana"), 2)
+
+        // Then - both modelled MBIDs are returned once each.
+        assertEquals(listOf("nirvana-a", "nirvana-b"), found.map { it.identifiers.musicBrainzId })
+        engine.close()
+    }
+
+    @Test
     fun `straight and curly apostrophe searches retain the Journey hint and main recording`() = runTest {
         // Given - captured Journey recordings have curly titles while the cover and iTunes use straight apostrophes.
         http.givenJsonResponse("artistname%3A%22Journey%22", fixture("apostrophe-canonical"))
@@ -102,8 +158,8 @@ class SearchSelectionBoundaryTest {
     }
 
     @Test
-    fun `engine supplements collapsed primary rows and preserves distinct editions`() = runTest {
-        // Given - the primary provider repeats a visible row and the secondary offers that row plus distinct editions.
+    fun `engine keeps look-alike primary entities and supplements distinct editions`() = runTest {
+        // Given - the primary provider returns two look-alike entities and the secondary offers one repeat plus distinct editions.
         val base = SearchCandidate("Album", "primary", EnrichmentIdentifiers(musicBrainzId = "a"), 1f, artist = "Artist", year = 2000, country = "GB", releaseType = "Album")
         val requestedLimits = mutableListOf<Int>()
         val primary = object : FakeProvider(id = "primary", isIdentityProvider = true) {
@@ -123,16 +179,17 @@ class SearchSelectionBoundaryTest {
         }
         val engine = EnrichmentEngine.Builder().addProvider(primary).addProvider(secondary).build()
 
-        // When - the caller requests up to six visible choices.
-        val found = engine.search(EnrichmentRequest.forAlbum("Album", "Artist"), 6)
+        // When - the caller requests up to seven visible choices.
+        val found = engine.search(EnrichmentRequest.forAlbum("Album", "Artist"), 7)
 
-        // Then - the secondary gets five free slots and explicit edition differences survive deduplication.
+        // Then - the secondary gets five free slots, both primary MBIDs lead, and explicit edition differences survive.
         assertEquals(listOf(5), requestedLimits)
-        assertEquals(listOf("GB", "US", "GB", "GB", "GB"), found.map { it.country })
-        assertEquals(listOf(2000, 2000, 2001, 2000, 2000), found.map { it.year })
-        assertEquals(listOf("Album", "Album", "Album", "Single", "Album"), found.map { it.releaseType })
-        assertEquals(listOf(null, null, null, null, "deluxe"), found.map { it.disambiguation })
-        assertEquals(listOf("primary", "secondary", "secondary", "secondary", "secondary"), found.map { it.provider })
+        assertEquals(listOf("a", "b"), found.take(2).map { it.identifiers.musicBrainzId })
+        assertEquals(listOf("GB", "GB", "US", "GB", "GB", "GB"), found.map { it.country })
+        assertEquals(listOf(2000, 2000, 2000, 2001, 2000, 2000), found.map { it.year })
+        assertEquals(listOf("Album", "Album", "Album", "Album", "Single", "Album"), found.map { it.releaseType })
+        assertEquals(listOf(null, null, null, null, null, "deluxe"), found.map { it.disambiguation })
+        assertEquals(listOf("primary", "primary", "secondary", "secondary", "secondary", "secondary"), found.map { it.provider })
         engine.close()
     }
 

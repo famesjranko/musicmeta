@@ -54,7 +54,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Search ranks a supplied artist's exact or punctuation-only title variants first, then other exact titles; a popular artist's recordings lead covers, unmarked ones first (#420)
 - Title-only album and track search uses iTunes artist order as a popularity hint, falling back to MusicBrainz ranking; an `enrichTimeoutMs` of about 12 s or less skips the hint (#422)
 - Title-only album search adds the hinted artist's unmarked exact album when MusicBrainz's results lack it, so a marked edition does not hide it
-- Search collapses identical visible rows and drops cross-provider title/artist duplicates unless edition details differ, so fewer than `limit` rows may return
+- Search drops supplemental rows repeating an identity-provider title and artist unless edition details differ, so fewer than `limit` may return; look-alike entities keep separate rows (#421)
 - Search folds typographic quotes, apostrophes, hyphens and ellipses without changing enrichment matching; fuzzy results keep relevance ahead of edition evidence
 - MusicBrainz typo suggestions require the title's words, with or without an artist; words with digits stay exact, and a title with no digit-free word of 4+ code points gets none (#414, #417)
 - MusicBrainz typo suggestions with an artist tolerate a misspelled artist word and require every artist word to match; featured credits can still miss (#430)
