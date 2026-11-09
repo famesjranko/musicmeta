@@ -1,6 +1,6 @@
 import com.vanniktech.maven.publish.SonatypeHost
+import org.gradle.process.JavaForkOptions
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
-import java.util.Properties
 
 plugins {
     alias(libs.plugins.kotlin.jvm)
@@ -36,31 +36,41 @@ kotlin {
     explicitApi()
 }
 
-// secrets.properties is where the keys actually live on a developer machine — it is what
-// secrets.properties.example tells you to create, and what demo-web already reads. Without this the
-// e2e suite runs keyless and still reports success, because every key-requiring test skips itself.
-val secrets = Properties().apply {
-    rootProject.file("secrets.properties").takeIf { it.isFile }?.inputStream()?.use { load(it) }
+val e2eCredentialProperties = listOf(
+    "lastfm.apikey",
+    "fanarttv.apikey",
+    "discogs.token",
+    "listenbrainz.token",
+)
+
+// Only explicit -D credentials become task inputs; the test JVM reads secrets files and the
+// environment itself, so a keyless run can share a cache key with a keyed one. That is why
+// `make test-e2e` passes -Pmusicmeta.rerunTests.
+fun JavaForkOptions.forwardE2eCredentialProperties() {
+    e2eCredentialProperties.forEach { property ->
+        System.getProperty(property)?.let { systemProperty(property, it) }
+    }
 }
 
 tasks.withType<Test> {
     // Forward system properties to test JVM (for E2E test gating)
     systemProperty("include.e2e", System.getProperty("include.e2e") ?: "false")
     systemProperty("include.probe", System.getProperty("include.probe") ?: "false")
+    forwardE2eCredentialProperties()
+}
 
-    // Forward API keys. Precedence is the one secrets.properties itself documents — the file wins
-    // over the environment — with an explicit -D above both, so one run can override without edits.
-    val apiKeys = mapOf(
-        "lastfm.apikey" to "LASTFM_API_KEY",
-        "fanarttv.apikey" to "FANARTTV_API_KEY",
-        "discogs.token" to "DISCOGS_TOKEN",
-        "listenbrainz.token" to "LISTENBRAINZ_TOKEN",
-    )
-    apiKeys.forEach { (prop, env) ->
-        systemProperty(
-            prop,
-            System.getProperty(prop) ?: secrets.getProperty(prop) ?: System.getenv(env) ?: "",
-        )
+val checkE2eCredentials by tasks.registering(JavaExec::class) {
+    description = "Verify that the full E2E suite has all four credentials."
+    group = "verification"
+    classpath = sourceSets.test.get().runtimeClasspath
+    mainClass.set("com.landofoz.musicmeta.testutil.E2eCredentialsKt")
+    dependsOn("testClasses")
+    forwardE2eCredentialProperties()
+}
+
+if (providers.gradleProperty("musicmeta.requireE2eCredentials").map(String::toBoolean).getOrElse(false)) {
+    tasks.named<Test>("test") {
+        dependsOn(checkE2eCredentials)
     }
 }
 

@@ -58,7 +58,7 @@ test-all: ## Unit tests for every module
 
 .PHONY: test-e2e
 test-e2e: ## E2E tests against live third-party APIs — never merge-gating, needs API keys
-	$(GRADLE) :musicmeta-core:test -Dinclude.e2e=true
+	$(GRADLE) :musicmeta-core:test -Dinclude.e2e=true -Pmusicmeta.requireE2eCredentials=true -Pmusicmeta.rerunTests
 
 .PHONY: demo
 demo: ## Compile, lint and test consumers/demo-cli/ and consumers/demo-web/, matching CI's demo-canary job
