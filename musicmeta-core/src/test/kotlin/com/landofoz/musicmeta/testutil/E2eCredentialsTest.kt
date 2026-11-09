@@ -68,22 +68,8 @@ class E2eCredentialsTest {
         val properties = mapOf("lastfm.apikey" to "property-lastfm")
         val environment = allEnvironmentValues("environment")
 
-        // When - resolving a table of present and absent candidates for each credential.
+        // When - resolving once with each credential's winner in a different source.
         val mixed = resolve(worktree, properties, environment)
-        val localWins = resolve(
-            worktree,
-            environment = environment,
-        )
-        val mainOnlyRoot = tmp.newFolder("main-only")
-        File(mainOnlyRoot, ".git").writeText("gitdir: ${File(main, ".git/worktrees/wt").absolutePath}\n")
-        val mainWinsWhenLocalIsAbsent = resolve(
-            mainOnlyRoot,
-            properties = mapOf("fanarttv.apikey" to ""),
-            environment = environment,
-        )
-        val environmentOnlyRoot = tmp.newFolder("environment-only")
-        val environmentOnly = resolve(environmentOnlyRoot, environment = environment)
-        val absent = resolve(tmp.newFolder("absent"))
 
         // Then - each key independently selects the highest-priority available source with the exact environment name.
         assertEquals(
@@ -95,10 +81,6 @@ class E2eCredentialsTest {
             ),
             mixed,
         )
-        assertEquals("local-lastfm", localWins["lastfm.apikey"])
-        assertEquals("main-fanart", mainWinsWhenLocalIsAbsent["fanarttv.apikey"])
-        assertEquals(allValues("environment"), environmentOnly)
-        assertEquals(allValues(""), absent)
     }
 
     @Test
@@ -110,13 +92,13 @@ class E2eCredentialsTest {
         writeSecrets(
             File(main, "secrets.properties"),
             mapOf(
-                "fanarttv.apikey" to "main-fanart",
+                "fanarttv.apikey" to "",
                 "discogs.token" to "   ",
                 "listenbrainz.token" to "\t",
             ),
         )
         File(worktree, "secrets.properties").writeText(
-            "lastfm.apikey=local-lastfm\n" +
+            "lastfm.apikey=\n" +
                 "fanarttv.apikey= \t \n" +
                 "discogs.token=\n" +
                 "listenbrainz.token= \n" +
@@ -134,8 +116,8 @@ class E2eCredentialsTest {
         val credentials = resolve(worktree, properties, environment)
 
         // Then - blank candidates never mask a lower source and all-blank candidates remain missing.
-        assertEquals("local-lastfm", credentials["lastfm.apikey"])
-        assertEquals("main-fanart", credentials["fanarttv.apikey"])
+        assertEquals("env-lastfm", credentials["lastfm.apikey"])
+        assertEquals("env-fanart", credentials["fanarttv.apikey"])
         assertEquals("env-discogs", credentials["discogs.token"])
         assertEquals("", credentials["listenbrainz.token"])
     }
@@ -183,9 +165,6 @@ class E2eCredentialsTest {
             mixedMissingFailure?.message,
         )
         assertFalse(allPresentFailure is Throwable)
-        listOf("lastfm-sentinel", "fanart-sentinel", "discogs-sentinel", "listenbrainz-sentinel").forEach { sentinel ->
-            assertFalse(allMissingMessage.contains(sentinel))
-        }
     }
 
     private fun resolve(

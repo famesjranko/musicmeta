@@ -43,6 +43,9 @@ val e2eCredentialProperties = listOf(
     "listenbrainz.token",
 )
 
+// Only explicit -D credentials become task inputs; the test JVM reads secrets files and the
+// environment itself, so a keyless run can share a cache key with a keyed one. That is why
+// `make test-e2e` passes -Pmusicmeta.rerunTests.
 fun JavaForkOptions.forwardE2eCredentialProperties() {
     e2eCredentialProperties.forEach { property ->
         System.getProperty(property)?.let { systemProperty(property, it) }
@@ -56,8 +59,6 @@ tasks.withType<Test> {
     forwardE2eCredentialProperties()
 }
 
-// The change removes credentials from `Test` inputs, so keyed and keyless runs share a cache key;
-// `-Pmusicmeta.rerunTests` stops a keyless result coming back as `FROM-CACHE`.
 val checkE2eCredentials by tasks.registering(JavaExec::class) {
     description = "Verify that the full E2E suite has all four credentials."
     group = "verification"
