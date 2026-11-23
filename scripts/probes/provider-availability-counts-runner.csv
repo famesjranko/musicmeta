@@ -145,3 +145,15 @@ run,provider,kind,count,total
 2026-11-16T15:12Z,deezer,ok,20,20
 2026-11-16T15:12Z,itunes,ok,20,20
 2026-11-16T15:12Z,lrclib,ok,20,20
+2026-11-23T17:41Z,musicbrainz-search,ok,10,20
+2026-11-23T17:41Z,musicbrainz-search,http 503,10,20
+2026-11-23T17:41Z,musicbrainz-artist,ok,12,20
+2026-11-23T17:41Z,musicbrainz-artist,http 503,8,20
+2026-11-23T17:41Z,listenbrainz,ok,20,20
+2026-11-23T17:41Z,listenbrainz-labs,ok,20,20
+2026-11-23T17:41Z,wikidata,ok,20,20
+2026-11-23T17:41Z,wikipedia,ok,20,20
+2026-11-23T17:41Z,coverartarchive,ok,20,20
+2026-11-23T17:41Z,deezer,ok,20,20
+2026-11-23T17:41Z,itunes,ok,20,20
+2026-11-23T17:41Z,lrclib,ok,20,20
